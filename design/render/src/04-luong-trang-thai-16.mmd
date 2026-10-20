@@ -1,0 +1,19 @@
+sequenceDiagram
+    autonumber
+    actor CN as Chủ nhóm
+    participant A as App chủ nhóm (V-46)
+    participant S as Server
+    participant DB as RDS
+    CN->>A: Mở chi tiết phiên
+    A->>S: GET /sessions/{id}/owner-detail (JWT)
+    S->>S: Kiểm quyền: là chủ nhóm của nhóm (NFR-11)
+    S->>DB: Ghi access_logs object_type = SESSION (BR-73)
+    S->>DB: Chỉ dữ liệu đã xác nhận: trạng thái phiên, EXITED + giờ, forfeited + người khởi phát, giải trình/khiếu nại. Sau phiên: trạng thái cuối, vào muộn, số PAUSED + lý do (BR-116)
+    S-->>A: Dữ liệu (không FOCUSING/GRACE/heartbeat thời gian thực, không chuỗi/Coins)
+    A-->>CN: Danh sách người theo tên, danh sách sự kiện theo giờ server (BR-115)
+    Note over S,A: Có MEMBER_EXITED mới: CN nhận push / hộp thông báo, nhưng V-46 KHÔNG tự đổi (BR-123)
+    CN->>A: Kéo xuống để làm mới
+    A->>S: GET /sessions/{id}/owner-detail
+    S->>DB: Gộp access_logs.view_count trong 10 phút (BR-73)
+    S-->>A: Dữ liệu mới
+    Note over A: Màn chỉ-xem: không dừng, kéo dài, đuổi người (BR-116)

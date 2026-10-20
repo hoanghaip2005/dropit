@@ -1,0 +1,21 @@
+stateDiagram-v2
+    state "HOẠT ĐỘNG (ACTIVE)" as HD
+    state "TẠM NGƯNG LỊCH (SCHEDULE_SUSPENDED)" as TN
+    state "CHỜ GIẢI TÁN (DISSOLVING)" as CGT
+    state "ĐÃ GIẢI TÁN (DISSOLVED)" as DGT
+
+    [*] --> HD: Tạo nhóm, chưa vượt max_groups_owned (BR-75, D-10)
+    HD --> DGT: Giải tán / chủ nhóm xóa tài khoản, không có phiên COUNTDOWN/ACTIVE (BR-80, BR-72)
+    HD --> CGT: Giải tán / chủ nhóm xóa tài khoản, có phiên COUNTDOWN/ACTIVE (BR-80)
+    HD --> TN: Quản trị khóa chủ nhóm, SCHEDULED → CANCELLED (BR-108, Q-118)
+    TN --> HD: Mở khóa chủ nhóm
+    TN --> DGT: Quản trị giải tán (BR-109) / t ≥ suspended_at + lock_dissolve_days
+    TN --> CGT: Giải tán khi có phiên COUNTDOWN/ACTIVE
+    CGT --> DGT: Phiên đang chạy đến ends_at (BR-80)
+    CGT --> CGT: Khóa chủ nhóm, giữ nguyên (giả định)
+    DGT --> [*]
+
+    note right of HD
+        Dưới 4 thành viên không là trạng thái,
+        chỉ cảnh báo (BR-74, Q-68)
+    end note

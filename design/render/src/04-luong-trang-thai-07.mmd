@@ -1,0 +1,27 @@
+sequenceDiagram
+    autonumber
+    participant C as App thành viên
+    participant S as Server
+    participant L as DynamoDB (log)
+    Note over C: FOCUSING. Vào nền, chờ lockWaitMs 600ms, không có tín hiệu khóa → LEAVE
+    C->>S: member:left_app {event_id, session_id, client_ts}
+    S->>S: Bỏ client_ts, dùng giờ server (BR-03)
+    alt Còn lượt khoan hồng
+        S->>L: left_app (serverTs)
+        S-->>C: member:grace {grace_deadline = now + 3000ms, server_ts} (chỉ người đó)
+        Note over C: Mở lại app, thấy cảnh báo V-09
+        C->>S: member:returned {event_id, session_id, client_ts}
+        alt t < hạn (BR-65)
+            S->>L: grace_recovered
+            S-->>C: ack {ok, state: FOCUSING}
+            Note over S: Không báo ai, không forfeited (BR-12)
+        else t ≥ hạn (vd. đúng 3,000s)
+            Note over S: Đã EXITED → xem 2.4
+        end
+    else Hết lượt (BR-13)
+        Note over S: EXITED ngay → xem 2.4
+    end
+    opt Gửi lại cùng event_id
+        C->>S: member:returned {event_id cũ}
+        S-->>C: ack kết quả cũ, duplicate: true (BR-31)
+    end

@@ -1,0 +1,34 @@
+sequenceDiagram
+    autonumber
+    actor CN as Chủ nhóm
+    participant S as Server
+    participant DB as RDS
+    participant SNS as SNS
+    participant C as App thành viên
+    CN->>S: POST /groups/{id}/schedules {start_time, duration_min ∈ {25,50}} (V-44)
+    alt Trùng phiên khác của nhóm (BR-78) / giờ < now + 1 phút (BR-79) / duration ∉ {25,50}
+        S-->>CN: Từ chối kèm lý do
+    else Hợp lệ
+        S->>DB: sessions status = SCHEDULED, session_members INVITED (DQ-F01)
+        S-->>CN: Đã lưu
+    end
+    S->>SNS: started_at − reminder_min: nhắc thành viên (BR-79, Should)
+    SNS-->>C: Push nhắc (V-18)
+    Note over S: started_at − lobby_open_min: mở phòng chờ (BR-63)
+    C->>S: session:join {event_id, session_id} (JWT ở handshake)
+    alt Chưa đồng ý bản mới (BR-06) / là chủ nhóm (BR-114) / trước giờ mở
+        S-->>C: Từ chối kèm lý do
+    else Hợp lệ
+        S-->>C: WAITING, session:state (V-06)
+    end
+    Note over S: t = started_at − 5s: SCHEDULED → COUNTDOWN (BR-04)
+    S-->>C: session:countdown {countdown_starts_at, started_at, server_ts} (V-07, không có nút "Rời phiên")
+    Note over C: Rời app trong COUNTDOWN: không ghi (BR-64)
+    Note over S: t = started_at: COUNTDOWN → ACTIVE, ends_at = started_at + duration
+    Note over S: Dùng trạng thái tiền cảnh cuối nhận trong COUNTDOWN (member:left_app / member:returned) — không có sự kiện hỏi riêng (DQ-F03)
+    alt Đang ở app
+        S-->>C: session:state + member:state FOCUSING, bật chỉ báo "Phiên đang được ghi" (V-08, BR-05)
+    else Không ở app / chưa báo
+        S-->>C: member:grace {grace_deadline} — GRACE từ started_at, trừ lượt (BR-64)
+    end
+    Note over S: Thành viên còn INVITED tại hạn vào → ABSENT (BR-08)

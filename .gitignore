@@ -1,0 +1,35 @@
+# Dependencies & build output
+node_modules/
+dist/
+build/
+.dart_tool/
+.gradle/
+.idea/
+*.iml
+Pods/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Local env & secrets
+.env
+.env.*
+!.env.example
+*.p12
+*.p8
+*.pem
+*.key
+*.jks
+*.keystore
+google-services.json
+GoogleService-Info.plist
+
+# Runtime data
+backend/uploads/
+backend/outbox/
+spike/t01-lifecycle/server/logs/
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/

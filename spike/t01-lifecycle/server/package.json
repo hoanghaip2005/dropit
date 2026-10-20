@@ -1,0 +1,15 @@
+{
+  "name": "t01-lifecycle-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Spike T-01 DropIt!: server đo sự kiện vòng đời (socket.io)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "selftest": "node selftest.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
+  }
+}

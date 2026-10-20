@@ -1,0 +1,30 @@
+sequenceDiagram
+    autonumber
+    participant X as App người thoát
+    participant S as Server
+    participant DB as RDS / bộ nhớ
+    participant T as App người trong phiên (chưa kết thúc)
+    participant SNS as SNS
+    participant N as Chủ nhóm + thành viên ngoài phiên + người đã kết thúc
+    Note over S: GRACE, t ≥ grace_deadline (timer server)
+    S->>DB: X → EXITED (serverTs)
+    alt forfeited = false (EXITED đầu tiên)
+        S->>DB: forfeited = true, forfeited_at, forfeit_trigger_user_id = X (BR-35)
+        Note over S: Một MEMBER_EXITED có trường forfeited {display_name, at} = tên X, giờ server — gộp SESSION_FORFEITED (BR-38, D-22)
+    else forfeited = true
+        Note over S: Chỉ MEMBER_EXITED, không đổi người khởi phát (BR-39)
+    end
+    par Người trong phiên (BR-82)
+        S-->>T: Socket MEMBER_EXITED {exited_display_name, exited_at, forfeited?}
+        alt T ở tiền cảnh, màn hình mở
+            Note over T: Banner V-11, tự ẩn, không âm thanh
+        else T khóa màn hình / GRACE / PAUSED
+            Note over T: Không push hệ thống, xếp hàng, hiện khi quay lại / mở khóa
+        end
+    and Người ngoài phiên (BR-27)
+        S->>SNS: Push có tên X (≤ notify_latency_s = 5s, BR-28)
+        SNS-->>N: Push + hộp thông báo (V-16)
+    end
+    S->>DB: Hộp thông báo cho mọi người nhận, trừ X (BR-81)
+    S-->>X: member:state {my_state: EXITED, reason: GRACE_EXPIRED} → màn V-13 (lối vào giải trình V-15)
+    Note over S,T: Phiên vẫn ACTIVE đến ends_at (D-05)

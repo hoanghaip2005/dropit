@@ -1,0 +1,22 @@
+sequenceDiagram
+    autonumber
+    participant S as Server
+    participant DB as RDS
+    participant SNS as SNS
+    participant V as Thành viên chưa kết thúc
+    participant E as Thành viên đã EXITED trước sự cố
+    participant CN as Chủ nhóm
+    alt ≥ 80% thành viên đang hoạt động mất kết nối trong 10s (BR-22, Q-28)
+        S->>S: Phát hiện sự cố toàn server
+    else Server khởi động lại giữa phiên (K-11)
+        S->>DB: Đọc phiên COUNTDOWN/ACTIVE còn dở (DQ-F04)
+    end
+    S->>DB: Phiên → CANCELLED, cancel_reason = SERVER_OUTAGE, gỡ forfeited
+    S->>DB: Mọi người chưa kết thúc → VOID, hủy hẹn GRACE/PAUSED/LOST (§3 #44)
+    Note over S,DB: EXITED trước sự cố giữ EXITED + ngắt chuỗi, LOST trước giữ LOST (BR-68)
+    S->>SNS: SESSION_CANCELLED_OUTAGE (không nêu cá nhân)
+    SNS-->>V: Push / socket + hộp thông báo
+    SNS-->>CN: Push + hộp thông báo
+    S->>SNS: SESSION_CANCELLED_OUTAGE_EXITED
+    SNS-->>E: "Lần rời app của bạn vẫn được ghi, chuỗi đã ngắt, có thể khiếu nại"
+    Note over S: Không Coins, không vào báo cáo tháng (BR-58)

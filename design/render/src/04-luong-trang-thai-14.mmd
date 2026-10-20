@@ -1,0 +1,37 @@
+sequenceDiagram
+    autonumber
+    actor X as Thành viên EXITED
+    participant S as Server
+    participant CN as Chủ nhóm
+    participant QT as Quản trị
+    participant DB as RDS
+    X->>S: Gửi giải trình ≤ 500 ký tự, trong ends_at + 7 ngày (V-15, BR-85)
+    S->>DB: Lưu (sửa được trong 24h, giữ bản cũ)
+    S-->>CN: Thông báo trong app, không push (V-47)
+    Note over S: Giải trình không đổi kết quả (BR-54)
+    X->>S: Gửi khiếu nại, t < ends_at + 24h, một lần/sự kiện (BR-86, Should)
+    alt Chọn "nghi lỗi hệ thống"
+        S->>DB: appeals.status = ESCALATED
+        S-->>QT: Hộp việc quản trị (V-63)
+    else
+        S->>DB: appeals.status = PENDING
+        S-->>CN: Thông báo trong app
+        CN->>S: Mở ca → IN_REVIEW, ghi access_logs (BR-73)
+        opt Quá 72h chưa quyết / chủ nhóm chọn "nghi lỗi hệ thống"
+            S->>DB: ESCALATED, báo người khiếu nại
+        end
+    end
+    alt Bác + lý do
+        S->>DB: REJECTED + decision_reason
+        S-->>X: Báo kết quả
+    else Chấp nhận + lý do
+        S->>DB: EXEMPTED + decision_reason, session_members.exempted = true (không xóa EXITED, BR-32)
+        alt Không còn EXITED chưa miễn trừ
+            S->>DB: forfeited = false, khôi phục hồi tố: SESSION_REWARD reason = APPEAL_RESTORE theo trần ngày phiên, STREAK_RESTORE, huy hiệu (BR-88)
+        else Còn EXITED khác
+            S->>DB: Giữ forfeited, khởi phát = EXITED chưa miễn trừ sớm nhất (BR-87)
+        end
+        S-->>X: EXEMPTION_GRANTED
+        S-->>CN: EXEMPTION_GRANTED bản đính chính, không Coins (đúng danh sách đã nhận MEMBER_EXITED, nêu tên, Q-138 Chờ)
+        Note over S: Báo cáo tháng đã tạo không đổi, chỉ ghi chú trong app (BR-102)
+    end

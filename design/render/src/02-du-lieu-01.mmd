@@ -1,0 +1,73 @@
+erDiagram
+  users ||--o{ groups : "sở hữu (owner_id)"
+  users ||--o{ group_members : "là thành viên"
+  groups ||--o{ group_members : "có"
+  users ||--o{ consents : "đồng ý"
+  groups ||--o{ consents : ""
+  groups ||--o{ group_invites : ""
+  groups ||--o{ schedules : ""
+  schedules ||--o{ sessions : "sinh"
+  groups ||--o{ sessions : ""
+  sessions ||--o{ session_members : ""
+  users ||--o{ session_members : ""
+  session_members ||--o{ session_pauses : ""
+  session_members ||--o| explanations : "EXITED"
+  session_members ||--o| appeals : "EXITED"
+  users ||--o{ coin_ledger : ""
+  users ||--o{ daily_attendance : ""
+  users ||--o{ achievement_log : ""
+  badges ||--o{ user_badges : ""
+  users ||--o{ user_badges : ""
+  shop_items ||--o{ user_items : ""
+  users ||--o{ user_items : ""
+  coin_ledger ||--o| user_items : "SHOP_PURCHASE"
+  users ||--o{ user_equipped : ""
+  shop_items ||--o{ user_equipped : ""
+  users ||--o{ journals : ""
+  groups ||--o{ monthly_reports : ""
+  monthly_reports ||--o{ monthly_report_rows : ""
+  users ||--o{ notifications : ""
+  users ||--o{ device_tokens : ""
+  users ||--o{ access_logs : "bị xem"
+  users ||--o{ abuse_reports : ""
+  users ||--o{ admin_audit : ""
+
+  users { uuid id PK
+    text cognito_sub UK
+    user_status status
+    int current_streak "KCN"
+    int longest_streak "KCN" }
+  groups { uuid id PK
+    uuid owner_id FK
+    group_status status
+    text report_purpose
+    int consent_version
+    char invite_code UK }
+  group_members { uuid id PK
+    uuid group_id FK
+    uuid user_id FK "UK khi left_at null"
+    int consent_version
+    timestamptz left_at }
+  sessions { uuid id PK
+    uuid group_id FK
+    smallint duration_min "25|50"
+    session_status status
+    timestamptz started_at
+    timestamptz ends_at
+    bool forfeited
+    uuid forfeit_trigger_user_id FK }
+  session_members { uuid session_id PK
+    uuid user_id PK
+    member_state state
+    int focus_seconds
+    bool exempted }
+  coin_ledger { uuid entry_id PK
+    ledger_type type
+    int amount
+    uuid ref_id
+    date reward_date
+    text idempotency_key UK }
+  appeals { uuid id PK
+    appeal_status status }
+  journals { uuid id PK
+    bytea ciphertext "mã hóa" }

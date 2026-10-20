@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    participant Cron as Cron EC2 (Must) / EventBridge + Lambda (Should)
+    participant S as Server báo cáo
+    participant DB as RDS
+    participant SES as SES
+    participant CN as Chủ nhóm
+    participant QT as Quản trị
+    Cron->>S: 02:00 ngày 1 (Asia/Ho_Chi_Minh, BR-56, Q-132)
+    loop Mỗi nhóm (gồm nhóm giải tán trong tháng, BR-62)
+        S->>DB: Đã có báo cáo (nhóm, kỳ)? (idempotent, BR-101)
+        alt Đã có
+            S->>S: Bỏ qua
+        else Chưa có
+            S->>DB: Lấy phiên COMPLETED của nhóm trong [ngày 1, ngày 1 tháng sau) (BR-55, BR-58)
+            S->>S: Dòng mỗi thành viên (không dòng chủ nhóm, không Coins, không chuỗi — BR-53, BR-60)
+            S->>S: Chỉ số nhóm + so với tháng trước, đếm sĩ số cho ngưỡng 5 (BR-104)
+            S->>DB: Lưu bản chụp bất biến, tên hiển thị tại lúc tạo (BR-56, BR-97)
+            S->>SES: Email tóm tắt: nhóm, kỳ, mục đích, số phiên, 2 tỉ lệ, số phiên mất thưởng, link mở app (BR-105)
+            Note over SES: Không PDF, không dòng thành viên, không pixel/link theo dõi (BR-122)
+            SES-->>CN: Email (V-50)
+            opt Gửi lỗi
+                S->>SES: Thử lại ≤ 3 lần trong 24h, sau đó chỉ còn bản trong app
+            end
+        end
+    end
+    opt Lần chạy lỗi
+        Cron->>S: Thử lại mỗi 1h, ≤ 3 lần, không quá 06:00 (BR-101)
+        S-->>QT: Quá hạn vẫn lỗi → cảnh báo hộp việc quản trị, chạy lại thủ công
+    end
+    CN->>S: Mở báo cáo trong app (V-48), ghi nhật ký truy cập (BR-73)

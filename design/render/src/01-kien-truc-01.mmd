@@ -1,0 +1,17 @@
+flowchart LR
+  TV["Thành viên nhóm<br/>(tham gia phiên)"]
+  CN["Chủ nhóm<br/>(chỉ quản lý, D-25)"]
+  QT["Quản trị hệ thống<br/>(nhóm Cognito admin)"]
+  SYS(("Hệ thống DropIt!"))
+  APNS["APNs / FCM<br/>(Apple, Google)"]
+  MAIL["Hộp thư chủ nhóm"]
+  GH["GitHub Actions<br/>+ App Store Connect / TestFlight"]
+
+  TV -- "App Flutter: vào phiên, Coins, nhật ký" --> SYS
+  CN -- "App Flutter: tạo nhóm, đặt lịch, xem báo cáo" --> SYS
+  QT -- "Web Admin (Should) / seed T-05 (MVP)" --> SYS
+  SYS -- "Push 'X đã rời app' (D-20, D-22)" --> APNS
+  APNS --> TV
+  APNS --> CN
+  SYS -- "Email báo cáo tháng tóm tắt (D-24, D-27)" --> MAIL
+  GH -- "Build, deploy, phát hành app (D-26)" --> SYS

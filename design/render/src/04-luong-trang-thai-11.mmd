@@ -1,0 +1,24 @@
+sequenceDiagram
+    autonumber
+    participant C as App thành viên
+    participant S as Server
+    loop Mỗi 5s khi tiền cảnh, màn hình mở
+        C->>S: heartbeat {session_id}
+        S->>S: last_seen_at = now
+    end
+    Note over C: Mất Wi-Fi / 4G, heartbeat cuối lúc T
+    Note over S: t = min(socket đóng, T + 10s) → DISCONNECTED, ghi disconnected_at, nhớ trạng thái trước (BR-19)
+    S->>S: Hẹn LOST tại disconnected_at + 10s
+    alt Nối lại trong hạn (t < disconnected_at + 10s)
+        C->>S: session:resume {event_id, session_id, last_server_event_id}
+        S-->>C: ack {ok, state} + session:state + phát lại S→C sau last_server_event_id (BR-20)
+        opt Báo đã rời app lúc mất mạng (§3 #2)
+            Note over S: Áp BR-11/BR-13 tính từ lúc nối lại
+        end
+    else t ≥ disconnected_at + 10s
+        S->>S: LOST, end_reason = DISCONNECT_TIMEOUT, tách khỏi thoát (BR-21)
+        Note over S: Không MEMBER_EXITED, không forfeited, không báo ai (D-19)
+        C->>S: Nối lại muộn
+        S-->>C: ack {ok:false, code: SESSION_LOST, state: LOST} → V-10, kết quả V-14
+    end
+    Note over S: Đang GRACE mà mất mạng: không DISCONNECTED, hạn 3s vẫn chạy → EXITED (§3 #1, #51)

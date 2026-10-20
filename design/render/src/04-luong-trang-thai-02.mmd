@@ -1,0 +1,55 @@
+stateDiagram-v2
+    [*] --> INVITED: Phiên SCHEDULED, thành viên đã đồng ý (DQ-F01)
+
+    INVITED --> WAITING: Vào phòng chờ, đã đồng ý, không ở phiên khác (BR-06, BR-09, BR-63)
+    INVITED --> FOCUSING: Vào muộn, started_at ≤ t < started_at + late_join_max_min (BR-07, Should)
+    INVITED --> ABSENT: t ≥ hạn vào (BR-08, BR-65)
+
+    WAITING --> FOCUSING: Phiên → ACTIVE, đang ở app (BR-05)
+    WAITING --> GRACE: Phiên → ACTIVE, đã rời app trong COUNTDOWN, trừ lượt (BR-64)
+    WAITING --> ABSENT: Bấm "Rời phiên" + xác nhận trước started_at (BR-118 (2), Q-149)
+    WAITING --> ABSENT: Mất kết nối, đến started_at chưa nối lại (Q-153)
+
+    FOCUSING --> GRACE: Rời app, còn lượt, hẹn 3s (BR-11, BR-13)
+    FOCUSING --> EXITED: Rời app, hết lượt (BR-13)
+    FOCUSING --> FOCUSING: Khóa / tắt màn hình (BR-15, D-08)
+    FOCUSING --> PAUSED: Tạm dừng + lý do, còn lượt, hẹn 5 phút (BR-16, BR-67)
+    FOCUSING --> DISCONNECTED: t ≥ last_seen_at + 10s hoặc socket đóng, chưa báo khóa (BR-19, BR-66)
+
+    GRACE --> FOCUSING: Quay lại, t < hạn → grace_recovered (BR-12)
+    GRACE --> EXITED: t ≥ hạn 3s, kể cả khi đang mất mạng (BR-14, §3 #1, #29, #51)
+
+    PAUSED --> FOCUSING: Bấm tiếp tục / hết 5 phút khi đang ở app (BR-16)
+    PAUSED --> GRACE: Hết 5 phút khi không ở app, không trừ lượt (BR-18)
+    PAUSED --> PAUSED: Rời app không tính (BR-16)
+    PAUSED --> DISCONNECTED: Mất heartbeat / socket đóng (BR-19)
+
+    DISCONNECTED --> FOCUSING: Nối lại + session_id, t < disconnected_at + 10s, trước đó FOCUSING (BR-20)
+    DISCONNECTED --> PAUSED: Nối lại trong hạn, trước đó PAUSED (BR-20, DQ-F05)
+    DISCONNECTED --> LOST: t ≥ disconnected_at + 10s (BR-19, BR-21, D-19)
+
+    FOCUSING --> EXITED: "Rời phiên" + xác nhận, reason = USER_LEAVE (BR-118 (1), D-29)
+    GRACE --> EXITED: "Rời phiên" + xác nhận, hủy hẹn 3s (BR-118, §3 #54, #55)
+    PAUSED --> EXITED: "Rời phiên" + xác nhận, hủy hẹn 5 phút (BR-118)
+
+    FOCUSING --> COMPLETED: t = ends_at (BR-23)
+    PAUSED --> COMPLETED: t = ends_at (§3 #5)
+    GRACE --> COMPLETED: t = ends_at, chưa quá hạn (§3 #6)
+    DISCONNECTED --> COMPLETED: Nối lại trong hạn sau ends_at (§3 #7, Q-31)
+
+    state "Mọi trạng thái chưa kết thúc" as ChuaKetThuc
+    note right of ChuaKetThuc
+        Rút đồng ý → WITHDRAWN (BR-26, ưu tiên mọi hạn, §3 #15)
+        Quản trị khóa → WITHDRAWN reason = ACCOUNT_LOCKED (BR-108)
+        Phiên CANCELLED (trừ BR-30) → VOID (BR-22, BR-63)
+        Chủ nhóm xóa khỏi nhóm → không đổi, hiệu lực sau ends_at (BR-77)
+    end note
+    ChuaKetThuc --> WITHDRAWN
+    ChuaKetThuc --> VOID
+
+    COMPLETED --> [*]
+    EXITED --> [*]
+    LOST --> [*]
+    ABSENT --> [*]
+    WITHDRAWN --> [*]
+    VOID --> [*]

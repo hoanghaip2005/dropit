@@ -1,0 +1,1850 @@
+openapi: 3.1.0
+info:
+  title: DropIt! REST API
+  version: 1.0.0-draft
+  summary: Hợp đồng REST cho app DropIt! (Giai đoạn 3 Thiết kế, bản nháp)
+  description: |
+    Nguồn: ba/srs/02-ep0*.md (US/AC), 03-quy-tac.md (BR), 04-nfr-rieng-tu.md (ma trận ai thấy gì),
+    05-tham-chieu-ky-thuat.md §2–§3 (tham khảo). Nguyên tắc chung xem design/03-api-socket.md.
+    - Mọi thời gian là giờ server, ISO-8601 UTC (BR-03, BR-33).
+    - Chủ nhóm không bao giờ nhận trường Coins/chuỗi của thành viên (BR-53, BR-61). Các schema
+      `*OwnerView` không có các trường đó; `additionalProperties: false` để kiểm thử hợp đồng bắt lỗi.
+    - Truy cập chéo nhóm → 403 FORBIDDEN_GROUP (NFR-11).
+    - `x-moscow`: Must (mặc định, không ghi) / Should. `x-br`: BR liên quan. `x-us`: story nguồn.
+    - Tên trường và giá trị enum khớp `design/schema.sql` / `02-du-lieu.md` (nguồn thắng). Ánh xạ trình bày (vd. `month` ↔ `monthly_reports.period`, `item_id` ↔ `shop_items.id`) xem 03-api-socket.md §1.2.
+  license:
+    name: Nội bộ nhóm Bá Khí
+    identifier: LicenseRef-internal
+servers:
+  - url: https://api.dropit.example/v1
+    description: Môi trường giả định (DQ-A01)
+security:
+  - cognitoJwt: []
+tags:
+  - name: EP-01 Tài khoản & đồng ý
+    description: US-01.xx
+  - name: EP-02 Nhóm & lịch
+    description: US-02.xx
+  - name: EP-03 Phiên tập trung
+    description: US-03.xx (phần realtime ở Socket.io, xem 03-api-socket.md)
+  - name: EP-04 Thông báo & giải trình
+    description: US-04.xx
+  - name: EP-05 Thành tích
+    description: US-05.xx
+  - name: EP-06 Coins & Shop
+    description: US-06.xx
+  - name: EP-07 Hồ sơ & nhật ký
+    description: US-07.xx
+  - name: EP-08 Báo cáo
+    description: US-08.xx
+  - name: EP-09 Quản trị
+    description: US-09.xx (toàn bộ Should)
+  - name: Hệ thống
+    description: Tiện ích
+
+paths:
+  /time:
+    get:
+      tags: [Hệ thống]
+      operationId: getServerTime
+      summary: Giờ server để client hiệu chỉnh đồng hồ
+      security: []
+      x-br: [BR-03, BR-33]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [server_ts]
+                properties:
+                  server_ts: { type: string, format: date-time }
+        '429': { $ref: '#/components/responses/TooMany' }
+
+  # ---------------- EP-01 ----------------
+  /me:
+    get:
+      tags: [EP-01 Tài khoản & đồng ý]
+      operationId: getMe
+      summary: Hồ sơ của tôi (tạo bản ghi users ở lần gọi đầu sau đăng nhập Cognito)
+      x-us: [US-01.01, US-07.01, US-07.04]
+      x-br: [BR-51, BR-52, BR-99]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/MeProfile' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    patch:
+      tags: [EP-01 Tài khoản & đồng ý]
+      operationId: updateMe
+      summary: Sửa tên hiển thị / bật hiện chuỗi trên hồ sơ (BR-99)
+      x-us: [US-01.03, US-07.04]
+      x-br: [BR-98]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                display_name: { type: string, minLength: 1, maxLength: 40 }
+                show_streak: { type: boolean, description: 'BR-99 (thêm 2026-10-20)' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/MeProfile' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+    delete:
+      tags: [EP-01 Tài khoản & đồng ý]
+      operationId: deleteMe
+      summary: Xóa tài khoản (Should)
+      x-moscow: Should
+      x-us: [US-01.10]
+      x-br: [BR-26, BR-62, BR-70, BR-72, BR-80]
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '202': { description: Đã nhận yêu cầu xóa; nhóm mình làm chủ bị giải tán (D-10) }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /me/avatar:
+    put:
+      tags: [EP-07 Hồ sơ & nhật ký]
+      operationId: requestAvatarUpload
+      summary: Xin URL S3 ký sẵn để tải avatar (Should)
+      x-moscow: Should
+      x-us: [US-07.03]
+      x-br: [BR-98]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content_type, size_bytes]
+              properties:
+                content_type: { type: string, enum: [image/jpeg, image/png, image/webp] }
+                size_bytes: { type: integer, maximum: 5242880 }
+      responses:
+        '200':
+          description: URL tải lên
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [upload_url, expires_at]
+                properties:
+                  upload_url: { type: string, format: uri }
+                  expires_at: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /me/logout-check:
+    get:
+      tags: [EP-01 Tài khoản & đồng ý]
+      operationId: logoutCheck
+      summary: Kiểm tra được đăng xuất không (chặn khi có trạng thái phiên chưa kết thúc)
+      x-us: [US-01.02]
+      x-br: [BR-70]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [allowed]
+                properties:
+                  allowed: { type: boolean }
+                  blocking_session_id: { type: [string, 'null'], format: uuid }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/groups:
+    get:
+      tags: [EP-01 Tài khoản & đồng ý]
+      operationId: listMyGroups
+      summary: Nhóm của tôi kèm vai trò theo từng nhóm
+      x-us: [US-01.04, US-02.06]
+      x-br: [BR-75, BR-114, BR-115]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/MyGroup' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/data:
+    get:
+      tags: [EP-01 Tài khoản & đồng ý]
+      operationId: getMyData
+      summary: Dữ liệu của tôi (loại dữ liệu đang lưu, thời hạn, ai thấy + dữ liệu cụ thể, lọc theo nhóm)
+      x-us: [US-01.08]
+      x-br: [BR-53]
+      parameters:
+        - { name: group_id, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: user_id, in: query, required: false, description: 'Chỉ để kiểm AC-01.08.3 — khác người gọi → 403', schema: { type: string } }
+      responses:
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/MyDataSummary' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/data/export:
+    post:
+      tags: [EP-01 Tài khoản & đồng ý]
+      operationId: exportMyData
+      summary: Xuất dữ liệu của tôi (Should)
+      x-moscow: Should
+      x-us: [US-01.09]
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '202': { description: Đang tạo tệp; nhận thông báo khi xong }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooMany' }
+  /me/access-log:
+    get:
+      tags: [EP-01 Tài khoản & đồng ý]
+      operationId: getMyAccessLog
+      summary: Ai đã xem dữ liệu của tôi (Should)
+      x-moscow: Should
+      x-us: [US-01.11]
+      x-br: [BR-73]
+      parameters: [ { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  next_cursor: { type: [string, 'null'] }
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AccessLogEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/devices:
+    put:
+      tags: [EP-04 Thông báo & giải trình]
+      operationId: registerDevice
+      summary: Đăng ký token push (tạo/cập nhật SNS platform endpoint)
+      x-us: [US-04.01]
+      x-br: [BR-27, BR-82]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [platform, push_token]
+              properties:
+                platform: { type: string, enum: [IOS, ANDROID] }
+                push_token: { type: string }
+      responses:
+        '204': { description: Đã đăng ký }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /invites/{code}:
+    get:
+      tags: [EP-01 Tài khoản & đồng ý]
+      operationId: previewInvite
+      summary: Nhập mã nhóm → xem nội dung đồng ý (chưa là thành viên)
+      x-us: [US-02.03, US-01.05]
+      x-br: [BR-06, BR-75, BR-76]
+      parameters:
+        - { name: code, in: path, required: true, schema: { type: string, pattern: '^[A-HJ-NP-Z2-9]{8}$' } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ConsentDocument' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooMany' }
+  /groups/{group_id}/consent:
+    post:
+      tags: [EP-01 Tài khoản & đồng ý]
+      operationId: acceptConsent
+      summary: Đồng ý minh bạch → thành viên (kiểm tra trần 10 và giới hạn 1 nhóm tại lúc này)
+      x-us: [US-01.05, US-01.06]
+      x-br: [BR-06, BR-74, BR-75, BR-76, BR-114]
+      parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [consent_version]
+              properties:
+                consent_version: { type: integer }
+                invite_code: { type: string, description: Bắt buộc khi vào lần đầu; bỏ trống khi đồng ý lại (US-01.06) }
+                accepted_items: { type: array, items: { type: string }, description: Mã từng mục đã tích (AC-01.05.x) }
+      responses:
+        '201': { description: Đã là thành viên, content: { application/json: { schema: { $ref: '#/components/schemas/MyGroup' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'GROUP_FULL | ALREADY_IN_GROUP | OWNER_OF_THIS_GROUP | CONSENT_VERSION_STALE'
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+    delete:
+      tags: [EP-01 Tài khoản & đồng ý]
+      operationId: withdrawConsent
+      summary: Rút đồng ý và rời nhóm (nếu đang trong phiên → WITHDRAWN, BR-26)
+      x-us: [US-01.07]
+      x-br: [BR-26, BR-32, BR-37, BR-48, BR-59, BR-74]
+      parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '200':
+          description: 'Đã rời nhóm. `sessions` = phiên đang chạy bị chuyển WITHDRAWN (after_forfeit → vẫn ngắt chuỗi, D-23). Đổi từ 204 (2026-10-20).'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  group_id: { type: string, format: uuid }
+                  left_at: { type: string, format: date-time }
+                  sessions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        session_id: { type: string, format: uuid }
+                        state: { type: string, enum: [WITHDRAWN] }
+                        after_forfeit: { type: boolean }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------- EP-02 ----------------
+  /groups:
+    post:
+      tags: [EP-02 Nhóm & lịch]
+      operationId: createGroup
+      summary: Tạo nhóm (người tạo là chủ nhóm, không là thành viên)
+      x-us: [US-02.01]
+      x-br: [BR-74, BR-75, BR-114]
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GroupInput' } } }
+      responses:
+        '201': { description: Đã tạo, content: { application/json: { schema: { $ref: '#/components/schemas/GroupOwnerView' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { description: MAX_GROUPS_OWNED, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /groups/{group_id}:
+    get:
+      tags: [EP-02 Nhóm & lịch]
+      operationId: getGroup
+      summary: Thông tin nhóm (theo vai trò người gọi)
+      x-us: [US-02.06]
+      x-br: [BR-74, BR-114]
+      parameters: [ { $ref: '#/components/parameters/GroupId' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/GroupOwnerView'
+                  - $ref: '#/components/schemas/GroupMemberView'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [EP-02 Nhóm & lịch]
+      operationId: updateGroup
+      summary: Sửa thông tin nhóm; đổi nội dung đồng ý → tăng consent_version (Should)
+      x-moscow: Should
+      x-us: [US-02.02, US-01.06]
+      x-br: [BR-06, BR-71]
+      parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/IfMatch' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GroupInput' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/GroupOwnerView' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [EP-02 Nhóm & lịch]
+      operationId: dissolveGroup
+      summary: Giải tán nhóm (Should)
+      x-moscow: Should
+      x-us: [US-02.09]
+      x-br: [BR-29, BR-62, BR-80]
+      parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '204': { description: Đã giải tán }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: SESSION_IN_PROGRESS, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /groups/{group_id}/invite-code:
+    get:
+      tags: [EP-02 Nhóm & lịch]
+      operationId: getInviteCode
+      summary: Xem mã mời (chủ nhóm)
+      x-us: [US-02.03]
+      x-br: [BR-76]
+      parameters: [ { $ref: '#/components/parameters/GroupId' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/InviteCode' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [EP-02 Nhóm & lịch]
+      operationId: rotateInviteCode
+      summary: Đổi mã mời (mã cũ hết hiệu lực ngay)
+      x-us: [US-02.03]
+      x-br: [BR-76]
+      parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '201': { description: Mã mới, content: { application/json: { schema: { $ref: '#/components/schemas/InviteCode' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /groups/{group_id}/email-invites:
+    post:
+      tags: [EP-02 Nhóm & lịch]
+      operationId: sendEmailInvites
+      summary: Mời bằng email qua SES (Should)
+      x-moscow: Should
+      x-us: [US-02.04]
+      x-br: [BR-74, BR-75, BR-76, BR-122]
+      parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emails]
+              properties:
+                emails: { type: array, minItems: 1, maxItems: 10, items: { type: string, format: email } }
+      responses:
+        '202': { description: Đã xếp hàng gửi }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/TooMany' }
+  /groups/{group_id}/members:
+    get:
+      tags: [EP-02 Nhóm & lịch]
+      operationId: listGroupMembers
+      summary: Thành viên nhóm — chủ nhóm đầu, còn lại theo tên (BR-115). Không Coins/chuỗi.
+      x-us: [US-02.06]
+      x-br: [BR-53, BR-74, BR-99, BR-115]
+      parameters: [ { $ref: '#/components/parameters/GroupId' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [owner, members, member_count]
+                properties:
+                  owner: { $ref: '#/components/schemas/PublicUser' }
+                  members: { type: array, items: { $ref: '#/components/schemas/PublicUser' } }
+                  member_count: { $ref: '#/components/schemas/MemberCount' }
+                  below_minimum: { type: [boolean, 'null'], description: 'Chỉ có giá trị khi người gọi là chủ nhóm (BR-74, cảnh báo dưới 4)' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /groups/{group_id}/members/{user_id}:
+    delete:
+      tags: [EP-02 Nhóm & lịch]
+      operationId: removeMember
+      summary: Chủ nhóm xóa thành viên (giữa phiên → BR-77)
+      x-us: [US-02.08]
+      x-br: [BR-32, BR-59, BR-74, BR-77]
+      parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/UserId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '202':
+          description: 'Người này đang có trạng thái chưa kết thúc trong phiên đang chạy → hiệu lực sau ends_at (BR-77, thêm 2026-10-20)'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id: { type: string, format: uuid }
+                  effective: { type: string, enum: [AFTER_SESSION] }
+                  effective_at: { type: string, format: date-time }
+                  session_id: { type: string, format: uuid }
+        '204': { description: Đã xóa (hiệu lực ngay) }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'CANNOT_REMOVE_SELF — gợi ý "Giải tán nhóm" (AC-02.08.3)', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /groups/{group_id}/schedules:
+    get:
+      tags: [EP-02 Nhóm & lịch]
+      operationId: listSchedules
+      summary: Lịch phiên của nhóm trong khoảng thời gian
+      x-us: [US-02.10, US-02.11]
+      parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/From' }, { $ref: '#/components/parameters/To' } ]
+      responses:
+        '200':
+          description: OK — theo started_at tăng dần
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/SessionSummary' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [EP-02 Nhóm & lịch]
+      operationId: createSchedule
+      summary: Đặt lịch một lần (Must) hoặc lặp lại (Should, có `recurrence`)
+      x-us: [US-02.10, US-02.10b]
+      x-br: [BR-01, BR-02, BR-03, BR-04, BR-78, BR-79, BR-108, BR-113]
+      parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ScheduleInput' } } }
+      responses:
+        '201': { description: Đã tạo, content: { application/json: { schema: { $ref: '#/components/schemas/Schedule' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: SCHEDULE_OVERLAP, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '422': { description: 'START_IN_PAST | DURATION_OUT_OF_RANGE', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /sessions/{session_id}:
+    get:
+      tags: [EP-03 Phiên tập trung]
+      operationId: getSession
+      summary: Thông tin phiên (trạng thái, mốc giờ server) — không có trạng thái từng người
+      x-us: [US-03.01, US-03.10, US-08.10]
+      x-br: [BR-04, BR-63, BR-114, BR-116]
+      parameters: [ { $ref: '#/components/parameters/SessionId' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SessionSummary' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [EP-02 Nhóm & lịch]
+      operationId: updateSession
+      summary: Sửa giờ/thời lượng phiên SCHEDULED (chủ nhóm)
+      x-us: [US-02.11]
+      x-br: [BR-02, BR-04, BR-65, BR-78, BR-79]
+      parameters: [ { $ref: '#/components/parameters/SessionId' }, { $ref: '#/components/parameters/IfMatch' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                started_at: { type: string, format: date-time }
+                duration_min: { $ref: '#/components/schemas/DurationMin' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SessionSummary' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: 'SESSION_ALREADY_STARTED | SCHEDULE_OVERLAP | VERSION_CONFLICT', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+    delete:
+      tags: [EP-02 Nhóm & lịch]
+      operationId: cancelSession
+      summary: Hủy phiên SCHEDULED (chủ nhóm); người đang WAITING → VOID
+      x-us: [US-02.11]
+      x-br: [BR-29, BR-63]
+      parameters: [ { $ref: '#/components/parameters/SessionId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '204': { description: Đã hủy }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: SESSION_ALREADY_STARTED, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /groups/{group_id}/abuse-reports:
+    post:
+      tags: [EP-02 Nhóm & lịch]
+      operationId: reportAbuse
+      summary: Báo cáo nhóm/hồ sơ lạm dụng (Should)
+      x-moscow: Should
+      x-us: [US-02.13]
+      x-br: [BR-109]
+      parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_type, category]
+              properties:
+                target_type: { type: string, enum: [GROUP, PROFILE], description: 'GROUP → abuse_reports.target_group_id; PROFILE → target_user_id' }
+                target_user_id: { type: string, format: uuid }
+                category: { type: string, enum: [INAPPROPRIATE_NAME, INAPPROPRIATE_AVATAR, MISUSE_SURVEILLANCE, OTHER], description: abuse_reports.category }
+                body: { type: string, maxLength: 1000, description: abuse_reports.body }
+      responses:
+        '201': { description: Đã ghi nhận }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: ALREADY_REPORTED, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  # ---------------- EP-03 ----------------
+  /me/sessions/upcoming:
+    get:
+      tags: [EP-03 Phiên tập trung]
+      operationId: getMyUpcomingSession
+      summary: Phiên kế tiếp của nhóm tôi là thành viên (trang chủ V-03)
+      x-us: [US-03.01]
+      x-br: [BR-63, BR-114]
+      responses:
+        '200':
+          description: OK (null nếu không có)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SessionSummary'
+                  - type: 'null'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/sessions:
+    get:
+      tags: [EP-03 Phiên tập trung]
+      operationId: listMySessionHistory
+      summary: Lịch sử phiên của tôi (Should) — mới nhất trước
+      x-moscow: Should
+      x-us: [US-03.14]
+      x-br: [BR-41, BR-119]
+      parameters: [ { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  next_cursor: { type: [string, 'null'] }
+                  items: { type: array, items: { $ref: '#/components/schemas/MySessionResult' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /sessions/{session_id}/result:
+    get:
+      tags: [EP-03 Phiên tập trung]
+      operationId: getMySessionResult
+      summary: Kết quả phiên của tôi (V-12/V-13/V-14) — có Coins vì là dữ liệu của chính người gọi
+      x-us: [US-03.10, US-06.01, US-05.03, US-05.05, US-03.12]
+      x-br: [BR-23, BR-24, BR-32, BR-37, BR-41, BR-68, BR-115]
+      parameters: [ { $ref: '#/components/parameters/SessionId' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/MySessionResult' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: 'OWNER_CANNOT_JOIN_SESSION (chủ nhóm dùng owner-detail) | FORBIDDEN_GROUP', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '409': { description: SESSION_NOT_FINISHED, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /sessions/{session_id}/owner-detail:
+    get:
+      tags: [EP-08 Báo cáo]
+      operationId: getOwnerSessionDetail
+      summary: Chi tiết phiên cho chủ nhóm (V-46) — chỉ sự kiện đã chốt, không realtime, không Coins/chuỗi
+      x-us: [US-08.10, US-04.06]
+      x-br: [BR-53, BR-61, BR-73, BR-114, BR-115, BR-116, BR-123]
+      parameters: [ { $ref: '#/components/parameters/SessionId' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SessionOwnerView' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------- EP-04 ----------------
+  /me/notifications:
+    get:
+      tags: [EP-04 Thông báo & giải trình]
+      operationId: listNotifications
+      summary: Hộp thông báo (mọi thông báo đều vào đây, BR-81) — mới nhất trước
+      x-us: [US-04.01, US-03.09, US-04.09]
+      x-br: [BR-27, BR-38, BR-81, BR-82, BR-91]
+      parameters: [ { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  next_cursor: { type: [string, 'null'] }
+                  unread_count: { type: integer }
+                  items: { type: array, items: { $ref: '#/components/schemas/Notification' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/notifications/read:
+    post:
+      tags: [EP-04 Thông báo & giải trình]
+      operationId: markNotificationsRead
+      summary: Đánh dấu đã đọc
+      x-us: [US-04.01]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids: { type: array, items: { type: string, format: uuid } }
+                up_to: { type: string, format: date-time }
+      responses:
+        '204': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /sessions/{session_id}/explanation:
+    get:
+      tags: [EP-04 Thông báo & giải trình]
+      operationId: getMyExplanation
+      summary: Thành viên đọc lại giải trình của chính mình kèm lịch sử bản cũ (thêm 2026-10-20)
+      x-us: [US-04.05]
+      x-br: [BR-85]
+      parameters: [ { $ref: '#/components/parameters/SessionId' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/MyExplanation' } } } }
+        '400': { description: 'NOT_EXITED_IN_SESSION — sự kiện của tôi không phải EXITED', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: Chưa gửi giải trình, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    put:
+      tags: [EP-04 Thông báo & giải trình]
+      operationId: upsertExplanation
+      summary: Thành viên EXITED gửi/sửa giải trình
+      x-us: [US-04.05]
+      x-br: [BR-32, BR-54]
+      parameters: [ { $ref: '#/components/parameters/SessionId' }, { $ref: '#/components/parameters/IfMatch' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 500, description: 'explanations.body (explanation_max_chars)' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Explanation' } } } }
+        '400': { description: 'NOT_EXITED_IN_SESSION — loại sự kiện không phải EXITED (AC-04.05.3, đổi từ 403 ngày 2026-10-20)', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: 'FORBIDDEN_GROUP (sự kiện của người khác) | NOT_EXITED_IN_SESSION (chủ nhóm)', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '409': { description: 'EXPLANATION_WINDOW_CLOSED | VERSION_CONFLICT', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /sessions/{session_id}/explanations:
+    get:
+      tags: [EP-04 Thông báo & giải trình]
+      operationId: listExplanationsForOwner
+      summary: Chủ nhóm xem giải trình kèm sự kiện thoát (V-47); mỗi lần xem ghi nhật ký truy cập
+      x-us: [US-04.06]
+      x-br: [BR-61, BR-73, BR-115]
+      parameters: [ { $ref: '#/components/parameters/SessionId' } ]
+      responses:
+        '200':
+          description: OK — theo giờ sự kiện (ngoại lệ 2 của BR-115)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Explanation' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /sessions/{session_id}/appeals:
+    post:
+      tags: [EP-04 Thông báo & giải trình]
+      operationId: createAppeal
+      summary: Khiếu nại sự kiện thoát bị ghi nhầm (Should)
+      x-moscow: Should
+      x-us: [US-04.07]
+      x-br: [BR-32, BR-35, BR-86]
+      parameters: [ { $ref: '#/components/parameters/SessionId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 1000, description: appeals.body }
+                suspect_system_error: { type: boolean, default: false, description: 'true → tạo ở ESCALATED (BR-110)' }
+      responses:
+        '201': { description: Đã tạo, content: { application/json: { schema: { $ref: '#/components/schemas/Appeal' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: 'APPEAL_EXISTS | APPEAL_WINDOW_CLOSED', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /appeals/{appeal_id}/decision:
+    post:
+      tags: [EP-04 Thông báo & giải trình]
+      operationId: decideAppeal
+      summary: Chủ nhóm miễn trừ / bác / chuyển quản trị (Should). Miễn trừ → EXEMPTION_GRANTED
+      x-moscow: Should
+      x-us: [US-04.08]
+      x-br: [BR-35, BR-43, BR-44, BR-86, BR-87, BR-88]
+      parameters:
+        - { name: appeal_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [EXEMPT, REJECT, ESCALATE], description: 'EXEMPT → EXEMPTED, REJECT → REJECTED, ESCALATE → ESCALATED' }
+                decision_reason: { type: string, minLength: 1, maxLength: 500, description: 'appeals.decision_reason; bắt buộc khi EXEMPT/REJECT' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Appeal' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: APPEAL_ALREADY_DECIDED, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  # ---------------- EP-05 ----------------
+  /me/achievements:
+    get:
+      tags: [EP-05 Thành tích]
+      operationId: getMyAchievements
+      summary: Chuỗi hiện tại, dài nhất, mốc kế tiếp, huy hiệu (V-26, V-27) — chỉ của chính tôi
+      x-us: [US-05.04, US-05.05, US-05.06]
+      x-br: [BR-49, BR-51, BR-52]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/MyAchievements' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/attendance:
+    get:
+      tags: [EP-05 Thành tích]
+      operationId: getMyAttendance
+      summary: Điểm danh của tôi theo tháng (Should)
+      x-moscow: Should
+      x-us: [US-05.02]
+      x-br: [BR-46]
+      parameters: [ { $ref: '#/components/parameters/MonthQuery' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AttendanceMonth' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/achievements/history:
+    get:
+      tags: [EP-05 Thành tích]
+      operationId: getAchievementHistory
+      summary: Lịch sử chuỗi/huy hiệu (Should)
+      x-moscow: Should
+      x-us: [US-05.08]
+      x-br: [BR-47, BR-49, BR-50, BR-52, BR-92]
+      parameters: [ { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  next_cursor: { type: [string, 'null'] }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string, enum: [STREAK_UP, STREAK_BROKEN, BADGE_EARNED] }
+                        value: { type: integer }
+                        badge_code: { type: [string, 'null'] }
+                        server_ts: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/badges/{badge_code}/display:
+    put:
+      tags: [EP-05 Thành tích]
+      operationId: setBadgeDisplay
+      summary: Bật/tắt hiện huy hiệu trên hồ sơ công khai (Should)
+      x-moscow: Should
+      x-us: [US-05.06]
+      x-br: [BR-99]
+      parameters:
+        - { name: badge_code, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [visible]
+              properties:
+                visible: { type: boolean }
+      responses:
+        '204': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /groups/{group_id}/members/{user_id}/attendance:
+    get:
+      tags: [EP-05 Thành tích]
+      operationId: ownerGetMemberAttendance
+      summary: Chủ nhóm xem điểm danh và kết quả phiên của thành viên nhóm mình (Should) — không chuỗi/Coins
+      x-moscow: Should
+      x-us: [US-05.09]
+      x-br: [BR-46, BR-53, BR-57, BR-59, BR-73, BR-99]
+      parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/UserId' }, { $ref: '#/components/parameters/MonthQuery' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/MemberAttendanceOwnerView' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ---------------- EP-06 ----------------
+  /me/coins:
+    get:
+      tags: [EP-06 Coins & Shop]
+      operationId: getMyCoins
+      summary: Số dư và sổ cái Coins của tôi (V-29) — mới nhất trước
+      x-us: [US-06.02]
+      x-br: [BR-43, BR-44, BR-53]
+      parameters: [ { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [balance, items]
+                properties:
+                  balance: { type: integer, minimum: 0 }
+                  next_cursor: { type: [string, 'null'] }
+                  items: { type: array, items: { $ref: '#/components/schemas/CoinEntry' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /shop/items:
+    get:
+      tags: [EP-06 Coins & Shop]
+      operationId: listShopItems
+      summary: Duyệt Shop (khung, hình nền; danh hiệu = Could)
+      x-us: [US-06.03]
+      parameters:
+        - { name: kind, in: query, schema: { $ref: '#/components/schemas/ItemKind' } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/ShopItem' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /shop/purchases:
+    post:
+      tags: [EP-06 Coins & Shop]
+      operationId: purchaseItem
+      summary: Mua đồ (một dòng sổ cái SHOP_PURCHASE âm, giao dịch nguyên tử)
+      x-us: [US-06.04]
+      x-br: [BR-44, BR-45]
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [item_id, expected_price]
+              properties:
+                item_id: { type: string, format: uuid }
+                expected_price: { type: integer, minimum: 0 }
+      responses:
+        '201':
+          description: Đã mua
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  item_id: { type: string, format: uuid }
+                  balance: { type: integer, minimum: 0 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { description: 'ALREADY_OWNED | PRICE_CHANGED', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '422': { description: 'INSUFFICIENT_COINS | ITEM_UNAVAILABLE', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /me/inventory:
+    get:
+      tags: [EP-06 Coins & Shop]
+      operationId: getMyInventory
+      summary: Đồ của tôi
+      x-us: [US-06.05, US-07.04]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/OwnedItem' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/equipment:
+    put:
+      tags: [EP-06 Coins & Shop]
+      operationId: setEquipment
+      summary: Trang bị / gỡ (null = gỡ)
+      x-us: [US-06.05, US-07.04]
+      x-br: [BR-95, BR-96]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                frame_item_id: { type: [string, 'null'], format: uuid }
+                background_item_id: { type: [string, 'null'], format: uuid }
+                title_item_id: { type: [string, 'null'], format: uuid, description: 'user_equipped theo kind (AVATAR_FRAME/BACKGROUND/TITLE); null = về món mặc định (BR-95)' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/MeProfile' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { description: ITEM_NOT_OWNED, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  # ---------------- EP-07 ----------------
+  /users/{user_id}/public-profile:
+    get:
+      tags: [EP-07 Hồ sơ & nhật ký]
+      operationId: getPublicProfile
+      summary: Hồ sơ công khai người cùng nhóm (V-32) — không Coins; chủ nhóm gọi thì không có chuỗi; không cùng nhóm → 403
+      x-us: [US-07.06, US-07.04, US-01.03, US-06.05]
+      x-br: [BR-53, BR-99]
+      parameters: [ { $ref: '#/components/parameters/UserId' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PublicProfile' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /me/journal:
+    get:
+      tags: [EP-07 Hồ sơ & nhật ký]
+      operationId: listJournal
+      summary: Xem lại nhật ký (Should) — chỉ chủ sở hữu; không có endpoint nào cho chủ nhóm/admin (US-07.10)
+      x-moscow: Should
+      x-us: [US-07.08, US-07.10]
+      x-br: [BR-100]
+      parameters: [ { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  next_cursor: { type: [string, 'null'] }
+                  items: { type: array, items: { $ref: '#/components/schemas/JournalEntry' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/journal/{date}:
+    put:
+      tags: [EP-07 Hồ sơ & nhật ký]
+      operationId: upsertJournal
+      summary: Viết (Must) / sửa (Should) nhật ký của ngày — tối đa 1 mục/ngày
+      x-us: [US-07.07, US-07.08]
+      x-br: [BR-100]
+      parameters:
+        - { name: date, in: path, required: true, schema: { type: string, format: date } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string, minLength: 1, maxLength: 5000, description: 'journal_max_chars (BR-100); lưu mã hóa ở journals.ciphertext' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/JournalEntry' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { description: 'JOURNAL_TOO_LONG | JOURNAL_DATE_INVALID', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    delete:
+      tags: [EP-07 Hồ sơ & nhật ký]
+      operationId: deleteJournal
+      summary: Xóa mục nhật ký (Should)
+      x-moscow: Should
+      x-us: [US-07.09]
+      x-br: [BR-100]
+      parameters:
+        - { name: date, in: path, required: true, schema: { type: string, format: date } }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      responses:
+        '204': { description: Đã xóa }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------- EP-08 ----------------
+  /groups/{group_id}/reports:
+    get:
+      tags: [EP-08 Báo cáo]
+      operationId: listGroupReports
+      summary: Các kỳ báo cáo của nhóm (chủ nhóm 13 tháng; thành viên theo BR-103)
+      x-us: [US-08.01, US-08.02, US-08.09]
+      x-br: [BR-58, BR-103, BR-105]
+      parameters: [ { $ref: '#/components/parameters/GroupId' } ]
+      responses:
+        '200':
+          description: OK — mới nhất trước
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/ReportPeriod' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /groups/{group_id}/reports/{month}:
+    get:
+      tags: [EP-08 Báo cáo]
+      operationId: getGroupReport
+      summary: Báo cáo tháng — chủ nhóm nhận mọi dòng (không Coins/chuỗi); thành viên nhận dòng của mình (+ tổng nhóm nếu đủ ngưỡng, Should)
+      x-us: [US-08.02, US-08.03, US-08.04, US-08.05, US-08.08]
+      x-br: [BR-53, BR-56, BR-57, BR-61, BR-73, BR-102, BR-103, BR-104, BR-115]
+      parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/Month' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ReportOwnerView'
+                  - $ref: '#/components/schemas/ReportMemberView'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: 'REPORT_NOT_READY | NOT_FOUND', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /groups/{group_id}/reports/{month}/members/{user_id}:
+    get:
+      tags: [EP-08 Báo cáo]
+      operationId: getReportMemberRow
+      summary: Chi tiết dòng báo cáo một thành viên (V-49, chủ nhóm); ghi nhật ký truy cập
+      x-us: [US-08.02]
+      x-br: [BR-53, BR-61, BR-73]
+      parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/Month' }, { $ref: '#/components/parameters/UserId' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ReportRowOwnerView' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /groups/{group_id}/reports/{month}/pdf:
+    get:
+      tags: [EP-08 Báo cáo]
+      operationId: downloadReportPdf
+      summary: Tải PDF trong app (Should) — URL S3 ký sẵn ngắn hạn
+      x-moscow: Should
+      x-us: [US-08.06]
+      x-br: [BR-57, BR-61, BR-73, BR-105]
+      parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/Month' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string, format: uri }
+                  expires_at: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ---------------- EP-09 (Should) ----------------
+  /admin/users/{user_id}/status:
+    put:
+      tags: [EP-09 Quản trị]
+      operationId: adminSetUserStatus
+      summary: Khóa / mở tài khoản (Should)
+      x-moscow: Should
+      x-us: [US-09.02]
+      x-br: [BR-09, BR-70, BR-114]
+      parameters: [ { $ref: '#/components/parameters/UserId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, note]
+              properties:
+                status: { type: string, enum: [ACTIVE, LOCKED] }
+                note: { type: string, maxLength: 500 }
+      responses:
+        '204': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/shop/items:
+    post:
+      tags: [EP-09 Quản trị]
+      operationId: adminCreateShopItem
+      summary: Thêm món Shop (Should)
+      x-moscow: Should
+      x-us: [US-09.03]
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ShopItem' } } }
+      responses:
+        '201': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/coins/adjustments:
+    post:
+      tags: [EP-09 Quản trị]
+      operationId: adminAdjustCoins
+      summary: Điều chỉnh Coins có kiểm toán (Should) — một dòng sổ cái ADMIN_ADJUST
+      x-moscow: Should
+      x-us: [US-09.04]
+      x-br: [BR-44, BR-45]
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, amount, reason]
+              properties:
+                user_id: { type: string, format: uuid }
+                amount: { type: integer }
+                reason: { type: string, minLength: 5 }
+      responses:
+        '201': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { description: BALANCE_WOULD_BE_NEGATIVE, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /admin/cases:
+    get:
+      tags: [EP-09 Quản trị]
+      operationId: adminListCases
+      summary: Khiếu nại chuyển lên và báo cáo lạm dụng (Should)
+      x-moscow: Should
+      x-us: [US-09.05, US-09.06]
+      x-br: [BR-86, BR-109]
+      parameters: [ { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  next_cursor: { type: [string, 'null'] }
+                  items: { type: array, items: { type: object } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/access-log:
+    get:
+      tags: [EP-09 Quản trị]
+      operationId: adminAccessLog
+      summary: Nhật ký truy cập (Should)
+      x-moscow: Should
+      x-us: [US-09.07]
+      x-br: [BR-73]
+      parameters: [ { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  next_cursor: { type: [string, 'null'] }
+                  items: { type: array, items: { $ref: '#/components/schemas/AccessLogEntry' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+components:
+  securitySchemes:
+    cognitoJwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token Amazon Cognito User Pool. Quyền admin = nhóm Cognito `admin` (claim cognito:groups, US-09.01) — mọi /admin/* trả 403 nếu thiếu. Vai trò chủ nhóm/thành viên tính theo từng nhóm ở server (D-10), không nằm trong token.
+  parameters:
+    GroupId: { name: group_id, in: path, required: true, schema: { type: string, format: uuid } }
+    UserId: { name: user_id, in: path, required: true, schema: { type: string, format: uuid } }
+    SessionId: { name: session_id, in: path, required: true, schema: { type: string, format: uuid } }
+    Month: { name: month, in: path, required: true, schema: { type: string, pattern: '^\d{4}-\d{2}$' } }
+    MonthQuery: { name: month, in: query, required: true, schema: { type: string, pattern: '^\d{4}-\d{2}$' } }
+    Cursor: { name: cursor, in: query, required: false, description: 'Con trỏ mờ lấy từ next_cursor', schema: { type: string } }
+    Limit: { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+    From: { name: from, in: query, required: false, schema: { type: string, format: date-time } }
+    To: { name: to, in: query, required: false, schema: { type: string, format: date-time } }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: UUID v4 do client sinh. Server giữ 24 giờ theo (user, key); cùng khóa + cùng thân → trả lại phản hồi cũ; khác thân → 422 IDEMPOTENCY_MISMATCH.
+      schema: { type: string, format: uuid }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      description: ETag từ lần GET trước; lệch → 409 VERSION_CONFLICT.
+      schema: { type: string }
+  responses:
+    BadRequest:
+      description: VALIDATION_FAILED
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unauthorized:
+      description: 'UNAUTHENTICATED | TOKEN_EXPIRED'
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: 'FORBIDDEN_GROUP | NOT_GROUP_OWNER | ACCOUNT_LOCKED | CONSENT_REQUIRED | OWNER_CANNOT_JOIN_SESSION | ADMIN_REQUIRED'
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: 'NOT_FOUND | INVITE_CODE_INVALID'
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Conflict:
+      description: 'VERSION_CONFLICT | SESSION_IN_PROGRESS'
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unprocessable:
+      description: 'Vi phạm quy tắc nghiệp vụ | IDEMPOTENCY_MISMATCH'
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } }
+    TooMany:
+      description: 'RATE_LIMITED | INVITE_CODE_LOCKED (BR-76: 5 lần sai trong 15 phút → khóa 15 phút)'
+      headers:
+        Retry-After:
+          description: Số giây chờ
+          schema: { type: integer }
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } }
+  schemas:
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_FAILED
+        - UNAUTHENTICATED
+        - TOKEN_EXPIRED
+        - ACCOUNT_LOCKED
+        - ADMIN_REQUIRED
+        - FORBIDDEN_GROUP
+        - NOT_GROUP_OWNER
+        - CONSENT_REQUIRED
+        - OWNER_CANNOT_JOIN_SESSION
+        - NOT_FOUND
+        - INVITE_CODE_INVALID
+        - INVITE_CODE_LOCKED
+        - GROUP_FULL
+        - ALREADY_IN_GROUP
+        - OWNER_OF_THIS_GROUP
+        - CONSENT_VERSION_STALE
+        - MAX_GROUPS_OWNED
+        - SCHEDULE_OVERLAP
+        - START_IN_PAST
+        - DURATION_OUT_OF_RANGE
+        - SESSION_ALREADY_STARTED
+        - SESSION_IN_PROGRESS
+        - SESSION_NOT_FINISHED
+        - NOT_EXITED_IN_SESSION
+        - EXPLANATION_WINDOW_CLOSED
+        - APPEAL_EXISTS
+        - APPEAL_WINDOW_CLOSED
+        - APPEAL_ALREADY_DECIDED
+        - INSUFFICIENT_COINS
+        - ITEM_UNAVAILABLE
+        - ALREADY_OWNED
+        - PRICE_CHANGED
+        - ITEM_NOT_OWNED
+        - BALANCE_WOULD_BE_NEGATIVE
+        - JOURNAL_TOO_LONG
+        - JOURNAL_DATE_INVALID
+        - REPORT_NOT_READY
+        - ALREADY_REPORTED
+        - VERSION_CONFLICT
+        - IDEMPOTENCY_MISMATCH
+        - RATE_LIMITED
+    Error:
+      type: object
+      description: RFC 9457 problem+json, thêm `code` nghiệp vụ ổn định.
+      required: [type, title, status, code]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        code: { $ref: '#/components/schemas/ErrorCode' }
+        detail: { type: string, description: 'Câu tiếng Việt hiển thị được, vd. "Bạn đang ở nhóm A. Rời nhóm A trước khi tham gia nhóm khác."' }
+        br: { type: string, description: 'BR gây lỗi, vd. BR-75' }
+        request_id: { type: string }
+    PublicUser:
+      type: object
+      additionalProperties: false
+      required: [user_id, display_name]
+      description: Dùng cho mọi góc nhìn về người khác. Không có Coins/chuỗi.
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        avatar_url: { type: [string, 'null'], format: uri }
+        frame_item_id: { type: [string, 'null'] }
+        background_item_id: { type: [string, 'null'] }
+        title_item_id: { type: [string, 'null'] }
+        joined_at: { type: [string, 'null'], format: date-time }
+    PublicProfile:
+      type: object
+      additionalProperties: false
+      description: 'BR-99: chỉ huy hiệu/chuỗi do chính người đó bật hiển thị. Người gọi là chủ nhóm → `shown_streak` luôn null (BR-53b).'
+      properties:
+        user: { $ref: '#/components/schemas/PublicUser' }
+        role: { type: string, enum: [OWNER, MEMBER], description: 'Vai trò của người được xem trong nhóm chung (V-32, thêm 2026-10-20)' }
+        shown_badges: { type: array, items: { type: string } }
+        shown_streak: { type: [integer, 'null'] }
+    MeProfile:
+      type: object
+      description: Dữ liệu của chính người gọi — được có Coins/chuỗi.
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        email: { type: string, format: email }
+        avatar_url: { type: [string, 'null'], format: uri }
+        frame_item_id: { type: [string, 'null'] }
+        background_item_id: { type: [string, 'null'] }
+        title_item_id: { type: [string, 'null'] }
+        coins_balance: { type: integer, minimum: 0 }
+        current_streak: { type: integer, minimum: 0 }
+        longest_streak: { type: integer, minimum: 0 }
+        show_streak: { type: boolean, description: 'BR-99: tự bật hiện chuỗi trên hồ sơ công khai (thêm 2026-10-20)' }
+        status: { type: string, enum: [ACTIVE, LOCKED] }
+    MyGroup:
+      type: object
+      required: [group_id, name, role]
+      properties:
+        group_id: { type: string, format: uuid }
+        name: { type: string }
+        role: { type: string, enum: [OWNER, MEMBER] }
+        status: { type: string, enum: [ACTIVE, SCHEDULE_SUSPENDED, DISSOLVING], description: 'AC-02.06.1 (thêm 2026-10-20)' }
+        member_count: { $ref: '#/components/schemas/MemberCount' }
+        below_minimum: { type: [boolean, 'null'], description: 'Chỉ khi role = OWNER: dưới 4 thành viên (BR-74)' }
+        month_completion_rate: { type: [number, 'null'], description: 'AC-02.06.6/BR-117: tỉ lệ hoàn thành phiên tháng hiện tại của RIÊNG nhóm này, tạm tính đến hôm qua (chủ nhóm: cả nhóm; thành viên: của mình). Không có chỉ số cộng nhiều nhóm.' }
+        consent_version: { type: integer }
+        needs_reconsent: { type: boolean, description: US-01.06 (Should) }
+        next_session:
+          oneOf:
+            - $ref: '#/components/schemas/SessionSummary'
+            - type: 'null'
+    GroupInput:
+      type: object
+      required: [name, report_purpose]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 60 }
+        report_purpose: { type: string, minLength: 1, maxLength: 500, description: 'Mục đích sử dụng báo cáo, hiện ở màn đồng ý (BR-61, US-08.08)' }
+    GroupOwnerView:
+      type: object
+      additionalProperties: false
+      properties:
+        group_id: { type: string, format: uuid }
+        name: { type: string }
+        report_purpose: { type: string }
+        status: { $ref: '#/components/schemas/GroupStatus' }
+        member_count: { $ref: '#/components/schemas/MemberCount' }
+        below_minimum: { type: boolean }
+        consent_version: { type: integer }
+        invite_code: { type: string }
+        created_at: { type: string, format: date-time }
+    GroupMemberView:
+      type: object
+      additionalProperties: false
+      properties:
+        group_id: { type: string, format: uuid }
+        name: { type: string }
+        report_purpose: { type: string }
+        status: { $ref: '#/components/schemas/GroupStatus' }
+        member_count: { $ref: '#/components/schemas/MemberCount' }
+        owner: { $ref: '#/components/schemas/PublicUser' }
+    InviteCode:
+      type: object
+      properties:
+        code: { type: string, pattern: '^[A-HJ-NP-Z2-9]{8}$' }
+        created_at: { type: string, format: date-time }
+    ConsentDocument:
+      type: object
+      required: [group_id, group_name, consent_version, items]
+      description: 'Nội dung đồng ý minh bạch (V-05): ai thấy gì, ghi gì, không ghi gì, thời hạn lưu (04 §2–§3).'
+      properties:
+        group_id: { type: string, format: uuid }
+        group_name: { type: string }
+        owner_display_name: { type: string }
+        report_purpose: { type: string }
+        consent_version: { type: integer }
+        member_count: { $ref: '#/components/schemas/MemberCount' }
+        is_full: { type: boolean }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: string }
+              text: { type: string }
+              required: { type: boolean }
+    ScheduleInput:
+      type: object
+      required: [start_time, duration_min]
+      properties:
+        start_time: { type: string, format: date-time, description: 'Phiên đơn: = sessions.started_at (BR-04). Lịch lặp: phần giờ → schedules.start_time, phần ngày → schedules.start_date (giờ Asia/Ho_Chi_Minh)' }
+        duration_min: { $ref: '#/components/schemas/DurationMin' }
+        recurrence:
+          description: Should (US-02.10b)
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [weekdays, end_date]
+              properties:
+                weekdays: { type: array, minItems: 1, maxItems: 7, uniqueItems: true, items: { type: integer, minimum: 1, maximum: 7 }, description: 'schedules.weekdays, ISO 1 = Thứ Hai' }
+                end_date: { type: string, format: date, description: 'schedules.end_date, ≤ start_date + recurrence_max_weeks (BR-113)' }
+    Schedule:
+      type: object
+      properties:
+        schedule_id: { type: string, format: uuid }
+        group_id: { type: string, format: uuid }
+        sessions: { type: array, items: { $ref: '#/components/schemas/SessionSummary' } }
+    GroupStatus:
+      type: string
+      description: 'groups.status — HOẠT ĐỘNG / TẠM NGƯNG LỊCH / CHỜ GIẢI TÁN / ĐÃ GIẢI TÁN'
+      enum: [ACTIVE, SCHEDULE_SUSPENDED, DISSOLVING, DISSOLVED]
+    MemberCount:
+      type: integer
+      minimum: 0
+      maximum: 10
+      description: 'Sĩ số = thành viên đang hoạt động, KHÔNG gồm chủ nhóm (BR-74, D-02, D-25). Sàn 4 chỉ cảnh báo, trần 10 chặn cứng.'
+    DurationMin:
+      type: integer
+      enum: [25, 50]
+      description: 'BR-02: chỉ 25 hoặc 50 phút, không cấu hình. Giá trị khác → 422 DURATION_OUT_OF_RANGE'
+    SessionCancelReason:
+      type: string
+      enum: [OWNER_CANCEL, NO_ATTENDEE, SERVER_OUTAGE, GROUP_DISSOLVED, OWNER_LOCKED, ADMIN]
+    AppealStatus:
+      type: string
+      description: 'appeals.status — CHỜ XỬ LÝ / ĐANG XỬ LÝ / CHUYỂN QUẢN TRỊ / MIỄN TRỪ / BÁC'
+      enum: [PENDING, IN_REVIEW, ESCALATED, EXEMPTED, REJECTED]
+    ItemKind:
+      type: string
+      enum: [AVATAR_FRAME, BACKGROUND, TITLE]
+    ItemStatus:
+      type: string
+      description: 'shop_items.status — ĐANG BÁN / ĐÃ ẨN'
+      enum: [ON_SALE, HIDDEN]
+    SessionStatus:
+      type: string
+      enum: [SCHEDULED, COUNTDOWN, ACTIVE, COMPLETED, CANCELLED]
+    MemberFinalState:
+      type: string
+      enum: [COMPLETED, EXITED, LOST, ABSENT, WITHDRAWN, VOID]
+    SessionSummary:
+      type: object
+      required: [session_id, group_id, status, started_at, duration_min]
+      properties:
+        session_id: { type: string, format: uuid }
+        group_id: { type: string, format: uuid }
+        group_name: { type: string }
+        status: { $ref: '#/components/schemas/SessionStatus' }
+        started_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        duration_min: { type: integer }
+        lobby_opens_at: { type: string, format: date-time, description: 'started_at − lobby_open_min (BR-63)' }
+        late_join_deadline: { type: [string, 'null'], format: date-time, description: BR-07 (Should) }
+        forfeited: { type: boolean }
+        cancel_reason: { oneOf: [ { $ref: '#/components/schemas/SessionCancelReason' }, { type: 'null' } ] }
+        server_ts: { type: string, format: date-time }
+    MySessionResult:
+      type: object
+      description: Kết quả của chính người gọi — được có Coins/chuỗi.
+      properties:
+        session_id: { type: string, format: uuid }
+        group_name: { type: string }
+        started_at: { type: string, format: date-time }
+        duration_min: { type: integer }
+        final_state: { $ref: '#/components/schemas/MemberFinalState' }
+        focus_seconds: { type: integer }
+        late_join: { type: boolean }
+        forfeited: { type: boolean }
+        forfeit_trigger_display_name: { type: [string, 'null'] }
+        cancelled_outage_exited: { type: boolean, description: BR-68 }
+        coins_awarded: { type: integer, minimum: 0 }
+        reward_cap_reached: { type: boolean }
+        streak_after: { type: integer }
+        streak_broken: { type: boolean }
+        new_badges: { type: array, items: { type: string } }
+        exempted: { type: boolean }
+        can_explain: { type: boolean }
+        can_appeal: { type: boolean }
+        participants:
+          type: array
+          description: Sắp theo BR-115; chỉ tên + trạng thái cuối, không Coins của người khác
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              display_name: { type: string }
+              final_state: { $ref: '#/components/schemas/MemberFinalState' }
+    SessionOwnerView:
+      type: object
+      additionalProperties: false
+      description: 'V-46. Không Coins, không chuỗi, không trạng thái realtime (BR-53, BR-116, BR-123).'
+      properties:
+        session_id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/SessionStatus' }
+        started_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        forfeited: { type: boolean }
+        forfeit_trigger_display_name: { type: [string, 'null'] }
+        cancel_reason: { oneOf: [ { $ref: '#/components/schemas/SessionCancelReason' }, { type: 'null' } ] }
+        cancelled_at: { type: [string, 'null'], format: date-time, description: 'AC-08.10.10 "Phiên đã hủy lúc hh:mm" (thêm 2026-10-20)' }
+        fetched_at: { type: string, format: date-time, description: 'Hiện "Cập nhật lúc…" (BR-123)' }
+        members:
+          type: array
+          description: 'Chỉ có phần tử khi status ∈ {COMPLETED, CANCELLED}; sắp BR-115'
+          items: { $ref: '#/components/schemas/SessionMemberOwnerRow' }
+        exit_events:
+          type: array
+          description: 'MEMBER_EXITED đã phát, theo thời gian (ngoại lệ 2 BR-115)'
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              display_name: { type: string }
+              server_ts: { type: string, format: date-time }
+    SessionMemberOwnerRow:
+      type: object
+      additionalProperties: false
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        final_state: { $ref: '#/components/schemas/MemberFinalState' }
+        late_join: { type: boolean }
+        pause_count: { type: integer }
+        pause_reasons: { type: array, items: { type: string } }
+        exited_at: { type: [string, 'null'], format: date-time }
+        has_explanation: { type: boolean }
+        appeal_status: { oneOf: [ { $ref: '#/components/schemas/AppealStatus' }, { type: 'null' } ] }
+        exempted: { type: boolean, description: 'AC-08.10.11 nhãn "Đã miễn trừ" (thêm 2026-10-20)' }
+    Notification:
+      type: object
+      properties:
+        notification_id: { type: string, format: uuid }
+        type:
+          type: string
+          enum: [MEMBER_EXITED, SESSION_FORFEITED, SESSION_CANCELLED_OUTAGE, SESSION_CANCELLED_OUTAGE_EXITED, SESSION_CANCELLED, SESSION_UPDATED, MEMBER_LEFT_GROUP, SESSION_RESULT, EXEMPTION_GRANTED, APPEAL_DECIDED, REMOVED_FROM_GROUP, GROUP_DISSOLVED, CONSENT_CHANGED, SESSION_REMINDER, BADGE_EARNED, STREAK_BROKEN, REPORT_READY]
+        title: { type: string }
+        body: { type: string }
+        group_id: { type: [string, 'null'], format: uuid }
+        session_id: { type: [string, 'null'], format: uuid }
+        server_ts: { type: string, format: date-time }
+        read: { type: boolean }
+    Explanation:
+      type: object
+      properties:
+        session_id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        exited_at: { type: string, format: date-time }
+        body: { type: string }
+        added_after_report: { type: boolean, description: 'BR-102 — theo BẢN GỬI ĐẦU: true khi lần gửi đầu sau lúc tạo báo cáo kỳ đó; sửa sau không đổi nhãn (giả định 2026-10-20)' }
+        submitted_at: { type: string, format: date-time, description: Lần gửi đầu (mốc hạn sửa 24 giờ) }
+        edited_at: { type: [string, 'null'], format: date-time, description: 'AC-04.06.6 nhãn "đã sửa lúc …"; null nếu chưa sửa' }
+        updated_at: { type: string, format: date-time }
+        version: { type: integer }
+    MyExplanation:
+      description: 'Giải trình của chính người gọi (US-04.05) kèm lịch sử bản cũ (AC-04.05.5). Chủ nhóm chỉ thấy bản mới nhất.'
+      allOf:
+        - $ref: '#/components/schemas/Explanation'
+        - type: object
+          properties:
+            edit_deadline: { type: string, format: date-time }
+            can_edit: { type: boolean }
+            history:
+              type: array
+              description: Bản cũ, mới nhất trước
+              items:
+                type: object
+                properties:
+                  body: { type: string }
+                  written_at: { type: string, format: date-time }
+                  replaced_at: { type: string, format: date-time }
+    Appeal:
+      type: object
+      properties:
+        appeal_id: { type: string, format: uuid }
+        session_id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/AppealStatus' }
+        body: { type: string }
+        suspect_system_error: { type: boolean }
+        decision_reason: { type: [string, 'null'] }
+        decided_at: { type: [string, 'null'], format: date-time }
+    MyAchievements:
+      type: object
+      properties:
+        current_streak: { type: integer }
+        longest_streak: { type: integer }
+        streak_counted_today: { type: boolean, description: 'AC-05.04.2: false → app hiện "Hôm nay chưa cộng chuỗi" (thêm 2026-10-20)' }
+        show_streak: { type: boolean, description: BR-99 }
+        badge_progress:
+          type: array
+          description: 'Tiến độ huy hiệu theo số đo (US-05.05): số phiên hoàn thành có thưởng, số giờ tập trung, chuỗi dài nhất (thêm 2026-10-20)'
+          items:
+            type: object
+            properties:
+              metric: { type: string, enum: [REWARDED_SESSIONS, FOCUS_HOURS, STREAK_DAYS] }
+              value: { type: integer }
+              next_badge_code: { type: [string, 'null'] }
+              next_badge_name: { type: [string, 'null'] }
+              next_threshold: { type: [integer, 'null'] }
+        next_milestone: { type: [integer, 'null'] }
+        badges:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: string }
+              earned_at: { type: string, format: date-time }
+              visible_on_profile: { type: boolean }
+    AttendanceMonth:
+      type: object
+      additionalProperties: false
+      properties:
+        month: { type: string }
+        days:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              date: { type: string, format: date }
+              attended: { type: boolean }
+    MemberAttendanceOwnerView:
+      type: object
+      additionalProperties: false
+      description: Không chuỗi, không Coins (BR-53).
+      properties:
+        user: { $ref: '#/components/schemas/PublicUser' }
+        attendance: { $ref: '#/components/schemas/AttendanceMonth' }
+        sessions:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              session_id: { type: string, format: uuid }
+              started_at: { type: string, format: date-time }
+              final_state: { $ref: '#/components/schemas/MemberFinalState' }
+    CoinEntry:
+      type: object
+      properties:
+        entry_id: { type: string, format: uuid }
+        amount: { type: integer }
+        type: { type: string, enum: [SESSION_REWARD, SHOP_PURCHASE, ADMIN_ADJUST], description: 'ledger_type. Hoàn thưởng miễn trừ = SESSION_REWARD với reason = APPEAL_RESTORE (BR-88)' }
+        reason: { type: string }
+        balance_after: { type: integer, minimum: 0 }
+        ref_id: { type: [string, 'null'], format: uuid }
+        reward_date: { type: [string, 'null'], format: date }
+        created_at: { type: string, format: date-time }
+    ShopItem:
+      type: object
+      required: [kind, name, price]
+      properties:
+        item_id: { type: string, format: uuid, readOnly: true, description: shop_items.id }
+        kind: { $ref: '#/components/schemas/ItemKind' }
+        name: { type: string, minLength: 1, maxLength: 40 }
+        price: { type: integer, minimum: 10, maximum: 1000, description: 'shop_price_min..shop_price_max (BR-93)' }
+        preview_url: { type: string, format: uri, readOnly: true, description: 'Sinh từ shop_items.preview_key' }
+        status: { $ref: '#/components/schemas/ItemStatus' }
+        owned: { type: boolean, readOnly: true }
+    OwnedItem:
+      type: object
+      properties:
+        item_id: { type: string, format: uuid }
+        kind: { $ref: '#/components/schemas/ItemKind' }
+        name: { type: string }
+        equipped: { type: boolean }
+        acquired_at: { type: string, format: date-time }
+    JournalEntry:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        text: { type: string }
+        updated_at: { type: string, format: date-time }
+    AccessLogEntry:
+      type: object
+      properties:
+        viewer_display_name: { type: string }
+        viewer_role: { type: string, enum: [OWNER, ADMIN] }
+        subject_user_id: { type: [string, 'null'], format: uuid }
+        object_type: { type: string, enum: [SESSION, REPORT, LEDGER, APPEAL, STREAK, EXPORT, EXPLANATION, ATTENDANCE], description: 'access_logs.object_type (PDF, dòng báo cáo → REPORT)' }
+        object_id: { type: [string, 'null'], format: uuid }
+        view_count: { type: integer, minimum: 1, description: 'Gộp lượt xem trong access_log_merge_min (BR-73)' }
+        first_viewed_at: { type: string, format: date-time }
+        last_viewed_at: { type: string, format: date-time }
+    MyDataSummary:
+      type: object
+      description: 'US-01.08 / V-25. Ngoài `categories`, bản 2026-10-20 trả dữ liệu cụ thể: groups, sessions (cùng trường SessionMemberOwnerRow + forfeit_trigger_display_name), exit_events (kèm giải trình, khiếu nại), attendance theo nhóm, reports (kỳ có dòng của tôi), consents, profile, streak, badges, coins, shop, journal (chỉ số mục).'
+      properties:
+        generated_at: { type: string, format: date-time }
+        group_filter: { type: [string, 'null'], format: uuid }
+        groups: { type: array, items: { type: object } }
+        sessions: { type: array, items: { type: object } }
+        exit_events: { type: array, items: { type: object } }
+        attendance: { type: array, items: { type: object } }
+        reports: { type: array, items: { type: object } }
+        consents: { type: array, items: { type: object } }
+        profile: { type: object }
+        streak: { type: object }
+        badges: { type: array, items: { type: object } }
+        coins: { type: object }
+        shop: { type: object }
+        journal: { type: object }
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: string }
+              description: { type: string }
+              visible_to: { type: array, items: { type: string, enum: [SELF, GROUP_MEMBERS, GROUP_OWNER, ADMIN] } }
+              retention: { type: string }
+    ReportPeriod:
+      type: object
+      properties:
+        month: { type: string }
+        status: { type: string, enum: [PENDING, GENERATED, FAILED], description: 'monthly_reports.status; tháng không có phiên vẫn GENERATED với số 0' }
+        generated_at: { type: [string, 'null'], format: date-time }
+    ReportRowOwnerView:
+      type: object
+      additionalProperties: false
+      description: 'Không Coins, không chuỗi (BR-53, BR-61).'
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        expected_sessions: { type: integer }
+        completed_sessions: { type: integer }
+        completion_rate: { type: [number, 'null'] }
+        exited_count: { type: integer }
+        lost_count: { type: integer }
+        absent_count: { type: integer }
+        focus_minutes: { type: integer }
+        attendance_days: { type: integer }
+        explanations:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              session_id: { type: string, format: uuid }
+              exited_at: { type: string, format: date-time }
+              body: { type: string }
+              added_after_report: { type: boolean, description: 'BR-102 nhãn "thêm sau khi tạo báo cáo" (thêm 2026-10-20)' }
+              edited_at: { type: [string, 'null'], format: date-time, description: 'AC-04.06.6 (thêm 2026-10-20)' }
+        prev_month_delta:
+          description: Should (US-08.05)
+          type: [object, 'null']
+    ReportOwnerView:
+      type: object
+      additionalProperties: false
+      properties:
+        view: { type: string, const: OWNER }
+        group_id: { type: string, format: uuid }
+        month: { type: string }
+        report_purpose: { type: string, description: Khối V-35 }
+        generated_at: { type: string, format: date-time }
+        rows: { type: array, description: Sắp BR-115, items: { $ref: '#/components/schemas/ReportRowOwnerView' } }
+        group_totals: { type: object }
+    ReportMemberView:
+      type: object
+      additionalProperties: false
+      properties:
+        view: { type: string, const: MEMBER }
+        group_id: { type: string, format: uuid }
+        month: { type: string }
+        report_purpose: { type: string }
+        generated_at: { type: string, format: date-time }
+        my_row: { $ref: '#/components/schemas/ReportRowOwnerView' }
+        group_totals:
+          type: [object, 'null']
+          description: 'Should (US-08.04): chỉ khi nhóm ≥ group_report_min thành viên lúc tạo báo cáo (BR-104)'

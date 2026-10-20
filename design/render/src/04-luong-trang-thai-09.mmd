@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    participant C as App thành viên
+    participant S as Server
+    Note over C: FOCUSING. Android SCREEN_OFF / iOS protectedDataWillBecomeUnavailable → LOCK
+    C->>S: member:screen_locked {event_id, session_id, client_ts}
+    S->>S: Cờ screenLocked = true, bỏ ngưỡng heartbeat, socket đóng không tính (BR-66)
+    Note over C,S: Heartbeat có thể giảm/ngừng. Vẫn FOCUSING (BR-15, §3 #40)
+    opt Có MEMBER_EXITED của người khác
+        S-->>C: Xếp hàng, không push hệ thống (BR-82)
+    end
+    C->>S: member:screen_unlocked {event_id, session_id, client_ts}
+    S->>S: last_seen_at = now, áp lại ngưỡng 10s (§3 #43)
+    S-->>C: ack FOCUSING + giao MEMBER_EXITED đã xếp hàng (banner V-11)
+    opt Mở khóa rồi rời app (§3 #17)
+        C->>S: member:left_app
+        Note over S: Theo 2.3 từ lúc rời app
+    end
+    opt member:returned mà không có screen_unlocked hợp lệ
+        Note over S: Coi như rời app (05 §5, Q-61, chờ spike)
+    end

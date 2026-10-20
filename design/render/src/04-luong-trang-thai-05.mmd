@@ -1,0 +1,30 @@
+sequenceDiagram
+    autonumber
+    actor U as Người dùng
+    participant C as App
+    participant Cog as Cognito
+    participant S as Server
+    participant DB as RDS
+    U->>C: Nhập email, mật khẩu (V-02)
+    C->>Cog: SignUp
+    Cog-->>U: Email mã xác minh
+    U->>C: Nhập mã
+    C->>Cog: ConfirmSignUp, đăng nhập
+    Cog-->>C: JWT (access + refresh)
+    C->>S: Tạo hồ sơ (JWT)
+    S->>DB: users (chưa thuộc nhóm nào)
+    U->>C: Nhập mã nhóm 8 ký tự (V-04)
+    C->>S: Kiểm tra mã
+    alt Mã sai / hết hiệu lực
+        S-->>C: Từ chối, đếm lượt sai (≥5 lần/15 phút → khóa 15 phút, BR-76)
+    else Mã đúng
+        S-->>C: Màn đồng ý: mục đích báo cáo, thời hạn lưu, quy tắc D-05 (V-05, BR-06)
+        U->>C: Bấm "Đồng ý"
+        C->>S: Đồng ý (consent_version)
+        alt Đã là thành viên nhóm khác (BR-75a) / nhóm đủ 10 (BR-74) / là chủ nhóm này
+            S-->>C: Từ chối kèm lý do, không tạo thành viên
+        else Hợp lệ
+            S->>DB: group_members (consent_version, consented_at, joined_at)
+            S-->>C: Vào nhóm, thấy phiên kế tiếp (V-03)
+        end
+    end

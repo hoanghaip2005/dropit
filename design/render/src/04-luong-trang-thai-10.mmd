@@ -1,0 +1,24 @@
+sequenceDiagram
+    autonumber
+    actor U as Thành viên
+    participant C as App
+    participant S as Server
+    U->>C: Bấm "Rời phiên" (V-06 hoặc V-08, không có ở V-07)
+    C-->>U: Hộp xác nhận nêu hệ quả (WAITING: "bạn sẽ bị ghi vắng")
+    alt Hủy hộp
+        C-->>U: Giữ nguyên, không gửi gì, hạn đang chạy vẫn chạy (§3 #57)
+    else Xác nhận, không có mạng (DISCONNECTED)
+        C-->>U: "Không có kết nối, chưa rời phiên", không xếp hàng gửi sau (§3 #56)
+    else Xác nhận, có mạng
+        C->>S: session:leave {event_id, session_id}
+        alt Trạng thái lúc nhận = WAITING (trước started_at)
+            S-->>C: ack ABSENT (end_reason = LOBBY_LEAVE), không MEMBER_EXITED, không D-05 (Q-149)
+        else FOCUSING / GRACE / PAUSED (ACTIVE)
+            S->>S: EXITED end_reason = USER_LEAVE, hủy hẹn GRACE/PAUSED, không trừ lượt
+            S-->>C: ack EXITED → V-13
+            Note over S: Thông báo như 2.4 (BR-27, BR-35)
+        else Đã kết thúc / event_id trùng
+            S-->>C: Bỏ qua, trả kết quả cũ (BR-31, BR-32)
+        end
+    end
+    Note over S: session:leave và grace_timeout gần như cùng lúc → sự kiện server nhận trước thắng, một bản ghi (§3 #55)

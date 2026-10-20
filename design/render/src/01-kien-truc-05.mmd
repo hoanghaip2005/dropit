@@ -1,0 +1,17 @@
+flowchart TB
+  NET((Internet))
+  subgraph VPC["VPC 10.0.0.0/16 — 1 region"]
+    subgraph PUB["Public subnet 10.0.1.0/24 (AZ-a)"]
+      EC2["EC2 (t3/t4g small)<br/>Nginx + Node (PM2 hoặc Docker)<br/>Elastic IP"]
+    end
+    subgraph PRIA["Private subnet 10.0.11.0/24 (AZ-a)"]
+      RDS[("RDS PostgreSQL micro<br/>Single-AZ, mã hóa")]
+    end
+    subgraph PRIB["Private subnet 10.0.12.0/24 (AZ-b)"]
+      SUB["Bắt buộc cho DB subnet group;<br/>Redis [Should]"]
+    end
+    VPCE["VPC gateway endpoint<br/>DynamoDB + S3 (miễn phí)"]
+  end
+  NET -- "443" --> EC2
+  EC2 -- "5432" --> RDS
+  EC2 --> VPCE

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "tertiary-container": "#002207", "on-primary-container": "#858486", "on-tertiary-fixed-variant": "#00531c", "inverse-surface": "#313030", "on-surface": "#111111", "secondary-container": "#b02f00", "surface-container-highest": "#e5e2e1", "error": "#ba1a1a", "on-background": "#1c1b1b", "secondary-fixed-dim": "#ffb5a0", "on-tertiary-container": "#00993b", "surface-bright": "#FFFFFF", "surface-dim": "#dcd9d9", "on-error": "#ffffff", "secondary-fixed": "#ffdbd1", "surface-container-high": "#F8F9FA", "surface-container-lowest": "#FFFFFF", "tertiary-fixed-dim": "#53e16f", "primary-container": "#1c1c1e", "surface-variant": "#e5e2e1", "on-primary": "#ffffff", "on-primary-fixed-variant": "#474649", "surface-container-low": "#FFFFFF", "background": "#fcf9f8", "error-container": "#ffdad6", "on-surface-variant": "#46464a", "surface-container": "#FFFFFF", "surface": "#F4F5F7", "inverse-on-surface": "#f3f0ef", "primary-fixed": "#e4e2e4", "inverse-primary": "#c8c6c8", "primary-fixed-dim": "#c8c6c8", "on-error-container": "#93000a", "on-secondary-container": "#ffffff", "on-secondary-fixed-variant": "#862200", "on-primary-fixed": "#1b1b1d", "outline": "#E5E7EB", "on-tertiary": "#ffffff", "primary": "#010102", "on-secondary": "#ffffff", "outline-variant": "#F0F0F2", "surface-tint": "#5f5e60", "on-tertiary-fixed": "#002107", "secondary": "#b02f00", "tertiary-fixed": "#72fe88", "on-secondary-fixed": "#3b0900", "tertiary": "#000100" }, "borderRadius": { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, "spacing": { "space-lg": "1.5rem", "margin-tablet": "1.5rem", "margin": "1rem", "space-xs": "0.25rem", "space-md": "1rem", "gutter": "1rem", "space-sm": "0.5rem", "gutter-desktop": "1.5rem", "space-xl": "2rem", "margin-desktop": "2.5rem" }, "fontFamily": { "body-md": ["Inter"], "headline-lg": ["Inter"], "headline-sm": ["Inter"], "display-lg": ["Inter"], "body-sm": ["Inter"], "label-sm": ["Inter"], "label-lg": ["Inter"], "display-lg-mobile": ["Inter"], "body-lg": ["Inter"], "headline-md": ["Inter"], "label-md": ["Inter"] }, "fontSize": { "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "headline-lg": ["28px", { "lineHeight": "36px", "fontWeight": "700" }], "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }], "display-lg": ["40px", { "lineHeight": "48px", "fontWeight": "700" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "label-sm": ["11px", { "lineHeight": "14px", "fontWeight": "500" }], "label-lg": ["14px", { "lineHeight": "20px", "fontWeight": "600" }], "display-lg-mobile": ["32px", { "lineHeight": "40px", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "headline-md": ["22px", { "lineHeight": "28px", "fontWeight": "600" }], "label-md": ["12px", { "lineHeight": "16px", "fontWeight": "600" }] } } } };</script><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface text-on-surface font-body-md text-body-md antialiased min-h-screen flex flex-col"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-gutter flex items-center justify-between"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-secondary text-[24px]">local_fire_department</span><span class="font-headline-sm text-headline-sm tracking-tight text-on-surface">DropIt!</span></div><div class="flex items-center gap-space-xs"><button aria-label="Notifications" class="w-11 h-11 flex items-center justify-center text-on-surface-variant hover:text-on-surface rounded-full transition-colors"><span class="material-symbols-outlined text-[22px]">notifications</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-28 bg-surface"><div class="flex flex-col w-full">
+<!-- Top Shop Summary Banner & Balance -->
+<div class="px-gutter pt-4 pb-2 flex items-center justify-between">
+<div class="flex flex-col">
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Shop</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Đổi Coins lấy vật phẩm trang trí</p>
+</div>
+<!-- Balance Pill Badge with micro-interaction state -->
+<div class="flex items-center gap-space-xs bg-secondary-fixed/50 px-3.5 py-1.5 rounded-full shadow-sm">
+<span class="material-symbols-outlined text-secondary-container text-[18px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="font-label-lg text-label-lg text-secondary font-bold tracking-tight" id="user-coin-balance">850</span>
+<span class="font-label-sm text-label-sm text-secondary font-medium">Coins</span>
+</div>
+</div>
+<!-- Chỉ 3 loại vật phẩm trang trí (BR-40, AC-06.03.1) -->
+<div class="w-full overflow-x-auto no-scrollbar py-2 pl-gutter pr-space-xs flex items-center gap-2">
+<button class="category-chip px-5 py-2 rounded-full font-label-lg text-label-lg bg-primary text-on-primary shadow-sm whitespace-nowrap flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px]">lens_blur</span><span>Khung avatar</span></button>
+<button class="category-chip px-5 py-2 rounded-full font-label-lg text-label-lg bg-surface-container text-on-surface-variant shadow-sm whitespace-nowrap flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px]">wallpaper</span><span>Hình nền</span></button>
+<button class="category-chip px-5 py-2 rounded-full font-label-lg text-label-lg bg-surface-container text-on-surface-variant shadow-sm whitespace-nowrap flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px]">sell</span><span>Danh hiệu</span></button>
+</div>
+<!-- 2-Column Product Grid -->
+<div class="px-gutter pt-3 pb-8 grid grid-cols-2 gap-3.5">
+<!-- Item 1: Cyber Halo Frame -->
+<div class="bg-surface-container rounded-lg p-3 flex flex-col justify-between shadow-[0_10px_25px_rgba(0,0,0,0.05)] transition-all duration-200 hover:-translate-y-0.5">
+<div class="flex flex-col">
+<div class="relative w-full aspect-square rounded-[20px] bg-surface-container-high overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-cover rounded-[20px]" data-alt="A futuristic 3D glowing cyber halo avatar frame, neon cyan and violet circular energy ring suspended against a clean dark gray studio background, soft volumetric ambient glow, 4k render, octane render minimalist tech aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJa4fcHVoQ6V3K2J0ErxV9xuF-xfFlMGk_5Fc8uZZ9zFxS1yXmpLcFg1D9N29VGH8sxPIopN21V2ezQZmw7afishzEwGEHIccuNHbeIUiOh6bN8x1MephLJCtzFtw581p3jSF6ZEouoS_1JjCz89vedB0UBokmHvek28OM6rjkp9ipYDJovlYVaKzcMI9Td39B7YR0XQ98iVn4gP482NNee_y0JnBGJO_aB-NjQu89UIv3aizozIB0"/>
+</div>
+<div class="mt-3 flex flex-col">
+<h2 class="font-headline-sm text-body-lg font-bold text-on-surface truncate">Cyber Halo</h2>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Khung avatar</span>
+</div>
+</div>
+<div class="mt-4 flex flex-col gap-2.5">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-secondary-container text-[16px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="font-label-lg text-label-lg text-secondary-container font-bold">200</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Coins</span>
+</div>
+<button class="w-full py-2.5 rounded-full bg-primary text-on-primary font-label-lg text-label-lg font-bold shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-1.5 hover:bg-neutral-800" onclick="handlePurchase(this, 200, 'Cyber Halo')">
+<span>Mua</span>
+</button>
+</div>
+</div>
+<!-- Item 2: Golden Desk Clock -->
+<div class="bg-surface-container rounded-lg p-3 flex flex-col justify-between shadow-[0_10px_25px_rgba(0,0,0,0.05)] transition-all duration-200 hover:-translate-y-0.5">
+<div class="flex flex-col">
+<div class="relative w-full aspect-square rounded-[20px] bg-surface-container-high overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-cover rounded-[20px]" data-alt="A luxury 3D metallic pomodoro desk clock with warm golden polished sheen, minimalist brass casing and satin matte dial, clean modern desktop accessory, premium studio lighting, soft shadows" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQaRih9fmxAIzl_dAMI1qU2NeP2v52RmMxThzA0L_ptpxN0Rl0FlegkHT_oCKll8kJd6AiX4-WA4mUKMTCBPA6g3CqYqH5nb791J4p0ImWIBzVjV33dSsGgmve1qrWL0CP1qyj25B7RVH2veLo3OieT105TYVDy9RPDylEGg1dxE8ZKTFBg0pS_v3wea3cKh-LZWgUyRsDSSCtabmhZn1ArjTjpj84zwWeMaBNZ2zqt_f9pqts4-fN"/>
+</div>
+<div class="mt-3 flex flex-col">
+<h2 class="font-headline-sm text-body-lg font-bold text-on-surface truncate">Đồng hồ vàng</h2>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Hình nền</span>
+</div>
+</div>
+<div class="mt-4 flex flex-col gap-2.5">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-secondary-container text-[16px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="font-label-lg text-label-lg text-secondary-container font-bold">350</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Coins</span>
+</div>
+<button class="w-full py-2.5 rounded-full bg-primary text-on-primary font-label-lg text-label-lg font-bold shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-1.5 hover:bg-neutral-800" onclick="handlePurchase(this, 350, 'Golden Clock')">
+<span>Mua</span>
+</button>
+</div>
+</div>
+<!-- Item 3: Solar Flare Aura -->
+<div class="bg-surface-container rounded-lg p-3 flex flex-col justify-between shadow-[0_10px_25px_rgba(0,0,0,0.05)] transition-all duration-200 hover:-translate-y-0.5">
+<div class="flex flex-col">
+<div class="relative w-full aspect-square rounded-[20px] bg-surface-container-high overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-cover rounded-[20px]" data-alt="A radiant 3D solar flare aura avatar ring, warm fiery glowing orange and amber particles orbiting a central circular void, gentle light spill, cinematic high-end asset render on neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5otTjavC6kxV0qwsUa-xmZLg5cieW64FYik20PE01qorTRndFhu4Lz9OYYeLw5oaCg-nBQ_30JovQ4IZRKXkqSov2jzrZjswBWrHVJYwq_aWtsdP8zy3FR22VIN4Re_sRVWJhXth5J2MZmeidMIaI-wqEIC6yrSZMaCZ9FJSs0QrNNxc0PbhdKW4BV1BbGG2zZwu0aANkpWL3q6isV6kZZRcjKLJOgP9jrqZRcRTfCpPwXubtvbXO"/>
+</div>
+<div class="mt-3 flex flex-col">
+<h2 class="font-headline-sm text-body-lg font-bold text-on-surface truncate">Solar Flare</h2>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Khung avatar</span>
+</div>
+</div>
+<div class="mt-4 flex flex-col gap-2.5">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-secondary-container text-[16px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="font-label-lg text-label-lg text-secondary-container font-bold">180</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Coins</span>
+</div>
+<button class="w-full py-2.5 rounded-full bg-primary text-on-primary font-label-lg text-label-lg font-bold shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-1.5 hover:bg-neutral-800" onclick="handlePurchase(this, 180, 'Solar Flare')">
+<span>Mua</span>
+</button>
+</div>
+</div>
+<!-- Item 4: Zen Garden Desk -->
+<div class="bg-surface-container rounded-lg p-3 flex flex-col justify-between shadow-[0_10px_25px_rgba(0,0,0,0.05)] transition-all duration-200 hover:-translate-y-0.5">
+<div class="flex flex-col">
+<div class="relative w-full aspect-square rounded-[20px] bg-surface-container-high overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-cover rounded-[20px]" data-alt="A stylized 3D claymorphism zen garden desk environment miniature, smooth stone pebbles, raked sand swirls, tiny bonsai tree with deep green leaves, warm daylight studio lighting, clean pastel accents" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsnimX5gcMBvRlOc5rDFX2aGiK5YKtvccx3EtrRTweNPkONf4QN13tivfP3eB0iXgl6yQ2qqiCFJ97_dWhoFBb9RO3IyM2PcFAZexQAu-8nNjxzpfd-BpzrdVipnE10bkmjDPBvude7OHJ3C_Opb6MyV0RgR6UwquzM4TrpRD7rY5ocNHrXTMRSBmW9PTofw-WYbRrDy-V2bowSuQJy4nPAUxmXeoo-zsKKSo3kmp1vd2zOfMrYpXQ"/>
+</div>
+<div class="mt-3 flex flex-col">
+<h2 class="font-headline-sm text-body-lg font-bold text-on-surface truncate">Zen Garden</h2>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Hình nền</span>
+</div>
+</div>
+<div class="mt-4 flex flex-col gap-2.5">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-secondary-container text-[16px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="font-label-lg text-label-lg text-secondary-container font-bold">400</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Coins</span>
+</div>
+<button class="w-full py-2.5 rounded-full bg-primary text-on-primary font-label-lg text-label-lg font-bold shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-1.5 hover:bg-neutral-800" onclick="handlePurchase(this, 400, 'Zen Garden')">
+<span>Mua</span>
+</button>
+</div>
+</div>
+<!-- Item 5: Sakura Petals Frame -->
+<div class="bg-surface-container rounded-lg p-3 flex flex-col justify-between shadow-[0_10px_25px_rgba(0,0,0,0.05)] transition-all duration-200 hover:-translate-y-0.5">
+<div class="flex flex-col">
+<div class="relative w-full aspect-square rounded-[20px] bg-surface-container-high overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-cover rounded-[20px]" data-alt="A delicate 3D circular avatar ring adorned with floating pale pink sakura cherry blossom petals, subtle wind swirl effect, soft morning sun lighting, peaceful botanical aesthetics on light studio background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9vOFh1zr9LDAw1PCs-5nQmW0pMgEvh8hD4-8oAMLZ-CkZ7aflWMPnpu4dUWRXbmm4wlgGkOI3sRZBJbrbxPGwXn_4nXtkHVaFyjXCGaaoAIlD7w9_j8h4u5xuACuqQXz3y-Lhavw6YSz1f48hPCpfCf1I52WJ_PHMwumqI_iQsoTya1gLvSRIpmg9c5BOpwyVlZ2poafvTzHgRmGI1qKpGR6630rPb5g_qwlQmMd0r6x0n9PKepRB"/>
+</div>
+<div class="mt-3 flex flex-col">
+<h2 class="font-headline-sm text-body-lg font-bold text-on-surface truncate">Sakura Petals</h2>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Khung avatar</span>
+</div>
+</div>
+<div class="mt-4 flex flex-col gap-2.5">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-secondary-container text-[16px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="font-label-lg text-label-lg text-secondary-container font-bold">150</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Coins</span>
+</div>
+<button class="w-full py-2.5 rounded-full bg-primary text-on-primary font-label-lg text-label-lg font-bold shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-1.5 hover:bg-neutral-800" data-owned="true" onclick="handlePurchase(this, 150, 'Sakura Petals')">
+<span class="material-symbols-outlined text-[16px]">check</span><span>Đang dùng · Gỡ</span>
+</button>
+</div>
+</div>
+<!-- Item 6: Obsidian Crown -->
+<div class="bg-surface-container rounded-lg p-3 flex flex-col justify-between shadow-[0_10px_25px_rgba(0,0,0,0.05)] transition-all duration-200 hover:-translate-y-0.5">
+<div class="flex flex-col">
+<div class="relative w-full aspect-square rounded-[20px] bg-surface-container-high overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-cover rounded-[20px]" data-alt="A sleek dark geometric low-poly obsidian crown with sharp beveled facets and faint ruby red internal refractions, ultra sharp reflections, dark modern luxury artifact, museum pedestal render" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4VdWBLbozCRS569V14v0TB3ANytSxjzoWt1DNW3_NdEMo8dDfxYVKR02HujUkzJajopT9nanCdkFv0dZEtyUw4nG0QXp4LH2XBsT4bEaoh8iZvkDdpXEoUetersHixYzxvn9vi1Np7g_4gdEfpUWU1jCQ3Y-a3gjq-lT8G2iFdydB8BgGg692-yv1Z69xwzGcODOiTvGIO5Y5nxDy3Yy_hps3tHABy2gixp8cQxNWbbFDhAG-cqxv"/>
+</div>
+<div class="mt-3 flex flex-col">
+<h2 class="font-headline-sm text-body-lg font-bold text-on-surface truncate">Người giữ nhịp</h2>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Danh hiệu</span>
+</div>
+</div>
+<div class="mt-4 flex flex-col gap-2.5">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-secondary-container text-[16px]" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="font-label-lg text-label-lg text-secondary-container font-bold">500</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Coins</span>
+</div>
+<button class="w-full py-2.5 rounded-full bg-primary text-on-primary font-label-lg text-label-lg font-bold shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-1.5 hover:bg-neutral-800" onclick="handlePurchase(this, 500, 'Obsidian Crown')">
+<span>Mua</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Toast Feedback Floating Pill -->
+<div class="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-all duration-300 transform -translate-y-2 flex items-center gap-2 bg-primary text-on-primary px-4 py-2.5 rounded-full shadow-xl" id="reward-toast">
+<span class="material-symbols-outlined text-white text-[18px]">check_circle</span>
+<span class="font-label-lg text-label-lg" id="toast-message">Đã mua</span>
+</div>
+</div>
+<script>
+  let coinBalance = 850;
+
+  function handlePurchase(button, price, itemName) {
+    const balanceElem = document.getElementById('user-coin-balance');
+    const toast = document.getElementById('reward-toast');
+    const toastMessage = document.getElementById('toast-message');
+
+    if (button.dataset.owned === 'true') {
+      toastMessage.textContent = 'Đang dùng — bấm Gỡ để bỏ trang bị';
+      showToast(toast);
+      return;
+    }
+
+    if (coinBalance >= price) {
+      coinBalance -= price;
+      balanceElem.textContent = coinBalance;
+      
+      // Update Button State to Owned / Equipped
+      button.dataset.owned = 'true';
+      button.classList.remove('bg-primary', 'hover:bg-neutral-800');
+      button.classList.add('bg-tertiary-container', 'text-on-tertiary-container');
+      button.innerHTML = '<span class="material-symbols-outlined text-[16px]">check</span><span>Đã sở hữu · Trang bị</span>';
+      
+      toastMessage.textContent = `Đã mua ${itemName} (-${price} Coins)`;
+      showToast(toast);
+    } else {
+      toastMessage.textContent = `Thiếu ${price - coinBalance} Coins`;
+      showToast(toast);
+    }
+  }
+
+  function showToast(toast) {
+    toast.classList.remove('opacity-0', '-translate-y-2');
+    toast.classList.add('opacity-100', 'translate-y-0');
+    setTimeout(() => {
+      toast.classList.remove('opacity-100', 'translate-y-0');
+      toast.classList.add('opacity-0', '-translate-y-2');
+    }, 2400);
+  }
+
+  // Category chip toggle selection
+  document.querySelectorAll('.category-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.category-chip').forEach(c => {
+        c.classList.remove('bg-primary', 'text-on-primary');
+        c.classList.add('bg-surface-container', 'text-on-surface-variant');
+      });
+      chip.classList.remove('bg-surface-container', 'text-on-surface-variant');
+      chip.classList.add('bg-primary', 'text-on-primary');
+    });
+  });
+</script></main><div class="fixed bottom-5 inset-x-6 z-50 pb-safe pointer-events-none flex justify-center"><nav class="pointer-events-auto w-full max-w-[360px] h-16 bg-[#1A1A1A] rounded-full shadow-[0_12px_32px_-4px_rgba(0,0,0,0.35)] px-space-sm flex items-center justify-between" data-active-classes="text-white"><a class="flex-1 min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[#6C6C70] hover:text-white transition-colors" data-path="home" href="#"><span class="material-symbols-outlined text-[20px]">grid_view</span><span class="font-label-sm text-label-sm">Home</span></a><a aria-current="page" class="flex-1 min-h-[44px] flex flex-col items-center justify-center gap-0.5 transition-colors text-white" data-path="rewards-shop" href="#"><span class="material-symbols-outlined text-[20px]">shopping_bag</span><span class="font-label-sm text-label-sm">Shop</span></a><a class="flex-1 min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[#6C6C70] hover:text-white transition-colors" data-path="team-hub" href="#"><span class="material-symbols-outlined text-[20px]">groups</span><span class="font-label-sm text-label-sm">Nhóm</span></a><a class="flex-1 min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[#6C6C70] hover:text-white transition-colors" data-path="user-profile" href="#"><span class="material-symbols-outlined text-[20px]">person</span><span class="font-label-sm text-label-sm">Profile</span></a></nav></div></body></html>

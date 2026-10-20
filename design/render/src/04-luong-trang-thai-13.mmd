@@ -1,0 +1,25 @@
+sequenceDiagram
+    autonumber
+    participant S as Server
+    participant DB as RDS
+    participant C as App thành viên
+    participant SNS as SNS
+    Note over S: t = ends_at
+    S->>S: FOCUSING/PAUSED/GRACE chưa quá hạn → COMPLETED. DISCONNECTED chờ hạn giữ chỗ (§3 #7)
+    S->>DB: BEGIN transaction (05 §3.1)
+    S->>DB: session_members.state (trạng thái cuối), end_reason = TIME_UP, focus_seconds (BR-32)
+    alt forfeited = false
+        loop Mỗi người COMPLETED
+            S->>DB: coin_ledger SESSION_REWARD 10/25 (vào muộn tính tỉ lệ), cắt theo trần 100/ngày (BR-40, BR-42, BR-43)
+            Note over DB: Khóa duy nhất (type, ref_id, user_id) chống ghi trùng (BR-45)
+            S->>DB: Nhật ký thành tích CHECKIN, STREAK_INC nếu chưa +1 hôm nay (BR-46, BR-49, BR-92)
+        end
+    else forfeited = true
+        S->>DB: Không dòng sổ cái nào (BR-41)
+        S->>DB: CHECKIN cho người COMPLETED (BR-46), STREAK_BREAK cho phạm vi BR-37
+    end
+    S->>DB: EXITED → STREAK_BREAK (BR-47a). LOST, ABSENT, VOID, WITHDRAWN theo BR-48
+    S->>DB: Phiên → COMPLETED, COMMIT
+    S-->>C: SESSION_RESULT qua socket, chỉ chính người đó (V-12 / V-13 / V-14)
+    S->>SNS: Push SESSION_RESULT cho người không mở app, gộp "mất thưởng — chuỗi bị ngắt" (BR-91, Q-93)
+    S->>DB: Xét huy hiệu theo mốc, chỉ thông báo trong app (BR-52, Q-95)

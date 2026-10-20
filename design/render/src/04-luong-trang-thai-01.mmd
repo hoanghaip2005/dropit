@@ -1,0 +1,28 @@
+stateDiagram-v2
+    direction LR
+    [*] --> SCHEDULED: Chủ nhóm đặt lịch (BR-01, BR-79)
+    SCHEDULED --> COUNTDOWN: t = started_at − countdown_s (BR-04)
+    SCHEDULED --> CANCELLED: Chủ nhóm hủy trước giờ (BR-29, OWNER_CANCEL) / giải tán (GROUP_DISSOLVED, BR-80) / khóa chủ nhóm (OWNER_LOCKED, BR-108)
+    COUNTDOWN --> ACTIVE: t = started_at, đặt ends_at (BR-04)
+    COUNTDOWN --> CANCELLED: Sự cố server, SERVER_OUTAGE (BR-22)
+    ACTIVE --> COMPLETED: t = ends_at, chốt từng người (BR-23)
+    ACTIVE --> CANCELLED: Sự cố server, SERVER_OUTAGE (BR-22, BR-68)
+    ACTIVE --> CANCELLED: Hết hạn vào, không ai vào → ABSENT trước, cancel_reason = NO_ATTENDEE (BR-30)
+    COMPLETED --> [*]
+    CANCELLED --> [*]
+
+    state ACTIVE {
+        direction LR
+        [*] --> ChuaMatThuong
+        state "forfeited = false" as ChuaMatThuong
+        state "forfeited = true (forfeited_at, forfeit_trigger_user_id)" as MatThuong
+        ChuaMatThuong --> MatThuong: EXITED đầu tiên → MEMBER_EXITED kèm forfeited (gộp SESSION_FORFEITED, BR-35, BR-38)
+        MatThuong --> MatThuong: EXITED tiếp theo → chỉ MEMBER_EXITED (BR-39)
+        ChuaMatThuong --> ChuaMatThuong: LOST / WITHDRAWN / ABSENT (BR-36, D-19)
+    }
+
+    note right of COMPLETED
+        Sau phiên: miễn trừ mọi EXITED → gỡ forfeited,
+        khôi phục hồi tố (BR-87, BR-88). Phiên vẫn COMPLETED.
+        Sự cố → CANCELLED gỡ forfeited (BR-22).
+    end note

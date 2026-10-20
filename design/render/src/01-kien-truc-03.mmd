@@ -1,0 +1,24 @@
+flowchart LR
+  subgraph Edge
+    REST["REST router (/v1)"]
+    WS["Socket.io gateway"]
+    MW["Middleware: JWT, authz theo nhóm,<br/>rate limit, idempotency"]
+  end
+  AUTH[auth + privacy]
+  GRP[groups]
+  SCH[schedules]
+  SESS["sessions / realtime engine"]
+  RW["rewards / coin ledger"]
+  NOTI[notifications]
+  REP[reports]
+  ADM[admin]
+  JOBS["jobs (cron)"]
+
+  REST --> MW
+  WS --> MW
+  MW --> AUTH & GRP & SCH & SESS & RW & REP & ADM
+  JOBS --> SCH & REP & RW & NOTI
+  SCH -- "SessionScheduled" --> SESS
+  SESS -- "MemberExited / SessionForfeited / SessionEnded" --> NOTI
+  SESS -- "SessionEnded (1 transaction)" --> RW
+  REP --> NOTI

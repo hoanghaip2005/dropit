@@ -1,0 +1,40 @@
+flowchart TB
+  subgraph Client
+    APP["App Flutter iOS/Android<br/>(Dart + plugin native vòng đời)"]
+    WEB["Web Admin [Should]<br/>React + Vite (SPA tĩnh)"]
+  end
+
+  subgraph AWS["AWS — 1 region (ap-southeast-1, giả định)"]
+    ALB["ALB + ACM [Should]"]
+    subgraph EC2["EC2 (public subnet)"]
+      NGX["Nginx + Let's Encrypt<br/>(TLS, MVP)"]
+      API["Backend Node.js/TypeScript<br/>REST + Socket.io<br/>+ cron nội bộ"]
+    end
+    RDS[("RDS PostgreSQL<br/>dữ liệu lõi, nhật ký cá nhân mã hóa,<br/>nhật ký truy cập (private subnet)")]
+    DDB[("DynamoDB<br/>log sự kiện phiên (TTL)")]
+    REDIS[("ElastiCache Redis [Should]")]
+    COG["Cognito User Pool<br/>(JWT, nhóm 'admin')"]
+    SNS["SNS Mobile Push"]
+    SESV["SES"]
+    S3[("S3<br/>ảnh Shop/avatar, xuất dữ liệu, PDF [Should]")]
+    CW["CloudWatch<br/>log, metric, alarm, uptime"]
+    EBL["EventBridge Scheduler + Lambda [Should]"]
+  end
+
+  APP -- "HTTPS REST / WSS Socket.io (JWT)" --> NGX
+  WEB -- "HTTPS REST (JWT admin)" --> NGX
+  APP -- "Đăng nhập" --> COG
+  WEB -- "Đăng nhập" --> COG
+  ALB -. "thay Nginx khi >1 instance" .-> API
+  NGX --> API
+  API -- "SQL (TLS)" --> RDS
+  API -- "PutItem/Query (VPC gateway endpoint)" --> DDB
+  API -. "pub/sub, trạng thái nóng" .-> REDIS
+  API -- "verify JWT (JWKS)" --> COG
+  API -- "Publish" --> SNS
+  API -- "SendEmail" --> SESV
+  API -- "presigned URL" --> S3
+  APP -- "tải/đẩy tệp qua presigned URL" --> S3
+  API -- "log/metric" --> CW
+  EBL -. "gọi endpoint nội bộ thay cron" .-> API
+  SNS --> APNS["APNs / FCM"]

@@ -1,0 +1,20 @@
+stateDiagram-v2
+    state "CHỜ XỬ LÝ (PENDING)" as CXL
+    state "ĐANG XỬ LÝ (IN_REVIEW)" as DXL
+    state "CHUYỂN QUẢN TRỊ (ESCALATED)" as CQT
+    state "MIỄN TRỪ (EXEMPTED)" as MT
+    state "BÁC (REJECTED)" as BAC
+
+    [*] --> CXL: Gửi khiếu nại EXITED của mình, t < ends_at + appeal_window_h (BR-86)
+    [*] --> CQT: Gửi kèm "nghi lỗi hệ thống" (suspect_system_error = true)
+    CXL --> DXL: Chủ nhóm mở ca, ghi nhật ký truy cập (BR-73)
+    CXL --> CQT: Chủ nhóm chọn "nghi lỗi hệ thống" / quá appeal_escalate_h / nhóm ĐÃ GIẢI TÁN / chủ nhóm bị khóa
+    DXL --> CQT: Như trên (BR-110)
+    DXL --> MT: Chấp nhận + lý do → BR-87, BR-88, EXEMPTION_GRANTED
+    DXL --> BAC: Bác + lý do
+    CQT --> MT: Quản trị chấp nhận + lý do (BR-110)
+    CQT --> BAC: Quản trị bác + lý do
+    MT --> MT: Quản trị "mở lại để xem", không đổi status
+    BAC --> BAC: Quản trị "mở lại để xem", không đổi status
+    MT --> [*]
+    BAC --> [*]

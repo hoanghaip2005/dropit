@@ -1,0 +1,10 @@
+flowchart TB
+  P["presentation<br/>Widget, màn V-xx, router (go_router)"]
+  S["state<br/>Riverpod Notifier / AsyncNotifier"]
+  D["domain<br/>entity, use case, quy tắc hiển thị (thuần Dart)"]
+  DA["data<br/>repository, REST client, socket client, Cognito, cache cục bộ"]
+  N["platform<br/>package focus_lifecycle (MethodChannel/EventChannel)"]
+  P --> S --> D
+  S --> DA
+  DA --> D
+  DA --> N

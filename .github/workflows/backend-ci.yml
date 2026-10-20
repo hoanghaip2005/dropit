@@ -1,0 +1,70 @@
+name: backend-ci
+
+on:
+  push:
+    paths: ['design/**', '.github/workflows/backend-ci.yml']
+  pull_request:
+    paths: ['design/**', '.github/workflows/backend-ci.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  openapi:
+    name: Lint OpenAPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npx -y @redocly/cli@1.34.5 lint design/openapi.yaml
+
+  schema:
+    name: Áp schema + kiểm thử ràng buộc
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: x
+          POSTGRES_DB: dropit
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: x
+      PGDATABASE: dropit
+    steps:
+      - uses: actions/checkout@v4
+      - name: Áp design/schema.sql
+        run: psql -v ON_ERROR_STOP=1 -q -f design/schema.sql
+      - name: Chạy design/tests/schema_test.sql
+        run: |
+          psql -v ON_ERROR_STOP=1 -f design/tests/schema_test.sql 2>&1 | tee schema_test.log
+          grep -q 'TONG KET' schema_test.log || { echo "Không thấy dòng tổng kết"; exit 1; }
+          if grep -E 'NOTICE: +FAIL:' schema_test.log; then echo "Có ca FAIL"; exit 1; fi
+
+  mermaid:
+    name: Render Mermaid (kiểm cú pháp)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Render mọi khối mermaid
+        working-directory: design/render
+        run: |
+          echo '{"args":["--no-sandbox"]}' > /tmp/puppeteer.json
+          python3 extract.py
+          fail=0
+          for f in src/*.mmd; do
+            if ! npx -y @mermaid-js/mermaid-cli@12.0.0 -q -p /tmp/puppeteer.json -i "$f" -o "/tmp/$(basename "$f" .mmd).svg"; then
+              echo "::error file=$f::Mermaid lỗi cú pháp"; fail=1
+            fi
+          done
+          exit $fail
