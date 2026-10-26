@@ -1,0 +1,55 @@
+name: iOS store screenshots
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: macos-15
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.44.2'
+          channel: stable
+          cache: true
+      - name: Build production-configured simulator app
+        working-directory: app
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+          flutter pub get --enforce-lockfile
+          flutter build ios --simulator --debug --dart-define-from-file=config/firebase-ios.json
+      - name: Capture native initial screen on iPhone and iPad
+        run: |
+          mkdir -p store-screenshots
+          python3 - <<'PY'
+          import json, subprocess, pathlib, time
+          def run(*args):
+              return subprocess.check_output(args, text=True)
+          devices=json.loads(run('xcrun','simctl','list','devices','available','--json'))['devices']
+          all_devices=[d for values in devices.values() for d in values]
+          targets=[]
+          for label,needle in [('iphone','iPhone 17 Pro Max'),('ipad','iPad Pro 13')]:
+              device=next((d for d in all_devices if needle in d['name']),None)
+              if device is None:
+                  raise RuntimeError('Required simulator unavailable: '+needle)
+              targets.append((label,device))
+          for label,d in targets:
+              udid=d['udid']
+              if d['state']!='Booted': run('xcrun','simctl','boot',udid)
+              run('xcrun','simctl','bootstatus',udid,'-b')
+              run('xcrun','simctl','status_bar',udid,'override','--time','9:41','--batteryState','charged','--batteryLevel','100')
+              run('xcrun','simctl','install',udid,'app/build/ios/iphonesimulator/Runner.app')
+              run('xcrun','simctl','launch',udid,'com.bakhi.dropit.dropit')
+              time.sleep(20)
+              run('xcrun','simctl','io',udid,'screenshot','store-screenshots/'+label+'-initial.png')
+              run('xcrun','simctl','shutdown',udid)
+          pathlib.Path('store-screenshots/README.txt').write_text('Native simulator captures; initial screen only. Inspect before upload. Not evidence of authenticated flows. Commit: '+run('git','rev-parse','HEAD'))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-store-screenshots
+          path: store-screenshots/
+          retention-days: 3
+          if-no-files-found: error
