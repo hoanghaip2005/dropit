@@ -58,7 +58,8 @@ void main() {
     await t.pumpWidget(wrap(LockdownView(view: v, onLeave: () {}, onDismissBanner: (_) {})));
     expect(find.text('Phiên đang được ghi'), findsNothing);
     expect(find.byKey(const Key('leaveButton')), findsNothing);
-    expect(find.textContaining('Mất kết nối — 0 Coins'), findsOneWidget);
+    expect(find.textContaining('Kết quả và phần thưởng sẽ được chốt sau.'), findsOneWidget);
+    expect(find.textContaining('0 Coins'), findsNothing);
   });
 
   testWidgets('V-07 Đếm ngược: không có nút, có "Chưa ghi"', (t) async {
@@ -74,7 +75,9 @@ void main() {
     final v = SessionView(phase: SessionPhase.waiting, connected: true, startedAt: now.add(const Duration(minutes: 2)), participantCount: 4);
     await t.pumpWidget(wrap(LobbyView(view: v, info: null, onLeave: () => tapped = true)));
     expect(find.text('4 người đã vào phòng chờ'), findsOneWidget);
-    expect(find.text('Khóa màn hình không tính là rời app.'), findsOneWidget);
+    await t.scrollUntilVisible(find.text(sessionLockGuidance), 180);
+    expect(find.text(sessionLockGuidance), findsOneWidget);
+    await t.scrollUntilVisible(find.byKey(const Key('leaveButton')), 180);
     await t.tap(find.byKey(const Key('leaveButton')));
     expect(tapped, isTrue);
   });

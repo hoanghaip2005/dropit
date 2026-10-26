@@ -146,8 +146,22 @@ export interface NotificationsTable {
   data: ColumnType<Record<string, unknown>, string | undefined, string>;
   dedupe_key: string | null;
   push_status: Generated<string>;
+  push_attempts: Generated<number>;
+  push_payload: ColumnType<Record<string, unknown> | null, string | null | undefined, string | null>;
+  push_next_at: TsNull;
+  push_lease_until: TsNull;
   read_at: TsNull;
   created_at: Generated<Date>;
+}
+export interface DeviceTokensTable {
+  id: Generated<string>;
+  user_id: string;
+  device_id: string | null;
+  platform: 'ANDROID' | 'IOS';
+  token: string;
+  sns_endpoint_arn: string | null;
+  created_at: Generated<Date>;
+  last_seen_at: Generated<Date>;
 }
 export interface IdempotencyKeysTable {
   user_id: string;
@@ -320,6 +334,7 @@ export interface Database {
   daily_attendance: DailyAttendanceTable;
   achievement_log: AchievementLogTable;
   notifications: NotificationsTable;
+  device_tokens: DeviceTokensTable;
   idempotency_keys: IdempotencyKeysTable;
   access_logs: AccessLogsTable;
   user_coin_balance: UserCoinBalanceView;

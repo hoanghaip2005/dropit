@@ -1,0 +1,42 @@
+{
+  "kind": "generate",
+  "sampling": {
+    "scheduler": "karras",
+    "total_steps": 28,
+    "sampler": "dpmpp_2m",
+    "cfg_scale": 6.0,
+    "seed": 2141026
+  },
+  "images": {
+    "extent": {
+      "initial": [
+        1024,
+        1024
+      ],
+      "input": [
+        1024,
+        1024
+      ],
+      "desired": [
+        1024,
+        1024
+      ],
+      "target": [
+        1024,
+        1024
+      ]
+    }
+  },
+  "conditioning": {
+    "control": [],
+    "regions": [],
+    "positive": "A single exquisite circular cherry blossom avatar frame, premium hand painted 2D fantasy mobile game UI asset, front view, centered perfect circular empty white opening. Thin elegant rose gold border. Asymmetric sakura branches around the OUTSIDE of the ring. Lush clusters of delicate five petal blush pink and ivory blossoms at upper right and lower left, fine golden stamens, dark plum twigs, tiny sage leaves, floating petals, luminous gold filigree, refined painterly anime illustration. Frame occupies 85 percent of square canvas, blank circular center 63 percent of canvas width. Isolated on pure white background, white empty center, no person, no portrait, no text.",
+    "negative": "3d render, plastic, photorealistic, thick bulky ring, portrait, face, person, text, watermark, logo, square frame, scenery, filled center, blurry, low quality"
+  },
+  "models": {
+    "loras": [],
+    "checkpoint": "zavychromaxl_v80.safetensors",
+    "version": "sdxl"
+  },
+  "batch_count": 1
+}

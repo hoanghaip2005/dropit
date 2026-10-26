@@ -1,0 +1,29 @@
+# Mobile push — SNS + FCM v1
+
+Backend supports Android and iOS FCM registration tokens through one SNS **GCM** platform application. iOS APNs credentials are configured in Firebase. No AWS resources or credentials are created by this implementation.
+
+## Configuration
+
+Set `AWS_REGION` and `SNS_PLATFORM_APPLICATION_ARN` on the backend deployment. The ARN must identify an SNS GCM platform application configured for FCM HTTP v1. Use the AWS default credential provider chain (deployment role preferred); never place AWS credentials in Flutter or commit credentials. The runtime role needs SNS `CreatePlatformEndpoint`, `SetEndpointAttributes` on the configured application/endpoints and `Publish` on those endpoints. Configure the SNS platform application with the Firebase service-account credential separately; do not send it to this API.
+
+Run the normal database migrations (`npm run db:migrate`, also applied on app startup). Migration002 extends the existing inbox outbox and device table. Existing inbox contents are retained. Without SNS configuration the inbox still works; registration returns503 `PUSH_UNAVAILABLE`. Development/test retains the console sender; production never silently substitutes console delivery.
+
+## Client contract
+
+1. Ask notification permission as an optional action. Denial, unsupported web, missing Firebase configuration, token or registration failure must never prevent login or use of the app. Do not repeatedly prompt after denial.
+2. After authentication, `PUT /v1/me/devices/{deviceId}/push` with Bearer access token and JSON `{ "token": "FCM registration token", "platform": "ANDROID" }` (or `IOS`). `deviceId` is the installation UUID used by the app. No user ID or endpoint ARN is accepted. Success204; an unconfigured/unavailable service503. Do not log token/ARN or include them in errors/UI.
+3. Re-register on token refresh and authentication change. Serialize requests; a late old-token request must not override a newer token. A token/install has one current user binding, replaced on account switch.
+4. Before clearing the auth session at logout or revoking push, `DELETE /v1/me/devices/{deviceId}/push` with the current Bearer token. Naturally idempotent204. The predicate includes authenticated user, so a delayed logout from the old user cannot delete the new user's binding. Coordinate in-flight registration before unregister; failed offline unregister is best-effort and must not prevent local logout. Do not asynchronously delete the Firebase token during logout: a delayed deletion can invalidate a newer login's token. Offline unregister may leave generic notifications on this installation until reconnection or a new authenticated binding.
+5. Create Android channel `dropit_events`. On notification tap, open the authenticated inbox, deduplicate `event_id`, refetch authorized data. Do not trust identifiers as authorization. Do not launch a URL supplied in payload.
+
+## Delivery and privacy
+
+Every push uses generic Vietnamese lock-screen text. Only `type`, `event_id`, `session_id`, `group_id` are allowlisted; no group/person names, journal, appeal reason, Coins or streak content is sent to SNS/FCM. The authenticated inbox remains the content source. Already delivered OS notifications cannot be recalled on logout; generic text and server authorization limit their content.
+
+Existing `notifications` is the durable outbox. `deliverOutside` records a sanitized payload without waiting for SNS. Jobs claim up to5 due rows with PostgreSQL `FOR UPDATE SKIP LOCKED`, two-minute leases recover after process termination. Initial attempt plus one retry after30seconds implements `push_retry=1`; failure remains `FAILED` in the inbox. Scheduled cron drains due work (default30seconds), including after restart. If a user comes online while queued, the inbox event is emitted via socket and push stays `NONE`. Users in WAITING/FOCUSING/GRACE/PAUSED/DISCONNECTED in an unfinished session defer lock-screen delivery until after the session. Inbox persistence is unchanged. Disabled/missing SNS endpoints are removed from the active binding table; token refresh/re-registration repairs them. Unregister intentionally removes only local binding, not a shared SNS endpoint that could have been rebound to another account.
+
+Delivery is **at least once**: a process may stop after SNS accepts a publish but before marking the row sent; transient failure on one device may resend to another. Clients deduplicate event IDs. `SENT` means SNS accepted at least one publish, not proof of display/read. No eligible device remains `NONE`; unconfigured production sender retries then `FAILED`. Permission denial, OS background limits and FCM/APNs delivery cannot be proven by API success. Authenticated inbox is authoritative. SNS endpoints unbound by token rotation remain managed cloud resources; periodically reconcile unused endpoints operationally without deleting active bindings. A database failure while enqueueing preserves the existing inbox and does not fail the domain action, but leaves no automatic push retry for that specific enqueue; a generic operational warning is emitted without payload/token.
+
+## Validation
+
+`npm run typecheck`; `npx vitest run test/unit/push.test.ts test/unit/push-jobs.test.ts test/integration/push.test.ts`. Integration requires the local PostgreSQL test service. Tests use an injected SNS transport, never AWS credentials. They cover authorization, ownership transfer, token rotation, idempotent unregister, bounded durable retry, invalid endpoint cleanup, payload privacy, active/lobby deferral, online socket handoff and unavailable registration. A scheduler test proves slow SNS work does not block domain ticks and shutdown awaits the single in-flight push worker. Real Android/iOS background/tap/denial verification still requires configured Firebase/SNS and devices; these tests do not establish real cloud delivery.

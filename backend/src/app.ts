@@ -1,14 +1,16 @@
 // Khởi tạo HTTP (Fastify) + Socket.io + cron trong một tiến trình (ADR-01).
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import { sql } from 'kysely';
 import { Server } from 'socket.io';
 import { loadConfig, type AppConfig } from './config.js';
 import { createDb, type DB } from './shared/db.js';
-import { Hs256Verifier, type TokenVerifier } from './shared/auth.js';
+import { Hs256Verifier, createTokenVerifier, type TokenVerifier } from './shared/auth.js';
 import { installErrorHandler } from './shared/http.js';
 import { applyMigrations } from './shared/migrate.js';
 import type { Ctx } from './context.js';
 import { ConsoleNotificationSender, NotificationService, type NotificationSender } from './modules/notifications/service.js';
+import { AwsSnsTransport, SnsNotificationSender } from './modules/notifications/sns.js';
 import { SessionManager } from './modules/sessions/manager.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { groupRoutes } from './modules/groups/routes.js';
@@ -37,15 +39,31 @@ export type BuildOpts = {
 
 export async function buildApp(opts: BuildOpts = {}) {
   const cfg = opts.cfg ?? loadConfig();
+  // Validate auth before opening a DB connection or applying migrations.
+  const verifier = opts.verifier ?? createTokenVerifier(cfg);
+  if (cfg.nodeEnv !== 'development' && cfg.nodeEnv !== 'test' &&
+      (cfg.devAuth || verifier instanceof Hs256Verifier)) {
+    throw new Error('Development authentication is forbidden outside development/test');
+  }
   const db = opts.db ?? createDb(cfg.databaseUrl);
   await applyMigrations(db); // db/migrations (idempotent)
-  const verifier = opts.verifier ?? new Hs256Verifier(cfg.jwtSecret);
-  const notifications = new NotificationService(db, opts.sender ?? new ConsoleNotificationSender(opts.quiet));
+  const sender = opts.sender ?? (cfg.snsRegion && cfg.snsPlatformApplicationArn
+    ? new SnsNotificationSender(db, new AwsSnsTransport(cfg.snsRegion, cfg.snsPlatformApplicationArn))
+    : cfg.nodeEnv === 'development' || cfg.nodeEnv === 'test'
+      ? new ConsoleNotificationSender(opts.quiet)
+      : { push: async () => { throw new Error('Push not configured'); } });
+  const notifications = new NotificationService(db, sender);
   const ctx = { cfg, db, verifier, notifications } as Ctx;
   ctx.sessions = new SessionManager(ctx);
   if (opts.quiet) ctx.sessions.setQuiet(true);
 
   const app = Fastify({ logger: opts.logger ?? false });
+  if (cfg.nodeEnv === 'development') {
+    await app.register(cors, {
+      origin: /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
+      methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    });
+  }
   installErrorHandler(app);
   app.get('/health', async () => {
     await sql`select 1`.execute(db);
@@ -68,7 +86,7 @@ export async function buildApp(opts: BuildOpts = {}) {
   const io = new Server(app.server, { cors: { origin: '*' }, transports: ['websocket'] }); // DQ-A06: tắt long-polling
   attachSessionSocket(io, ctx);
 
-  let stopJobs: (() => void) | null = null;
+  let stopJobs: (() => Promise<void>) | null = null;
   return {
     app,
     io,
@@ -80,7 +98,7 @@ export async function buildApp(opts: BuildOpts = {}) {
       return addr;
     },
     async close() {
-      stopJobs?.();
+      await stopJobs?.();
       await ctx.sessions.stop();
       io.close();
       await app.close();

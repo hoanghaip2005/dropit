@@ -19,7 +19,7 @@ class InitialAvatar extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(color: dark ? DT.primary : DT.accentSoftBg, shape: BoxShape.circle),
       child: dark
-          ? Icon(Icons.person, size: size * 0.5, color: Colors.white)
+          ? Icon(Icons.person, size: size * 0.5, color: DT.onPrimary)
           : Text(initial,
               style: context.text.headlineSmall!
                   .copyWith(color: DT.accent, fontSize: size * 0.42, height: 1)),

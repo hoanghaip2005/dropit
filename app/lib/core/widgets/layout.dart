@@ -109,6 +109,9 @@ class AppHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.text;
+    if (context.ownerStyle && style == HeaderStyle.brand && leading == HeaderLeading.none) {
+      return AppHeader.large(title: title, caption: caption ?? 'DropIt! · Chủ nhóm', trailing: trailing);
+    }
     switch (style) {
       case HeaderStyle.back:
         final lead = _leadingButton(context);
@@ -151,11 +154,9 @@ class AppHeader extends StatelessWidget {
             height: 48,
             child: Row(children: [
               lead ??
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(color: DT.accent, shape: BoxShape.circle),
-                    child: Icon(icon, size: 20, color: Colors.white),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(9),
+                    child: Image.asset('assets/brand/icon.png', width: 36, height: 36, semanticLabel: 'DropIt!'),
                   ),
               const SizedBox(width: DT.spaceSm),
               Expanded(
@@ -225,7 +226,7 @@ class AppScaffold extends StatelessWidget {
       content = body!;
     }
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: context.ownerStyle && backgroundColor == DT.background ? OwnerStyle.canvas : backgroundColor,
       body: SafeArea(
         bottom: false,
         child: Column(children: [
@@ -250,11 +251,8 @@ class NavItem {
   final String label;
 }
 
-/// Thanh điều hướng viên thuốc nổi. Hai bộ theo mockup:
-/// - [light] = false: đen nhám (chủ nhóm — `manager_dashboard`: Nhóm · Lịch · Báo cáo · Hồ sơ);
-///   mục chọn biểu tượng đặc + nền trắng 14%, mục khác trắng 70%.
-/// - [light] = true: trắng (thành viên — `employee_home_dashboard`, `n_10`: Trang chủ · … · Hồ sơ);
-///   mục chọn chữ đen đậm + nền xám nhạt, mục khác xám.
+/// Navigation nổi dùng chung: nền trắng, mục chọn cam nhạt và icon cam.
+/// [light] giữ tương thích với các shell; cả hai vai trò dùng cùng visual system.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav(
       {super.key, required this.items, required this.currentIndex, required this.onTap, this.light = false});
@@ -263,7 +261,7 @@ class AppBottomNav extends StatelessWidget {
   final ValueChanged<int> onTap;
   final bool light;
 
-  Color _fg(bool on) => light ? (on ? DT.textPrimary : DT.textSecondary) : (on ? Colors.white : Colors.white70);
+  Color _fg(bool on) => light ? (on ? DT.accent : DT.textSecondary) : (on ? DT.accentDecor : const Color(0xFFA1A1A6));
 
   @override
   Widget build(BuildContext context) {
@@ -279,9 +277,9 @@ class AppBottomNav extends StatelessWidget {
           height: DT.navHeight,
           padding: const EdgeInsets.symmetric(horizontal: DT.spaceSm),
           decoration: BoxDecoration(
-            color: light ? DT.card : DT.primary,
+            color: light ? DT.card : const Color(0xFF1C1C1E),
             borderRadius: BorderRadius.circular(DT.pill),
-            boxShadow: light ? DT.heroShadow : DT.navShadow,
+            boxShadow: DT.navShadow,
           ),
           child: Row(children: [
             for (var i = 0; i < items.length; i++)
@@ -296,8 +294,8 @@ class AppBottomNav extends StatelessWidget {
                     child: Container(
                       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
                       decoration: BoxDecoration(
-                        color: i == currentIndex
-                            ? (light ? DT.surfaceHigh : Colors.white.withValues(alpha: 0.14))
+                        color: light && i == currentIndex
+                            ? DT.accentSoftBg
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(DT.pill),
                       ),

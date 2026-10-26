@@ -4,8 +4,27 @@ import { sql } from 'kysely';
 import type { Ctx } from '../../context.js';
 import { currentUser, parse } from '../../shared/http.js';
 import { decodeCursor, encodeCursor } from '../../shared/cursor.js';
+import { AppError } from '../../shared/errors.js';
 
 export function notificationRoutes(app: FastifyInstance, ctx: Ctx) {
+  app.put('/v1/me/devices/:deviceId/push', async (req, reply) => {
+    const me = await currentUser(req, ctx.db, ctx.verifier);
+    const { deviceId } = parse(z.object({ deviceId: z.string().uuid() }), req.params);
+    const body = parse(z.object({ token: z.string().min(20).max(4096).regex(/^\S+$/),
+      platform: z.enum(['ANDROID', 'IOS']) }).strict(), req.body);
+    if (!ctx.notifications.sender.register) throw new AppError(503, 'PUSH_UNAVAILABLE', 'Thông báo đẩy chưa sẵn sàng');
+    try { await ctx.notifications.sender.register(me.id, deviceId, body.platform, body.token); }
+    catch { throw new AppError(503, 'PUSH_UNAVAILABLE', 'Chưa đăng ký được thông báo. Bạn vẫn có thể dùng ứng dụng.'); }
+    return reply.code(204).send();
+  });
+  app.delete('/v1/me/devices/:deviceId/push', async (req, reply) => {
+    const me = await currentUser(req, ctx.db, ctx.verifier);
+    const { deviceId } = parse(z.object({ deviceId: z.string().uuid() }), req.params);
+    // Natural idempotence; deletion still works when SNS configuration is unavailable.
+    if (ctx.notifications.sender.unregister) await ctx.notifications.sender.unregister(me.id, deviceId);
+    else await ctx.db.deleteFrom('device_tokens').where('user_id', '=', me.id).where('device_id', '=', deviceId).execute();
+    return reply.code(204).send();
+  });
   app.get('/v1/me/notifications', async (req) => {
     const me = await currentUser(req, ctx.db, ctx.verifier);
     const q = parse(z.object({ cursor: z.string().optional(), limit: z.coerce.number().int().min(1).max(100).default(20) }), req.query);

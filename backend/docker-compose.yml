@@ -14,6 +14,7 @@ services:
       - ../design/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
       - ./db/seed-demo.sql:/docker-entrypoint-initdb.d/03-seed-demo.sql:ro
+      - ./db/seed-cosmetics.sql:/docker-entrypoint-initdb.d/04-seed-cosmetics.sql:ro
       - dropit-backend-pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dropit -d dropit"]

@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../app/env.dart';
 import '../../app/theme.dart';
-import '../../core/api.dart';
 import '../../core/auth.dart';
 import '../../core/widgets.dart';
 
@@ -20,12 +18,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   int _page = 0;
 
   static const _pages = [
-    (Icons.groups_outlined, 'Tập trung cùng nhóm',
-        'Chủ nhóm đặt lịch phiên 25 hoặc 50 phút. Mọi người vào phòng chờ và bắt đầu cùng lúc.'),
-    (Icons.phonelink_lock_outlined, 'Ở lại trong app',
-        'Rời app quá 3 giây là thoát phiên, cả nhóm biết tên bạn và phiên mất thưởng tập thể. Khóa màn hình không tính.'),
-    (Icons.shield_outlined, 'Riêng tư',
-        'DropIt! không đọc nội dung điện thoại, không biết bạn mở app nào. Chỉ ghi lúc phiên đang chạy.'),
+    (
+      Icons.groups_outlined,
+      'Tập trung cùng nhóm',
+      'Chủ nhóm đặt lịch phiên 25 hoặc 50 phút. Mọi người vào phòng chờ và bắt đầu cùng lúc.',
+    ),
+    (
+      Icons.phonelink_lock_outlined,
+      'Ở lại trong app',
+      'Rời app quá 3 giây là thoát phiên, cả nhóm biết tên bạn và phiên mất thưởng tập thể. Khóa màn hình không tính.',
+    ),
+    (
+      Icons.shield_outlined,
+      'Riêng tư',
+      'DropIt! không đọc nội dung điện thoại, không biết bạn mở app nào. Chỉ ghi lúc phiên đang chạy.',
+    ),
   ];
 
   Future<void> _finish() async {
@@ -41,56 +48,82 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: DT.margin),
-          child: Column(children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: DT.spaceSm),
-              child: Row(children: [
-                const StatusBadge('DropIt!'),
-                const Spacer(),
-                if (!last) LinkButton(label: 'Bỏ qua', color: DT.textSecondary, onPressed: _finish),
-              ]),
-            ),
-            Expanded(
-              child: PageView(
-                controller: _pc,
-                onPageChanged: (i) => setState(() => _page = i),
-                children: [
-                  for (final (icon, title, body) in _pages)
-                    LayoutBuilder(
-                      builder: (context, c) => SingleChildScrollView(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(minHeight: c.maxHeight),
-                          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                            _Illustration(icon: icon),
-                            const SizedBox(height: DT.spaceLg),
-                            Text(title, style: t.displaySmall, textAlign: TextAlign.center),
-                            const SizedBox(height: DT.spaceSm),
-                            Text(body,
-                                textAlign: TextAlign.center,
-                                style: t.bodyLarge!.copyWith(color: DT.textSecondary)),
-                          ]),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: DT.spaceSm),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset('assets/brand/icon.png', width: 32, height: 32),
+                    ),
+                    const SizedBox(width: DT.spaceSm),
+                    Text('DropIt!', style: t.titleLarge),
+                    const Spacer(),
+                    if (!last) LinkButton(label: 'Bỏ qua', color: DT.textSecondary, onPressed: _finish),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: PageView(
+                  controller: _pc,
+                  onPageChanged: (i) => setState(() => _page = i),
+                  children: [
+                    for (final (icon, title, body) in _pages)
+                      LayoutBuilder(
+                        builder: (context, c) => SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minHeight: c.maxHeight),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (icon == Icons.groups_outlined)
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(DT.radiusLg),
+                                    child: Image.asset(
+                                      'assets/mockup/onboarding.png',
+                                      height: 260,
+                                      width: 300,
+                                      fit: BoxFit.contain,
+                                      semanticLabel: 'Minh họa tập trung cùng nhóm',
+                                    ),
+                                  )
+                                else
+                                  _Illustration(icon: icon),
+                                const SizedBox(height: DT.spaceLg),
+                                Text(title, style: t.displaySmall, textAlign: TextAlign.center),
+                                const SizedBox(height: DT.spaceSm),
+                                Text(
+                                  body,
+                                  textAlign: TextAlign.center,
+                                  style: t.bodyLarge!.copyWith(color: DT.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: DT.spaceMd),
-            PageDots(count: _pages.length, index: _page),
-            const SizedBox(height: DT.spaceMd),
-            PrimaryButton(
-              label: last ? 'Bắt đầu' : 'Tiếp',
-              trailingIcon: Icons.arrow_forward,
-              onPressed: () async {
-                if (!last) {
-                  _pc.nextPage(duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
-                  return;
-                }
-                await _finish();
-              },
-            ),
-            const SizedBox(height: DT.spaceLg),
-          ]),
+              const SizedBox(height: DT.spaceMd),
+              PageDots(count: _pages.length, index: _page),
+              const SizedBox(height: DT.spaceMd),
+              PrimaryButton(
+                label: last ? 'Bắt đầu' : 'Tiếp',
+                trailingIcon: Icons.arrow_forward,
+                onPressed: () async {
+                  if (!last) {
+                    _pc.nextPage(duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+                    return;
+                  }
+                  await _finish();
+                },
+              ),
+              const SizedBox(height: DT.spaceLg),
+            ],
+          ),
         ),
       ),
     );
@@ -104,46 +137,50 @@ class _Illustration extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget chip(IconData i, String s, {bool green = false}) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: green ? DT.successSoftBg : DT.card,
-            borderRadius: BorderRadius.circular(DT.pill),
-            boxShadow: DT.cardShadow,
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(i, size: 18, color: green ? DT.success : DT.accent),
-            const SizedBox(width: 6),
-            Text(s, style: context.text.labelLarge!.copyWith(color: green ? DT.success : DT.textPrimary)),
-          ]),
-        );
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: green ? DT.successSoftBg : DT.card,
+        borderRadius: BorderRadius.circular(DT.pill),
+        boxShadow: DT.cardShadow,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(i, size: 18, color: green ? DT.success : DT.accent),
+          const SizedBox(width: 6),
+          Text(s, style: context.text.labelLarge!.copyWith(color: green ? DT.success : DT.textPrimary)),
+        ],
+      ),
+    );
     return SizedBox(
       height: 280,
       width: 300,
-      child: Stack(alignment: Alignment.center, children: [
-        Container(
-          width: 200,
-          height: 200,
-          decoration: const BoxDecoration(color: DT.card, shape: BoxShape.circle, boxShadow: DT.heroShadow),
-          child: Center(
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: const BoxDecoration(color: DT.accentSoftBg, shape: BoxShape.circle),
-              child: Icon(icon, size: 64, color: DT.accent),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 200,
+            height: 200,
+            decoration: const BoxDecoration(color: DT.card, shape: BoxShape.circle, boxShadow: DT.heroShadow),
+            child: Center(
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: const BoxDecoration(color: DT.accentSoftBg, shape: BoxShape.circle),
+                child: Icon(icon, size: 64, color: DT.accent),
+              ),
             ),
           ),
-        ),
-        Positioned(top: 8, left: 8, child: chip(Icons.timer_outlined, '25:00')),
-        Positioned(bottom: 16, left: 16, child: chip(Icons.monetization_on, '+10 Coins', green: true)),
-        Positioned(top: 130, right: 0, child: chip(Icons.groups_outlined, 'Cùng nhóm')),
-      ]),
+          Positioned(top: 8, left: 8, child: chip(Icons.timer_outlined, '25:00')),
+          Positioned(bottom: 16, left: 16, child: chip(Icons.monetization_on, '+10 Coins', green: true)),
+          Positioned(top: 130, right: 0, child: chip(Icons.groups_outlined, 'Cùng nhóm')),
+        ],
+      ),
     );
   }
 }
 
-final devUsersProvider = FutureProvider.autoDispose<List<DevUser>>((ref) => ref.watch(devAuthApiProvider).users());
-
-/// V-02 Đăng nhập (bản dev: chọn người seed → POST /dev/token).
+/// V-02 Đăng nhập bằng tài khoản thật.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
   @override
@@ -151,85 +188,265 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _custom = TextEditingController();
-  String? _busy;
+  final _form = GlobalKey<FormState>();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _busy = false;
+  bool _obscured = true;
   String? _error;
 
-  Future<void> _login(DevUser u) async {
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_busy || !(_form.currentState?.validate() ?? false)) return;
+    final api = ref.read(productionAuthApiProvider);
+    if (!api.configured) return;
+    final controller = ref.read(authProvider.notifier);
+    final email = _email.text.trim();
+    final password = _password.text;
+    FocusScope.of(context).unfocus();
     setState(() {
-      _busy = u.id;
+      _busy = true;
       _error = null;
     });
     try {
-      final t = await ref.read(devAuthApiProvider).token(u);
-      await ref.read(authProvider.notifier).setToken(t, u.label);
+      final session = await api.signIn(email, password);
+      if (!mounted) return;
+      await controller.acceptSession(session);
       if (mounted) context.go('/home');
-    } catch (e) {
-      final err = ApiError.from(e);
-      setState(() => _error = err.offline
-          ? 'Không kết nối được máy chủ ${Env.baseUrl}. Kiểm tra backend đã chạy chưa.'
-          : 'Đăng nhập thất bại: ${err.message}');
+    } on AuthFailure catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Chưa đăng nhập được. Vui lòng thử lại.');
+      }
     } finally {
-      if (mounted) setState(() => _busy = null);
+      if (mounted) setState(() => _busy = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final users = ref.watch(devUsersProvider);
-    final t = context.text;
-    return AppScaffold(
-      header: const AppHeader.back(title: 'DropIt!'),
-      children: [
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Chào mừng trở lại', style: t.headlineLarge),
-          Text('Đăng nhập để vào nhóm của bạn.', style: t.bodyMedium!.copyWith(color: DT.textSecondary)),
-        ]),
-        AppBanner(
-          title: 'Bản phát triển',
-          text: 'Chọn một tài khoản mẫu. Máy chủ: ${Env.baseUrl}',
-          icon: Icons.developer_mode,
-        ),
-        if (_error != null) AppBanner(tone: BannerTone.danger, text: _error!),
-        users.when(
-          loading: () => const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())),
-          error: (e, _) => SizedBox(
-              height: 320, child: ErrorState(error: e, onRetry: () => ref.invalidate(devUsersProvider))),
-          data: (list) => AppCard(
-            padding: const EdgeInsets.symmetric(horizontal: DT.spaceMd, vertical: DT.spaceXs),
-            children: [
-              for (var i = 0; i < list.length; i++)
-                MemberTile(
-                  name: list[i].label,
-                  subtitle: list[i].email,
-                  divider: i < list.length - 1,
-                  onTap: _busy == null ? () => _login(list[i]) : null,
-                  trailing: _busy == list[i].id
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.arrow_forward, size: 20, color: DT.textSecondary),
+    final configured = ref.watch(productionAuthApiProvider).configured;
+    final t = context.text.apply(
+      bodyColor: OwnerStyle.ink,
+      displayColor: OwnerStyle.ink,
+    );
+    InputDecoration decoration(String label, IconData icon) => InputDecoration(
+      labelText: label,
+      errorMaxLines: 3,
+      prefixIcon: Icon(icon, color: OwnerStyle.muted),
+      filled: true,
+      fillColor: OwnerStyle.inset,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: const BorderSide(color: OwnerStyle.primary, width: 2),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+    );
+    return Scaffold(
+      backgroundColor: OwnerStyle.canvas,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: (constraints.maxHeight - 32).clamp(
+                  0,
+                  double.infinity,
                 ),
-            ],
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 460),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Image.asset(
+                        'assets/brand/logo-horizontal-light.png',
+                        height: 56,
+                        semanticLabel: 'DropIt!',
+                      ),
+                      const SizedBox(height: 32),
+                      Text('Chào mừng trở lại', style: t.headlineLarge),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Đăng nhập để vào nhóm của bạn.',
+                        style: t.bodyLarge!.copyWith(color: OwnerStyle.muted),
+                      ),
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(32),
+                        ),
+                        child: AutofillGroup(
+                          child: Form(
+                            key: _form,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (!configured) ...[
+                                  Semantics(
+                                    liveRegion: true,
+                                    child: Text(
+                                      'Đăng nhập hiện chưa sẵn sàng. Vui lòng thử lại sau.',
+                                      key: const Key('loginNotConfigured'),
+                                      style: t.bodyMedium,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                ],
+                                TextFormField(
+                                  key: const Key('loginEmail'),
+                                  controller: _email,
+                                  enabled: configured && !_busy,
+                                  keyboardType: TextInputType.emailAddress,
+                                  autofillHints: const [
+                                    AutofillHints.username,
+                                    AutofillHints.email,
+                                  ],
+                                  textInputAction: TextInputAction.next,
+                                  autocorrect: false,
+                                  enableSuggestions: false,
+                                  decoration: decoration(
+                                    'Email',
+                                    Icons.mail_outline,
+                                  ),
+                                  validator: (value) {
+                                    final email = value?.trim() ?? '';
+                                    if (email.isEmpty) {
+                                      return 'Nhập email của bạn.';
+                                    }
+                                    if (!RegExp(
+                                      r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+                                    ).hasMatch(email)) {
+                                      return 'Email chưa đúng định dạng.';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                TextFormField(
+                                  key: const Key('loginPassword'),
+                                  controller: _password,
+                                  enabled: configured && !_busy,
+                                  obscureText: _obscured,
+                                  autocorrect: false,
+                                  enableSuggestions: false,
+                                  autofillHints: const [AutofillHints.password],
+                                  textInputAction: TextInputAction.done,
+                                  onFieldSubmitted: (_) => _submit(),
+                                  decoration:
+                                      decoration(
+                                        'Mật khẩu',
+                                        Icons.lock_outline,
+                                      ).copyWith(
+                                        suffixIcon: IconButton(
+                                          tooltip: _obscured
+                                              ? 'Hiện mật khẩu'
+                                              : 'Ẩn mật khẩu',
+                                          constraints: const BoxConstraints(
+                                            minWidth: 48,
+                                            minHeight: 48,
+                                          ),
+                                          onPressed: configured && !_busy
+                                              ? () => setState(
+                                                  () => _obscured = !_obscured,
+                                                )
+                                              : null,
+                                          icon: Icon(
+                                            _obscured
+                                                ? Icons.visibility_outlined
+                                                : Icons.visibility_off_outlined,
+                                          ),
+                                        ),
+                                      ),
+                                  validator: (value) =>
+                                      value == null || value.isEmpty
+                                      ? 'Nhập mật khẩu của bạn.'
+                                      : null,
+                                ),
+                                if (_error != null) ...[
+                                  const SizedBox(height: 16),
+                                  Semantics(
+                                    liveRegion: true,
+                                    child: Text(
+                                      _error!,
+                                      key: const Key('loginError'),
+                                      style: t.bodyMedium!.copyWith(
+                                        color: DT.warning,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 24),
+                                FilledButton(
+                                  key: const Key('loginSubmit'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: OwnerStyle.primary,
+                                    foregroundColor: Colors.white,
+                                    minimumSize: const Size.fromHeight(56),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 16,
+                                    ),
+                                  ),
+                                  onPressed: configured && !_busy
+                                      ? _submit
+                                      : null,
+                                  child: Wrap(
+                                    alignment: WrapAlignment.center,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    spacing: 12,
+                                    runSpacing: 8,
+                                    children: [
+                                      if (_busy)
+                                        const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      Text(
+                                        _busy ? 'Đang đăng nhập…' : 'Đăng nhập',
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
-        PillTextField(
-          controller: _custom,
-          icon: Icons.mail_outline,
-          hint: 'Email công việc hoặc mã người dùng',
-          keyboardType: TextInputType.emailAddress,
-        ),
-        PrimaryButton(
-          label: 'Đăng nhập',
-          trailingIcon: Icons.arrow_forward,
-          loading: _busy != null && !(users.value?.any((u) => u.id == _busy) ?? false),
-          onPressed: _busy == null
-              ? () {
-                  final v = _custom.text.trim();
-                  if (v.isEmpty) return;
-                  _login(DevUser(v, v, email: v.contains('@') ? v : null));
-                }
-              : null,
-        ),
-      ],
+      ),
     );
   }
 }

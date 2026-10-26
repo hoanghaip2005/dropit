@@ -6,5 +6,6 @@ const c = new pg.Client({ connectionString: url });
 c.on('notice', (n) => console.log('NOTICE:', n.message));
 await c.connect();
 await c.query(readFileSync(new URL('../db/seed-demo.sql', import.meta.url), 'utf8'));
+await c.query(readFileSync(new URL('../db/seed-cosmetics.sql', import.meta.url), 'utf8'));
 await c.end();
 console.log('Đã áp seed-demo.sql');

@@ -1,0 +1,42 @@
+{
+  "kind": "generate",
+  "batch_count": 1,
+  "images": {
+    "extent": {
+      "desired": [
+        1024,
+        1024
+      ],
+      "target": [
+        1024,
+        1024
+      ],
+      "input": [
+        1024,
+        1024
+      ],
+      "initial": [
+        1024,
+        1024
+      ]
+    }
+  },
+  "sampling": {
+    "cfg_scale": 6.0,
+    "sampler": "dpmpp_2m",
+    "scheduler": "karras",
+    "total_steps": 28,
+    "seed": 2141027
+  },
+  "models": {
+    "checkpoint": "zavychromaxl_v80.safetensors",
+    "loras": [],
+    "version": "sdxl"
+  },
+  "conditioning": {
+    "positive": "A single exquisite circular avatar frame, premium hand painted 2D fantasy mobile game UI asset, refined anime illustration, elegant organic silhouette, delicate ink outlines and painterly shading. Enchanted forest laurel, fine antique gold vine ring, flowing emerald and sage leaves, small ivory woodland blossoms, curling tendrils, jade dew drops, lush foliage clusters lower left and upper right, elegant botanical jewelry. Front view, centered circular frame, ornate asymmetric decorations concentrated around the OUTSIDE of a thin ring. Balanced open negative space, readable at small size, no objects in the center. Frame occupies 85 percent of square canvas, large EMPTY pure white circular center occupies 63 percent of canvas width. Isolated on pure solid white background. No scenery, no person, no portrait, no text, no letters.",
+    "control": [],
+    "regions": [],
+    "negative": "3d render, plastic, photorealistic, thick bulky ring, portrait, face, person, text, watermark, logo, square frame, scenery, filled center, blurry, low quality"
+  }
+}

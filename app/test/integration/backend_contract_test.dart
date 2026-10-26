@@ -1,7 +1,7 @@
 // Test tích hợp nhỏ với backend local (http://localhost:3000).
 // Tự bỏ qua nếu /health không trả lời. Chạy: flutter test test/integration
 import 'package:dio/dio.dart';
-import 'package:dropit/core/auth.dart';
+import '../support/dev_auth.dart';
 import 'package:dropit/core/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
 
-/// Nút chính: viên thuốc đen nhám, chữ trắng, cao 56 (hoặc 48 khi [compact]).
+/// Nút chính nền cam `#FF7A00`, chữ đen `#141414` (7.05:1), cao 56 (48 khi [compact]).
 /// [trailingIcon] mặc định không có; mockup thường dùng `Icons.arrow_forward`.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
@@ -26,8 +26,8 @@ class PrimaryButton extends StatelessWidget {
     this.trailingIcon,
     this.loading = false,
     this.compact = false,
-  })  : background = DT.accent,
-        foreground = Colors.white;
+  })  : background = DT.primary,
+        foreground = DT.onPrimary;
 
   final String label;
   final VoidCallback? onPressed;
@@ -40,15 +40,15 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = foreground ?? Colors.white;
+    final fg = foreground ?? (background == null || background == DT.primary ? DT.onPrimary : Colors.white);
     return FilledButton(
       onPressed: loading ? null : onPressed,
       style: FilledButton.styleFrom(
         minimumSize: Size.fromHeight(compact ? DT.buttonHeightCompact : DT.buttonHeight),
         backgroundColor: background,
         foregroundColor: fg,
-        disabledBackgroundColor: (background ?? DT.primary).withValues(alpha: 0.4),
-        disabledForegroundColor: fg,
+        disabledBackgroundColor: loading ? (background ?? Theme.of(context).colorScheme.primary) : (context.ownerStyle ? OwnerStyle.line : DT.surfaceDim),
+        disabledForegroundColor: loading ? fg : DT.textSecondary,
       ),
       child: _ButtonContent(label: label, icon: icon, trailingIcon: trailingIcon, loading: loading, color: fg),
     );
@@ -78,13 +78,13 @@ class SecondaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = destructive ? DT.warning : DT.textPrimary;
+    final fg = destructive ? DT.warning : (context.ownerStyle ? OwnerStyle.ink : DT.accent);
     return OutlinedButton(
       onPressed: loading ? null : onPressed,
       style: OutlinedButton.styleFrom(
         foregroundColor: fg,
         minimumSize: Size.fromHeight(tall ? DT.buttonHeight : DT.buttonHeightCompact),
-        side: BorderSide(color: destructive ? DT.warning : DT.outline),
+        side: BorderSide(color: destructive ? DT.warning : (context.ownerStyle ? OwnerStyle.line : DT.outline)),
       ),
       child: _ButtonContent(label: label, icon: icon, trailingIcon: trailingIcon, loading: loading, color: fg),
     );

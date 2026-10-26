@@ -24,7 +24,7 @@ export async function startServer(engine: Partial<EngineConfig> = {}) {
     },
   });
   const sender = new ConsoleNotificationSender(true);
-  const srv = await buildApp({ cfg, sender, quiet: true });
+  const srv = await buildApp({ cfg, sender, verifier: new Hs256Verifier(cfg.jwtSecret), quiet: true });
   await srv.start(0, '127.0.0.1');
   const port = (srv.app.server.address() as { port: number }).port;
   const base = `http://127.0.0.1:${port}`;

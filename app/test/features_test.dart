@@ -3,7 +3,6 @@ import 'package:dropit/app/theme.dart';
 import 'package:dropit/core/api.dart';
 import 'package:dropit/core/models.dart';
 import 'package:dropit/core/models_ext.dart';
-import 'package:dropit/core/widgets.dart';
 import 'package:dropit/features/journal/journal_screens.dart';
 import 'package:dropit/features/profile/profile_screens.dart';
 import 'package:dropit/features/reports/report_screens.dart';
@@ -126,7 +125,7 @@ void main() {
     await t.pumpWidget(app(const ShopItemScreen(itemId: 'i2'), api));
     await t.pumpAndSettle();
     expect(find.text('Thiếu 20 Coins'), findsWidgets);
-    final btn = t.widget<PrimaryButton>(find.byKey(const Key('buyButton')));
+    final btn = t.widget<FilledButton>(find.byKey(const Key('buyButton')));
     expect(btn.onPressed, isNull);
   });
 
@@ -169,12 +168,12 @@ void main() {
     expect(find.byKey(const Key('profileCoins')), findsOneWidget);
   });
 
-  testWidgets('Báo cáo chủ nhóm: mục đích ở đầu, sắp tên A→Z (Đ cạnh D), không Coins/chuỗi', (t) async {
+  testWidgets('Báo cáo chủ nhóm: ẩn mục đích, sắp tên A→Z (Đ cạnh D), không Coins/chuỗi', (t) async {
     final api = FakeApi(owner: true);
     await t.pumpWidget(app(const ReportScreen(groupId: 'g1'), api));
     await t.pumpAndSettle();
-    expect(find.byKey(const Key('purposeCard')), findsOneWidget);
-    expect(find.text('Theo dõi mức độ tập trung chung của nhóm.'), findsOneWidget);
+    expect(find.byKey(const Key('purposeCard')), findsNothing);
+    expect(find.text('Theo dõi mức độ tập trung chung của nhóm.'), findsNothing);
     expect(find.textContaining('Coins'), findsNothing);
     expect(find.textContaining('chuỗi', findRichText: false).evaluate().where((e) {
       final w = e.widget;

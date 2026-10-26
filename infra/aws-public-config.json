@@ -1,0 +1,10 @@
+{
+  "region": "ap-southeast-1",
+  "cognitoUserPoolId": "ap-southeast-1_iCogdmW0v",
+  "cognitoClientId": "6vkgari2smj7qp1114lheihom0",
+  "appOrigin": "https://dropit.tutty-lab-demo.com",
+  "instanceName": "dropit-beta-sg",
+  "staticIp": "54.254.61.215",
+  "backupBucket": "dropit-backups-303278700480-sg",
+  "snsPlatformApplicationArn": "arn:aws:sns:ap-southeast-1:303278700480:app/GCM/DropIt-FCM"
+}

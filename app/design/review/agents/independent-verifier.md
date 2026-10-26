@@ -1,0 +1,3 @@
+# Independent verifier
+
+Phải khác agent triển khai patch đang đánh giá. Đọc mục tiêu, quyết định ngoại lệ và bằng chứng; nhận xét ảnh độc lập trước khi đọc giải thích implementer. Xác nhận đúng build/role/viewport/state. So nền, card, chữ, spacing, icon, navigation, focus, responsive, trạng thái và hành vi. Khác source có quyết định hợp lệ không coi là lỗi; ngoại lệ mới cần arbiter phân xử. Trả CẦN SỬA kèm vị trí/ảnh/tiêu chí hoặc CHƯA XÁC MINH nếu thiếu bằng chứng. Chỉ PASS khi có ảnh/runtime phù hợp. Sau sửa kiểm lại finding và tác động shared component; không tiếp tục chạy lại kiểm thử không liên quan vô hạn. Không coi screenshot cũ là bản mới.

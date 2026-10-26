@@ -209,6 +209,14 @@ class MySessionResult {
   MySessionResult.fromJson(Map<String, dynamic> j)
       : sessionId = '${j['session_id'] ?? ''}',
         groupName = j['group_name'] as String?,
+        sessionMode = j['session_mode'] as String?,
+        joinedAt = _dt(j['joined_at']),
+        exitedAt = _dt(j['exited_at']),
+        endedAt = _dt(j['ended_at']),
+        explanationSubmitDeadline = _dt(j['explanation_submit_deadline']),
+        hasExplanation = j['has_explanation'] == true,
+        rewardDailyCap = j['reward_daily_cap'] is num ? (j['reward_daily_cap'] as num).toInt() : null,
+        cancelledOutageExited = j['cancelled_outage_exited'] == true,
         startedAt = _dt(j['started_at']),
         durationMin = _int(j['duration_min'], 25),
         finalState = '${j['final_state'] ?? ''}',
@@ -225,6 +233,14 @@ class MySessionResult {
         participants = _list(j['participants']);
   final String sessionId;
   final String? groupName;
+  final String? sessionMode;
+  final DateTime? joinedAt;
+  final DateTime? exitedAt;
+  final DateTime? endedAt;
+  final DateTime? explanationSubmitDeadline;
+  final bool hasExplanation;
+  final int? rewardDailyCap;
+  final bool cancelledOutageExited;
   final DateTime? startedAt;
   final int durationMin;
   final String finalState;

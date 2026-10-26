@@ -277,15 +277,21 @@ class SessionController extends Notifier<SessionView> {
   Future<void> _joinOrResume() async {
     _syncClock();
     final first = !_joined;
-    final ack = await _requestRetry(
+    var ack = await _requestRetry(
       first ? 'session:join' : 'session:resume',
       _env({if (!first && _lastServerEventId != null) 'last_server_event_id': _lastServerEventId}),
     );
+    // Mở lại màn tạo controller mới: server vẫn giữ trạng thái người đã vào.
+    if (first && ack?['ok'] == false && ack?['code'] == 'SESSION_NOT_ACTIVE' && ack?['state'] != null) {
+      ack = await _requestRetry('session:resume', _env());
+    }
     if (ack == null) return; // chưa ack; socket.io sẽ nối lại
     if (ack['ok'] == false) {
       final code = '${ack['code']}';
       if (code == 'SESSION_LOST') {
         _applyMyState('LOST');
+      } else if (ack['state'] == 'EXITED' || ack['state'] == 'ABSENT' || ack['state'] == 'COMPLETED' || ack['state'] == 'VOID') {
+        _applyMyState('${ack['state']}');
       } else if (first) {
         _fail(code, '${ack['detail'] ?? _joinErrorText(code)}');
       }

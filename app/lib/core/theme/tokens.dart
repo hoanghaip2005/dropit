@@ -9,21 +9,23 @@ class DT {
   DT._();
 
   // ---- Nền / bề mặt
-  static const background = Color(0xFFF4F5F7); // canvas off-white
+  static const background = Color(0xFFFAF7F3); // nền kem của hệ control mới
   static const card = Color(0xFFFFFFFF);
-  static const surfaceHigh = Color(0xFFF0F1F4); // ô nhập / chip xám nhạt trong thẻ
-  static const surfaceDim = Color(0xFFEBECEF); // rãnh thanh tiến độ, chấm trang
+  static const surfaceHigh = Color(0xFFF5EFE9);
+  static const surfaceDim = Color(0xFFEDE3DA);
   static const skeleton = Color(0xFFEBE7E7);
 
   // ---- Chữ
-  static const primary = Color(0xFF1C1C1E); // đen nhám: nút chính, thanh điều hướng
-  static const textPrimary = Color(0xFF111111);
-  static const textSecondary = Color(0xFF6C6C70);
+  static const primary = Color(0xFFFF7A00); // cam thương hiệu: chỉ làm NỀN (nút, chip đặc); chữ trên nó dùng [onPrimary]
+  static const onPrimary = Color(0xFF141414); // 7.05:1 trên #FF7A00 (trắng chỉ 2.61:1 — cấm)
+  static const brandInk = Color(0xFF141414); // nền splash / icon
+  static const textPrimary = Color(0xFF302823);
+  static const textSecondary = Color(0xFF76695F);
 
   // ---- Nhấn / chức năng
-  static const accent = Color(0xFFB02F00); // Coins, chữ/biểu tượng nhấn
-  static const accentSoftBg = Color(0xFFFFF1EC);
-  static const accentDecor = Color(0xFFFF5722); // chỉ trang trí, không làm chữ
+  static const accent = Color(0xFFC2410C); // chữ/biểu tượng cam trên nền sáng: 5.18 trắng, 4.85 nền, 4.74 soft
+  static const accentSoftBg = Color(0xFFFFF3E8);
+  static const accentDecor = Color(0xFFFF7A00); // chỉ trang trí, không làm chữ
   static const success = Color(0xFF1B7F3B);
   static const successSoftBg = Color(0xFFE8F9ED);
   static const successDecor = Color(0xFF34C759);
@@ -32,9 +34,9 @@ class DT {
   static const onWarningSoft = Color(0xFF93000A);
 
   // ---- Viền
-  static const outline = Color(0xFFE5E7EB);
-  static const outlineVariant = Color(0xFFC7C6CA);
-  static const divider = Color(0xFFF0F0F2);
+  static const outline = Color(0xFFEADFD5);
+  static const outlineVariant = Color(0xFFB7A89B);
+  static const divider = Color(0xFFF1E9E2);
 
   // ---- Lockdown (đen tĩnh)
   static const lockdownBg = Color(0xFF000000);
@@ -81,7 +83,7 @@ class DT {
 
   /// Thanh điều hướng nổi: `0 12px 32px -4px rgba(17,17,17,.30)`.
   static const navShadow = [
-    BoxShadow(color: Color(0x4D111111), blurRadius: 32, spreadRadius: -4, offset: Offset(0, 12)),
+    BoxShadow(color: Color(0x186E412C), blurRadius: 24, spreadRadius: -4, offset: Offset(0, 8)),
   ];
 
   /// "Card elevation" lớn của DESIGN.md (thẻ hero).

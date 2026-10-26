@@ -71,6 +71,27 @@ final achievementsProvider = FutureProvider.autoDispose((ref) => ref.watch(apiPr
 final attendanceProvider = FutureProvider.autoDispose
     .family<AttendanceMonth, String>((ref, month) => ref.watch(apiProvider).attendance(month));
 final historyProvider = FutureProvider.autoDispose((ref) => ref.watch(apiProvider).history(limit: 50));
+final historyRewardTodayProvider = FutureProvider.autoDispose<HistoryRewardToday>(
+    (ref) => ref.watch(apiProvider).historyRewardToday());
+/// Load every page within a bounded period, so picking an old day and its totals
+/// never silently operate on only the latest page of the user's history.
+final historyPeriodProvider = FutureProvider.autoDispose
+    .family<HistoryPage, (String, String)>((ref, range) async {
+  final api = ref.watch(apiProvider);
+  final items = <MySessionResult>[];
+  final seenCursors = <String>{};
+  String? cursor;
+  do {
+    final page = await api.history(
+        cursor: cursor, limit: 100, from: range.$1, to: range.$2);
+    items.addAll(page.items);
+    cursor = page.nextCursor;
+    if (cursor != null && !seenCursors.add(cursor)) {
+      throw StateError('History pagination returned a repeated cursor');
+    }
+  } while (cursor != null);
+  return HistoryPage(items, null);
+});
 final journalProvider = FutureProvider.autoDispose((ref) => ref.watch(apiProvider).journal());
 final explanationsProvider = FutureProvider.autoDispose
     .family<List<Explanation>, String>((ref, sid) => ref.watch(apiProvider).explanations(sid));

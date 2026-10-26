@@ -45,9 +45,9 @@ class PillTextField extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: DT.spaceMd),
         decoration: BoxDecoration(
           color: DT.card,
-          borderRadius: BorderRadius.circular(DT.pill),
-          boxShadow: DT.softShadow,
-          border: errorText != null ? Border.all(color: DT.warning) : null,
+          borderRadius: BorderRadius.circular(DT.radius),
+          boxShadow: context.ownerStyle ? null : DT.softShadow,
+          border: Border.all(color: errorText != null ? DT.warning : (context.ownerStyle ? OwnerStyle.line : DT.outline)),
         ),
         child: Row(children: [
           if (icon != null) ...[Icon(icon, color: DT.textSecondary), const SizedBox(width: DT.spaceSm + 4)],

@@ -1,0 +1,42 @@
+{
+  "conditioning": {
+    "negative": "3d render, plastic, photorealistic, thick bulky ring, portrait, face, person, text, watermark, logo, square frame, scenery, filled center, blurry, low quality",
+    "positive": "A single exquisite heraldic achievement emblem, a graceful swallow with outstretched wings above a small sunrise, champagne gold filigree and peach enamel, warm morning light. Premium 2D hand painted fantasy mobile game inventory icon. Confident delicate ink outlines, refined painterly highlights, rich harmonious colors, elegant compact silhouette, beautifully illustrated details readable at small sizes. One centered standalone emblem occupying 75 percent of a square canvas, all decorative tips fully inside image with generous clean margin. Isolated cutout on PURE SOLID WHITE background. No scene, no background gradient, no lettering, no words, no numbers, no watermark. Flat front view, illustration, not a 3D render.",
+    "regions": [],
+    "control": []
+  },
+  "kind": "generate",
+  "images": {
+    "extent": {
+      "initial": [
+        1024,
+        1024
+      ],
+      "input": [
+        1024,
+        1024
+      ],
+      "desired": [
+        1024,
+        1024
+      ],
+      "target": [
+        1024,
+        1024
+      ]
+    }
+  },
+  "batch_count": 1,
+  "models": {
+    "loras": [],
+    "version": "sdxl",
+    "checkpoint": "zavychromaxl_v80.safetensors"
+  },
+  "sampling": {
+    "sampler": "dpmpp_2m",
+    "seed": 2211002,
+    "total_steps": 28,
+    "cfg_scale": 6.0,
+    "scheduler": "karras"
+  }
+}

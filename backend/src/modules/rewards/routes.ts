@@ -1,10 +1,25 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { sql } from 'kysely';
 import type { Ctx } from '../../context.js';
 import { currentUser, parse } from '../../shared/http.js';
 import { decodeCursor, encodeCursor } from '../../shared/cursor.js';
+import { vnDay } from '../../shared/time.js';
 
 export function rewardRoutes(app: FastifyInstance, ctx: Ctx) {
+  // Reward-day total, independent of history pagination and current wallet balance.
+  app.get('/v1/me/rewards/today', async (req) => {
+    const me = await currentUser(req, ctx.db, ctx.verifier);
+    const day = vnDay(new Date());
+    const total = await ctx.db.selectFrom('coin_ledger')
+      .select((eb) => eb.fn.coalesce(eb.fn.sum<string>('amount'), sql<string>`0`).as('total'))
+      .where('user_id', '=', me.id)
+      .where('type', '=', 'SESSION_REWARD')
+      .where('reward_date', '=', day)
+      .executeTakeFirstOrThrow();
+    return { reward_date: day, coins_awarded: Number(total.total), daily_cap: ctx.cfg.engine.coinsDailyCap };
+  });
+
   // Coins của chính tôi (US-06.02) — chỉ qua /me, không đọc chéo được (P3, BR-53)
   app.get('/v1/me/coins', async (req) => {
     const me = await currentUser(req, ctx.db, ctx.verifier);

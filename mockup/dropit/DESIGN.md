@@ -21,10 +21,10 @@ colors:
   primary-container: '#1c1c1e'
   on-primary-container: '#858486'
   inverse-primary: '#c8c6c8'
-  secondary: '#b02f00'
+  secondary: '#c2410c'
   on-secondary: '#ffffff'
-  secondary-container: '#ff5722'
-  on-secondary-container: '#541100'
+  secondary-container: '#ff7a00'
+  on-secondary-container: '#141414'
   tertiary: '#010100'
   on-tertiary: '#ffffff'
   tertiary-container: '#1f1b1a'
@@ -49,9 +49,12 @@ colors:
   on-background: '#1c1b1b'
   surface-variant: '#e5e2e1'
   card: '#FFFFFF'
-  accent: '#B02F00'
-  accent-soft-bg: '#FFF1EC'
-  accent-decor: '#FF5722'
+  accent: '#C2410C'
+  accent-fill: '#FF7A00'
+  on-accent-fill: '#141414'
+  accent-soft-bg: '#FFF3E8'
+  accent-decor: '#FF7A00'
+  brand-ink: '#141414'
   success: '#1B7F3B'
   success-decor: '#34C759'
   text-primary: '#111111'
@@ -144,32 +147,38 @@ This design system establishes a clean, utilitarian aesthetic inspired by modern
 
 ## Colors
 
-The palette is strictly calibrated to create maximum hierarchy and functional clarity. The base utilizes an off-white canvas (`#F4F5F7`) that allows pristine white cards (`#FFFFFF`) to float effortlessly. Matte black (`#1C1C1E`) commands primary actions and structural navigation, while burnt orange (`#B02F00`) marks currency and active states.
+The palette is strictly calibrated to create maximum hierarchy and functional clarity. The base utilizes an off-white canvas (`#F4F5F7`) that allows pristine white cards (`#FFFFFF`) to float effortlessly. Matte black (`#1C1C1E`) commands primary actions and structural navigation, while the brand orange family (matching the app icon tray `#FFB300`→`#FF6A00`) marks currency and active states: bright `#FF7A00` as a fill, deep `#C2410C` for text/icons on light surfaces.
 
 - **Primary:** Matte Black (`#1C1C1E`)
-- **Accent (text, icons, Coins):** Burnt Orange (`#B02F00`). `#FF5722` is decorative only (large fills/illustrations, never text on light backgrounds; 3.16:1 on white).
+- **Accent fill (buttons, solid chips):** Brand Orange `#FF7A00` with **black `#141414` label** (7.05:1). White on `#FF7A00` = 2.61:1 — forbidden.
+- **Accent (text, icons, Coins on light):** Deep Orange `#C2410C`. `#FF7A00` is never text on light backgrounds (2.45:1 on `#FAF7F3`).
+- **Brand ink:** `#141414` (icon background, splash).
 - **Neutral Canvas:** Off-White (`#F4F5F7`) & Pure White (`#FFFFFF`)
 - **Functional:** Success Green text `#1B7F3B` (`#34C759` decorative only) and Warning Red `#BA1A1A`.
 - **Rule:** Warning red is reserved for errors/exit alerts. It is **never** used as the accent color for Coins, rewards or highlights.
 
-### Contrast table (WCAG 2.1, computed 2026-10-19)
+### Contrast table (WCAG 2.1, computed 2026-10-19; accent rows recomputed 2026-10-26)
 
 | Pair | Ratio | Target |
 | --- | --- | --- |
 | text-primary `#111111` on background `#F4F5F7` | 17.31:1 | ≥4.5 |
 | text-secondary `#6C6C70` on background `#F4F5F7` | 4.79:1 | ≥4.5 |
 | text-secondary `#6C6C70` on card `#FFFFFF` | 5.23:1 | ≥4.5 |
-| accent `#B02F00` on card `#FFFFFF` | 6.46:1 | ≥4.5 |
-| accent `#B02F00` on background `#F4F5F7` | 5.92:1 | ≥4.5 |
-| accent `#B02F00` on accent-soft-bg `#FFF1EC` | 5.86:1 | ≥4.5 |
-| white on accent `#B02F00` (button) | 6.46:1 | ≥4.5 |
+| accent `#C2410C` on card `#FFFFFF` | 5.18:1 | ≥4.5 |
+| accent `#C2410C` on app background `#FAF7F3` | 4.85:1 | ≥4.5 |
+| accent `#C2410C` on surface-high `#F5EFE9` | 4.54:1 | ≥4.5 |
+| accent `#C2410C` on accent-soft-bg `#FFF3E8` | 4.74:1 | ≥4.5 |
+| white on accent `#C2410C` (badge/day) | 5.18:1 | ≥4.5 |
+| `#141414` on accent-fill `#FF7A00` (button) | 7.05:1 | ≥4.5 |
+| `#000000` on accent-fill `#FF7A00` | 8.04:1 | ≥4.5 |
+| accent-fill `#FF7A00` on brand-ink `#141414` | 7.05:1 | ≥4.5 |
 | success `#1B7F3B` on `#F4F5F7` / `#FFFFFF` | 4.64 / 5.07:1 | ≥4.5 |
 | white on primary `#1C1C1E` | 17.01:1 | ≥4.5 |
 | Lockdown button `#5C5C5C` vs bg `#000000` | 3.14:1 | ≥3 (component) |
 | white label on Lockdown button `#5C5C5C` | 6.69:1 | ≥4.5 |
 | lockdown-text-secondary `#A1A1A6` on `#000000` | 8.16:1 | ≥4.5 |
 
-Replaced (fail): `#8E8E93` on `#F4F5F7` = 2.99:1; `#FF5722` text on white = 3.16:1; `#333333` button on black = 1.66:1.
+Replaced (fail): white on `#FF7A00` = 2.61:1; `#FF7A00` text on `#FAF7F3` = 2.45:1; `#8E8E93` on `#F4F5F7` = 2.99:1; `#FF5722` text on white = 3.16:1; `#333333` button on black = 1.66:1.
 
 ## Typography
 
@@ -203,10 +212,10 @@ The shape language combines strict pill-shaped geometry with generous, friendly 
 ### Buttons
 - **Primary:** Matte black (`#1C1C1E`) fill with white text, pill-shaped (`999px`), featuring generous vertical padding for thumb-friendly touch targets.
 - **Secondary / Toggle:** White background (`#FFFFFF`) with dark text, transitioning to matte black when active.
-- **Accent:** Burnt orange (`#B02F00`) for Coins text/icons and accent buttons (white label). Never red.
+- **Accent:** Brand orange `#FF7A00` fill with black `#141414` label for accent buttons; deep orange `#C2410C` for Coins text/icons. Never red.
 
 ### Chips & Badges
-- Pill-shaped small containers used for coin balances and category tags. Coin badges use `#FFF1EC` background with `#B02F00` text to draw immediate visual interest.
+- Pill-shaped small containers used for coin balances and category tags. Coin badges use `#FFF3E8` background with `#C2410C` text to draw immediate visual interest.
 
 ### Input Fields & Controls
 - Clean, borderless or soft-bordered input fields embedded within white container cards. Segmented controls use pill-toggle styling to switch between session durations (e.g., 25m vs 50m).

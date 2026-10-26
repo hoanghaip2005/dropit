@@ -8,6 +8,7 @@ import { sortPeople } from '../../shared/sort.js';
 import { activeMembership, roleIn } from '../groups/service.js';
 import { sessionCols, toSummary } from './summary.js';
 import { decodeCursor, encodeCursor } from '../../shared/cursor.js';
+import { iso } from '../../shared/time.js';
 
 const SessionId = z.object({ session_id: z.string().uuid() });
 
@@ -36,12 +37,19 @@ export async function myResult(ctx: Ctx, userId: string, sessionId: string) {
   const u = await ctx.db.selectFrom('users').select('current_streak').where('id', '=', userId).executeTakeFirstOrThrow();
   const base = s.duration_min === 25 ? ctx.cfg.engine.coins25 : ctx.cfg.engine.coins50;
   const appeal = await ctx.db.selectFrom('appeals').select('id').where('session_id', '=', sessionId).where('user_id', '=', userId).executeTakeFirst();
+  const explanation = await ctx.db.selectFrom('explanations').select('id')
+    .where('session_id', '=', sessionId).where('user_id', '=', userId).executeTakeFirst();
   const now = Date.now();
   const exited = sm.state === 'EXITED';
   return {
     session_id: sessionId,
+    // This endpoint currently contains group sessions only, regardless of attendance.
+    session_mode: 'SQUAD',
     group_name: s.group_name,
     started_at: s.started_at.toISOString(),
+    joined_at: iso(sm.joined_at),
+    exited_at: iso(sm.exited_at),
+    ended_at: iso(sm.ended_at),
     duration_min: s.duration_min,
     final_state: sm.state,
     focus_seconds: sm.focus_seconds,
@@ -51,6 +59,9 @@ export async function myResult(ctx: Ctx, userId: string, sessionId: string) {
     cancelled_outage_exited: s.status === 'CANCELLED' && s.cancel_reason === 'SERVER_OUTAGE' && exited,
     coins_awarded: sm.coins_awarded,
     reward_cap_reached: s.status === 'COMPLETED' && (sm.state === 'COMPLETED' || sm.exempted) && !s.forfeited && sm.coins_awarded < base,
+    reward_daily_cap: ctx.cfg.engine.coinsDailyCap,
+    explanation_submit_deadline: new Date(s.ends_at.getTime() + ctx.cfg.explanationSubmitDays * 86400e3).toISOString(),
+    has_explanation: !!explanation,
     streak_after: u.current_streak,
     streak_broken: broke,
     new_badges: logs.filter((l) => l.kind === 'BADGE_AWARD' && l.ref_badge_id).map((l) => l.ref_badge_id!),
@@ -96,10 +107,19 @@ export function sessionRoutes(app: FastifyInstance, ctx: Ctx) {
   // Lịch sử phiên của tôi (US-03.14, Should) — mới nhất trước, chỉ phiên đã chốt mà tôi có trạng thái
   app.get('/v1/me/sessions', async (req) => {
     const me = await currentUser(req, ctx.db, ctx.verifier);
-    const q = parse(z.object({ cursor: z.string().optional(), limit: z.coerce.number().int().min(1).max(100).default(20) }), req.query);
+    const q = parse(z.object({
+      cursor: z.string().optional(),
+      limit: z.coerce.number().int().min(1).max(100).default(20),
+      from: z.string().datetime({ offset: true }).optional(),
+      to: z.string().datetime({ offset: true }).optional(),
+    }).refine((value) => !value.from || !value.to || Date.parse(value.from) < Date.parse(value.to), {
+      message: 'from must be earlier than to', path: ['to'],
+    }), req.query);
     let qb = ctx.db.selectFrom('session_members').innerJoin('sessions', 'sessions.id', 'session_members.session_id')
       .select(['sessions.id', 'sessions.started_at'])
       .where('session_members.user_id', '=', me.id).where('sessions.status', 'in', ['COMPLETED', 'CANCELLED']);
+    if (q.from) qb = qb.where('sessions.started_at', '>=', new Date(q.from));
+    if (q.to) qb = qb.where('sessions.started_at', '<', new Date(q.to));
     const c = decodeCursor(q.cursor);
     if (c) qb = qb.where((eb) => eb.or([eb('sessions.started_at', '<', c.t), eb.and([eb('sessions.started_at', '=', c.t), eb('sessions.id', '<', c.id)])]));
     const rows = await qb.orderBy('sessions.started_at', 'desc').orderBy('sessions.id', 'desc').limit(q.limit + 1).execute();

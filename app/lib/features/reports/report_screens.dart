@@ -68,6 +68,21 @@ class _OwnerReportsHubScreenState extends ConsumerState<OwnerReportsHubScreen> {
   }
 }
 
+class _ReportMetric extends StatelessWidget {
+  const _ReportMetric({required this.label, required this.value});
+  final String label;
+  final String value;
+  @override
+  Widget build(BuildContext context) => AppCard(
+    radius: DT.radiusLg,
+    gap: DT.spaceSm,
+    children: [
+      Text(label, style: context.text.bodySmall!.copyWith(color: OwnerStyle.muted)),
+      Text(value, style: context.text.headlineLarge!.copyWith(color: OwnerStyle.ink, fontFeatures: DT.tabular)),
+    ],
+  );
+}
+
 /// V-48 (chủ nhóm) / V-34 (thành viên) — cùng endpoint, server trả view theo vai trò.
 class ReportScreen extends ConsumerWidget {
   const ReportScreen({super.key, required this.groupId, this.inShell = false});
@@ -163,30 +178,26 @@ class _ReportBodyState extends ConsumerState<ReportBody> {
     final t = context.text;
     final tot = r.totals ?? const {};
     return [
-      Text('Báo cáo tháng ${monthLabel(r.month)}', key: const Key('reportTitle'), style: t.headlineMedium),
-      PurposeCard(purpose: r.purpose, generatedAt: ddmm(r.generatedAt)),
+      Text('Tháng ${monthLabel(r.month)}', key: const Key('reportTitle'), style: t.titleLarge),
       StatRow(children: [
-        StatTile(label: 'Phiên đã diễn ra', value: '${tot['sessions_held'] ?? 0}'),
-        StatTile(
+        _ReportMetric(label: 'Phiên đã diễn ra', value: '${tot['sessions_held'] ?? 0}'),
+        _ReportMetric(
           label: 'Phiên có người thoát',
           value: '${tot['forfeited_sessions'] ?? 0}',
-          caption: 'Các phiên này mất thưởng tập thể',
         ),
       ]),
       StatRow(children: [
-        StatTile(
+        _ReportMetric(
           label: 'Tỉ lệ hoàn thành',
           value: pct(tot['completion_rate'] as num?),
-          caption: 'Hết giờ mà bản thân không thoát',
         ),
-        StatTile(
+        _ReportMetric(
           label: 'Hoàn thành có thưởng',
           value: pct(tot['rewarded_completion_rate'] as num?),
-          caption: 'Hoàn thành và phiên không mất thưởng',
         ),
       ]),
-      AppCard(children: [
-        const SectionHeader('Theo thành viên', subtitle: 'Sắp theo tên A→Z, không xếp hạng.'),
+      AppCard(radius: DT.radiusLg, gap: DT.spaceMd, children: [
+        SectionHeader('Theo thành viên', trailing: Text('${r.rows.length} người', style: t.bodySmall!.copyWith(color: OwnerStyle.muted))),
         Row(children: [
           Expanded(flex: 4, child: Text('Tên', style: t.labelMedium!.copyWith(color: DT.textSecondary))),
           Expanded(flex: 2, child: Text('Có mặt', style: t.labelMedium!.copyWith(color: DT.textSecondary))),
@@ -198,11 +209,12 @@ class _ReportBodyState extends ConsumerState<ReportBody> {
           InkWell(
             key: Key('reportRow-${row.userId}'),
             onTap: () => context.push('/reports/${r.groupId}/${r.month}/members/${row.userId}'),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(border: row == r.rows.last ? null : const Border(bottom: BorderSide(color: OwnerStyle.line))),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Expanded(flex: 4, child: Text(row.displayName, style: t.titleSmall)),
+                  Expanded(flex: 4, child: Text(row.displayName, style: t.titleMedium)),
                   Expanded(flex: 2, child: Text('${row.present}/${row.expected}', style: t.bodyMedium!.copyWith(fontFeatures: DT.tabular))),
                   Expanded(flex: 3, child: Text(pct(row.completionRate), style: t.bodyMedium!.copyWith(fontFeatures: DT.tabular))),
                   Expanded(
@@ -225,8 +237,7 @@ class _ReportBodyState extends ConsumerState<ReportBody> {
             ),
           ),
       ]),
-      HintText('Báo cáo tạo lúc ${hhmm(r.generatedAt)} ${ddmm(r.generatedAt)} — số liệu không đổi sau khi tạo.'),
-      const HintText('Ngày 1 hằng tháng, email tóm tắt báo cáo gửi chủ nhóm, không kèm tệp PDF.', icon: Icons.mail_outline),
+      Text('Cập nhật ${ddmm(r.generatedAt)}', style: t.bodySmall!.copyWith(color: OwnerStyle.muted)),
     ];
   }
 
@@ -238,7 +249,6 @@ class _ReportBodyState extends ConsumerState<ReportBody> {
     final tot = r.totals;
     return [
       Text('Báo cáo của tôi · ${g?.name ?? ''} · Tháng ${monthLabel(r.month)}', style: t.headlineSmall),
-      PurposeCard(purpose: r.purpose, generatedAt: ddmm(r.generatedAt)),
       const AppBanner(tone: BannerTone.info, icon: Icons.visibility_outlined, text: 'Chủ nhóm thấy đúng các số dưới đây về bạn.'),
       if (m == null)
         const AppCard(children: [InfoRow(icon: Icons.info_outline, title: 'Không có dòng của bạn trong kỳ này')])
@@ -278,7 +288,7 @@ class _ReportBodyState extends ConsumerState<ReportBody> {
 }
 
 /// V-49 Chi tiết báo cáo một thành viên (chủ nhóm). Mockup `t_11_chi_ti_t_b_o_c_o_th_nh_vi_n`.
-/// Không Coins, chuỗi, điểm, hạng; mục đích báo cáo ở đầu (V-35).
+/// Chi tiết báo cáo thành viên; không Coins, chuỗi, điểm, hạng.
 class OwnerMemberReportScreen extends ConsumerWidget {
   const OwnerMemberReportScreen({super.key, required this.groupId, required this.month, required this.userId});
   final String groupId;
@@ -287,7 +297,6 @@ class OwnerMemberReportScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final row = ref.watch(reportRowProvider((groupId, month, userId)));
-    final rep = ref.watch(reportProvider((groupId, month))).value;
     final t = context.text;
     return AppScaffold(
       header: AppHeader.brand(
@@ -300,7 +309,6 @@ class OwnerMemberReportScreen extends ConsumerWidget {
         onRetry: () => ref.invalidate(reportRowProvider((groupId, month, userId))),
         errorTitle: 'Chưa tải được chi tiết.',
         builder: (m) => PageList(children: [
-          PurposeCard(purpose: rep?.purpose, generatedAt: rep == null ? null : ddmm(rep.generatedAt)),
           StatRow(children: [
             StatTile(label: 'Có mặt', value: '${m.present}/${m.expected}', caption: 'phiên đã lên lịch'),
             StatTile(
@@ -361,7 +369,7 @@ class OwnerScheduleHubScreen extends ConsumerWidget {
         builder: (list) {
           final owned = list.where((g) => g.isOwner).toList();
           return PageList(onRefresh: refresh, children: [
-            Text('Chủ nhóm không tham gia phiên, chỉ quản lý lịch và xem kết quả sau phiên.', style: t.bodySmall),
+            Text('Lịch tập trung của các nhóm bạn quản lý', style: t.bodySmall),
             for (final g in owned) _GroupSchedules(group: g),
           ]);
         },
@@ -378,8 +386,14 @@ class _GroupSchedules extends ConsumerWidget {
     final s = ref.watch(schedulesProvider(group.groupId));
     final t = context.text;
     final now = DateTime.now().toUtc();
-    return AppCard(children: [
-      Text(group.name, style: t.headlineSmall),
+    return AppCard(radius: DT.radiusLg, gap: DT.spaceMd, children: [
+      Row(children: [
+        Container(width: 44, height: 44,
+          decoration: BoxDecoration(color: DT.accentSoftBg, borderRadius: BorderRadius.circular(16)),
+          child: const Icon(Icons.event_outlined, color: DT.accent)),
+        const SizedBox(width: DT.spaceSm),
+        Expanded(child: Text(group.name, style: t.headlineSmall)),
+      ]),
       s.when(
         loading: () => const LinearProgressIndicator(),
         error: (e, _) => Text(ApiError.from(e).message, style: t.bodySmall),

@@ -35,7 +35,7 @@ export async function meProfile(ctx: Ctx, userId: string) {
 export function authRoutes(app: FastifyInstance, ctx: Ctx) {
   app.get('/v1/time', async () => ({ server_ts: new Date().toISOString() }));
 
-  if (ctx.cfg.devAuth && ctx.verifier instanceof Hs256Verifier) {
+  if (['development', 'test'].includes(ctx.cfg.nodeEnv) && ctx.cfg.devAuth && ctx.verifier instanceof Hs256Verifier) {
     const signer = ctx.verifier;
     // Thay Cognito ở môi trường dev: cấp access token HS256 cho email bất kỳ.
     app.post('/dev/token', async (req) => {

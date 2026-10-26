@@ -234,7 +234,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: DT.spaceMd,
               crossAxisSpacing: DT.spaceMd,
-              childAspectRatio: 0.92,
+              mainAxisExtent: 280,
               children: [
                 for (final b in shown)
                   _BadgeTile(def: b, earned: earned[b.code], value: metric[b.metric]),
@@ -265,13 +265,7 @@ class _BadgeTile extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         children: [
           Row(children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(color: got ? DT.accentSoftBg : DT.surfaceHigh, shape: BoxShape.circle),
-              child: Icon(def.icon, color: got ? DT.accent : DT.textSecondary),
-            ),
-            const Spacer(),
+            Expanded(child: Center(child: AchievementEmblem(code: def.code, earned: got, size: 96))),
             Icon(got ? Icons.check_circle : Icons.lock_outline, size: 18, color: got ? DT.success : DT.textSecondary),
           ]),
           Text(def.name, maxLines: 2, style: t.titleSmall),

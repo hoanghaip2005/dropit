@@ -9,7 +9,9 @@ import '../../core/auth.dart';
 import '../../core/models.dart';
 import '../../core/models_ext.dart';
 import '../../core/providers.dart';
+import '../../core/push.dart';
 import '../../core/widgets.dart';
+import '../achievements/achievements_screen.dart' show badgeName;
 
 /// V-22 Hồ sơ của tôi. Mockup: `user_profile`, `employee_profile_inventory`.
 /// Hiện khung avatar + hình nền đang trang bị. Chủ nhóm (không là thành viên nhóm nào) không thấy Coins/chuỗi/Shop (BR-53).
@@ -19,9 +21,10 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(meProvider);
     final owner = ref.watch(ownerOnlyProvider) ?? false;
+    final showcase = owner ? <EarnedBadge>[] : (ref.watch(achievementsProvider).value?.badges.where((b) => b.visible).take(3).toList() ?? <EarnedBadge>[]);
     // BR-70 / AC-01.02.3: đang có trạng thái chưa kết thúc trong phiên → khóa Đăng xuất
     final inSession = ref.watch(liveSessionProvider) != null;
-    final shop = ref.watch(shopItemsProvider).value ?? const <ShopItem>[];
+    final shop = owner ? const <ShopItem>[] : ref.watch(shopItemsProvider).value ?? const <ShopItem>[];
     final keyOf = {for (final s in shop) s.itemId: s};
     final t = context.text;
     Future<void> refresh() async {
@@ -31,10 +34,9 @@ class ProfileScreen extends ConsumerWidget {
     }
 
     return AppScaffold(
-      header: AppHeader.brand(
-        title: 'DropIt!',
-        caption: owner ? 'Chủ nhóm' : null,
-        icon: owner ? Icons.timer_outlined : Icons.local_fire_department,
+      header: AppHeader.large(
+        title: 'Hồ sơ',
+        caption: owner ? 'DropIt! · Chủ nhóm' : 'DropIt!',
         trailing: CircleIconButton(
           icon: Icons.notifications_none,
           tooltip: 'Hộp thông báo',
@@ -48,7 +50,6 @@ class ProfileScreen extends ConsumerWidget {
           final frame = owner ? null : keyOf[m.frameItemId];
           final bg = owner ? null : keyOf[m.backgroundItemId];
           final title = owner ? null : keyOf[m.titleItemId];
-          final bgColor = bg == null ? null : previewColor(bg.previewKey);
           return PageList(onRefresh: refresh, children: [
             if (m.cachedAt != null)
               AppBanner(
@@ -61,24 +62,40 @@ class ProfileScreen extends ConsumerWidget {
                 onAction: () => ref.invalidate(meProvider),
               ),
             // Hero: hình nền đang trang bị (mặc định: cam nhạt → canvas), avatar có khung.
-            Container(
+            if (owner)
+              AppCard(
+                key: const Key('ownerProfileHero'),
+                radius: DT.radiusLg,
+                padding: const EdgeInsets.all(24),
+                gap: DT.spaceMd,
+                children: [
+                  Center(child: Stack(clipBehavior: Clip.none, children: [
+                    FramedAvatar(name: m.displayName,
+                      imageUrl: m.avatarUrl == null ? null : fixHost(m.avatarUrl!), size: 88),
+                    Positioned(right: -4, bottom: -4, child: CircleIconButton(
+                      key: const Key('changeAvatar'), icon: Icons.photo_camera_outlined,
+                      tooltip: 'Đổi ảnh đại diện', size: 44,
+                      onPressed: () => pickAndUploadAvatar(context, ref))),
+                  ])),
+                  Column(children: [
+                    Text(m.displayName, style: t.headlineMedium, textAlign: TextAlign.center),
+                    const SizedBox(height: DT.spaceSm),
+                    const StatusBadge('Chủ nhóm', tone: BadgeTone.accent),
+                  ]),
+                  SecondaryButton(label: 'Sửa hồ sơ', icon: Icons.edit_outlined,
+                    onPressed: () => context.push('/profile/edit')),
+                ],
+              )
+            else CosmeticSurface(
               key: const Key('profileHero'),
-              padding: const EdgeInsets.symmetric(vertical: DT.spaceLg),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(DT.radiusLg),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: bgColor == null
-                      ? const [DT.accentSoftBg, DT.background]
-                      : [bgColor, Color.lerp(bgColor, DT.background, 0.75)!],
-                ),
-              ),
+              artKey: bg?.previewKey,
+              padding: const EdgeInsets.symmetric(vertical: DT.spaceLg, horizontal: DT.spaceMd),
               child: Column(children: [
                 Stack(clipBehavior: Clip.none, children: [
                   FramedAvatar(
                     name: m.displayName,
                     imageUrl: m.avatarUrl == null ? null : fixHost(m.avatarUrl!),
+                    frameKey: frame?.previewKey,
                     frameColor: frame == null ? null : previewColor(frame.previewKey),
                     size: 108,
                   ),
@@ -98,9 +115,8 @@ class ProfileScreen extends ConsumerWidget {
                 Text(m.displayName, style: t.headlineMedium, textAlign: TextAlign.center),
                 if (title != null) ...[
                   const SizedBox(height: DT.spaceXs),
-                  ItemPreview(kind: 'TITLE', colorKey: title.previewKey, label: title.name, size: 30),
+                  TitleAdornment(artKey: title.previewKey, label: title.name),
                 ],
-                if (m.email != null) Text(m.email!, style: t.bodyMedium!.copyWith(color: DT.textSecondary)),
                 const SizedBox(height: DT.spaceSm),
                 Material(
                   color: DT.card,
@@ -123,6 +139,17 @@ class ProfileScreen extends ConsumerWidget {
               ]),
             ),
             if (!owner) ...[
+              if (showcase.isNotEmpty)
+                AppCard(children: [
+                  const SectionHeader('Huy hiệu trưng bày'),
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    for (final b in showcase)
+                      Expanded(child: Column(children: [
+                        AchievementEmblem(code: b.code, size: 72),
+                        Text(badgeName(b.code), textAlign: TextAlign.center, style: t.labelMedium),
+                      ])),
+                  ]),
+                ]),
               StatRow(children: [
                 StatTile(
                   label: 'Chuỗi hiện tại',
@@ -152,16 +179,27 @@ class ProfileScreen extends ConsumerWidget {
                   _Link('Dữ liệu của tôi', Icons.privacy_tip_outlined, '/my-data', last: true),
                 ],
               ),
-            ] else
+            ] else ...[
+              const SectionHeader('Quản lý'),
               AppCard(
+                radius: DT.radiusLg,
                 padding: const EdgeInsets.symmetric(horizontal: DT.spaceMd, vertical: DT.spaceXs),
                 children: const [
                   _Link('Nhóm tôi quản lý', Icons.groups_outlined, '/groups'),
-                  _Link('Báo cáo tháng', Icons.analytics_outlined, '/owner/reports'),
+                  _Link('Lịch phiên', Icons.event_outlined, '/owner/schedule'),
+                  _Link('Báo cáo tháng', Icons.analytics_outlined, '/owner/reports', last: true),
+                ],
+              ),
+              const SectionHeader('Cá nhân'),
+              AppCard(
+                radius: DT.radiusLg,
+                padding: const EdgeInsets.symmetric(horizontal: DT.spaceMd, vertical: DT.spaceXs),
+                children: const [
                   _Link('Nhật ký', Icons.book_outlined, '/journal'),
                   _Link('Dữ liệu của tôi', Icons.privacy_tip_outlined, '/my-data', last: true),
                 ],
               ),
+            ],
             if (inSession)
               const AppBanner(
                 key: Key('logoutLocked'),
@@ -182,7 +220,7 @@ class ProfileScreen extends ConsumerWidget {
                       if (ok && ref.read(liveSessionProvider) == null) await ref.read(authProvider.notifier).logout();
                     },
             ),
-            Text('Không đăng xuất được khi đang trong phiên.', textAlign: TextAlign.center, style: t.bodySmall),
+            if (!owner) Text('Không đăng xuất được khi đang trong phiên.', textAlign: TextAlign.center, style: t.bodySmall),
           ]);
         },
       ),
@@ -231,11 +269,13 @@ class _Link extends StatelessWidget {
         leading: Container(
           width: 36,
           height: 36,
-          decoration: const BoxDecoration(color: DT.surfaceHigh, shape: BoxShape.circle),
-          child: Icon(icon, size: 20, color: DT.textPrimary),
+          decoration: BoxDecoration(color: context.ownerStyle ? OwnerStyle.inset : DT.surfaceHigh,
+            borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, size: 20, color: context.ownerStyle ? OwnerStyle.ink : DT.textPrimary),
         ),
         title: title,
         divider: !last,
+        trailing: Icon(Icons.chevron_right_rounded, size: 20, color: context.ownerStyle ? OwnerStyle.muted : DT.textSecondary),
         onTap: () => context.push(route),
       );
 }
@@ -469,7 +509,9 @@ class NotificationsScreen extends ConsumerWidget {
           },
         ),
       ),
-      body: AsyncBody(
+      body: Column(children: [
+        const PushPermissionCard(),
+        Expanded(child: AsyncBody(
         value: n,
         onRetry: refresh,
         isEmpty: (d) => d.items.isEmpty,
@@ -520,7 +562,8 @@ class NotificationsScreen extends ConsumerWidget {
             ],
           ),
         ]),
-      ),
+      )),
+      ]),
     );
   }
 }

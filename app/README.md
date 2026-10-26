@@ -3,6 +3,20 @@
 Org `com.bakhi.dropit`, tên `dropit`. Riverpod 3, go_router, dio, socket_io_client, theme theo `mockup/dropit/DESIGN.md`.
 Package native `packages/focus_lifecycle` tách từ `spike/t01-lifecycle` (Kotlin/Swift + bộ phân loại LOCK/LEAVE bằng Dart).
 
+## Xem trên trình duyệt
+
+```powershell
+cd D:\DropIt!\backend
+npm run db:up
+npm run dev
+# Terminal khác:
+cd D:\DropIt!\app
+flutter run -d web-server --web-hostname=127.0.0.1 --web-port=8080 --dart-define=API_BASE_URL=http://localhost:3000
+```
+
+Mở http://127.0.0.1:8080. Đăng nhập dev bằng tài khoản mẫu An (thành viên) hoặc Lan (chủ nhóm).
+Bản web dùng để xem giao diện và luồng dữ liệu; phát hiện khóa màn hình native vẫn cần kiểm tra trên Android/iOS.
+
 ## Chạy trên Windows
 
 Dấu `!` trong `D:\DropIt!` làm hỏng Gradle → dùng ổ ảo và TEMP ngắn:
@@ -60,7 +74,9 @@ Truy vết US: xem `ba/views/00-danh-muc-man.md` (mỗi V-xx ghi US tương ứn
 
 ## Design system
 
-Nguồn: `mockup/dropit/DESIGN.md` + lớp Tailwind của `mockup/*/code.html`. Font Inter qua `google_fonts` (tắt khi `flutter test`).
+Nguồn: `mockup/dropit/DESIGN.md` + lớp Tailwind của `mockup/*/code.html`. Font Inter 400/500/600/700 đóng gói trong `assets/fonts/` (kèm OFL), không tải font mạng lúc chạy.
+
+Ảnh nguồn mockup được lưu local tại `assets/mockup/`; URL gốc trong `sources.json`. Onboarding dùng ảnh nguồn. Shop, xem thử, Đồ của tôi và hồ sơ dùng SVG gốc trong `assets/cosmetics/` (3 khung trong suốt, 3 cảnh nền, 2 huy hiệu danh hiệu), cùng renderer trong `cosmetics.dart`. Avatar thật được giữ dưới lớp khung. Tái tạo SVG bằng `python app/scripts/generate_cosmetics.py` từ thư mục gốc.
 
 - `lib/core/theme/tokens.dart` — `DT`: màu (canvas `#F4F5F7`, thẻ trắng, đen nhám `#1C1C1E`, accent `#B02F00` cho Coins, success `#1B7F3B`, warning `#BA1A1A` chỉ cho lỗi/thoát, Lockdown đen/`#5C5C5C`/`#A1A1A6`), bo góc (8/16/24/32/pill), khoảng cách (4/8/16/24/32, lề màn 16), chiều cao nút 56/48, bóng (`cardShadow`, `softShadow`, `navShadow`, `heroShadow`).
 - `lib/core/theme/app_theme.dart` — `buildLightTheme()` (ColorScheme, TextTheme Inter, nút/ô nhập/dialog/snackbar), `DropItColors` (ThemeExtension, `context.dropit`), `context.text`.
@@ -102,7 +118,7 @@ Dữ liệu của tôi (V-25), Rút đồng ý và rời nhóm (V-21). `member:p
 
 ## Giả định đợt này
 
-- Ảnh xem trước Shop là SVG giữ chỗ → app tự vẽ màu bằng cùng công thức băm của server (không thêm thư viện SVG).
+- Shop: 8 vật phẩm mẫu dùng SVG riêng; món chưa có thiết kế dùng preview dự phòng.
 - Công tắc "Hiện chuỗi và huy hiệu" ánh xạ vào `PUT /me/badges/{code}/display` (bật = 3 huy hiệu mới nhất, BR-99); API chưa có cờ riêng cho chuỗi công khai.
 - Tiến độ huy hiệu phiên/giờ chưa có số đo từ API → chỉ hiện "Chưa đạt"; tiến độ chuỗi dùng `longest_streak`.
 - Không có API đọc lại giải trình của chính mình → màn V-15 chỉ hiện trạng thái sau lần gửi trong phiên màn.

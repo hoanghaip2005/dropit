@@ -77,8 +77,9 @@ export async function upsertExplanation(ctx: Ctx, userId: string, sessionId: str
     }
     if (!row) throw new AppError(409, 'VERSION_CONFLICT', 'Giải trình đã được sửa ở nơi khác, tải lại rồi sửa');
   }
-  const u = await ctx.db.selectFrom('users').select('display_name').where('id', '=', userId).executeTakeFirstOrThrow();
-  return toExplanation(row, u.display_name, sm.exited_at!);
+  // Return the same authoritative edit deadline, permission and revision list
+  // as GET, so clients cannot briefly unlock a stale or expired editor.
+  return getMyExplanation(ctx, userId, sessionId);
 }
 
 type ExplRow = { session_id: string; user_id: string; body: string; added_after_report: boolean; created_at: Date; edited_at: Date | null; updated_at: Date };

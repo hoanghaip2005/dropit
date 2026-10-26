@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-25",
+  "currency_rate_assumed": 26000,
+  "tax_fx_reserve_assumed": 0.15,
+  "scenarios": [
+    {
+      "name": "Thấp",
+      "sessions_per_user": 4,
+      "minutes": 25,
+      "sessions": 200,
+      "user_hours": 83.33333333333333,
+      "heartbeats": 60000,
+      "cold_loads": 200,
+      "transfer_gb": 10.416,
+      "push_attempts": 800,
+      "emails": 50,
+      "db_gb": 0.05,
+      "uploads_gb": 0.01,
+      "backup_gb": 0.54,
+      "bucket_usd": 1,
+      "total_usd": 8.005,
+      "vnd": 239350
+    },
+    {
+      "name": "Cơ sở",
+      "sessions_per_user": 20,
+      "minutes": 50,
+      "sessions": 1000,
+      "user_hours": 833.3333333333334,
+      "heartbeats": 600000,
+      "cold_loads": 1000,
+      "transfer_gb": 52.389,
+      "push_attempts": 10000,
+      "emails": 250,
+      "db_gb": 0.25,
+      "uploads_gb": 0.1,
+      "backup_gb": 3.15,
+      "bucket_usd": 1,
+      "total_usd": 8.025,
+      "vnd": 239948
+    },
+    {
+      "name": "Cao",
+      "sessions_per_user": 60,
+      "minutes": 50,
+      "sessions": 3000,
+      "user_hours": 2500,
+      "heartbeats": 1800000,
+      "cold_loads": 3000,
+      "transfer_gb": 157.168,
+      "push_attempts": 120000,
+      "emails": 1000,
+      "db_gb": 1,
+      "uploads_gb": 1,
+      "backup_gb": 18,
+      "bucket_usd": 3,
+      "total_usd": 10.1,
+      "vnd": 301990
+    }
+  ]
+}

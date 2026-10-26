@@ -34,6 +34,14 @@ export async function monthlyReportTick(ctx: Ctx, now = new Date()) {
 
 export function startJobs(ctx: Ctx) {
   let running = false;
+  let stopped = false;
+  let pushWork: Promise<void> | null = null;
+  const pushTick = () => {
+    if (stopped || pushWork) return;
+    pushWork = ctx.notifications.flushPush().catch(() => {
+      console.warn('[push] Queue processing unavailable; persisted work will retry');
+    }).finally(() => { pushWork = null; });
+  };
   let lastMonthly = 0;
   const tick = async () => {
     if (running) return;
@@ -55,5 +63,12 @@ export function startJobs(ctx: Ctx) {
   };
   void tick();
   const t = setInterval(tick, ctx.cfg.openSessionsIntervalMs);
-  return () => clearInterval(t);
+  pushTick();
+  const pushTimer = setInterval(pushTick, Math.min(ctx.cfg.openSessionsIntervalMs, 30000));
+  return async () => {
+    stopped = true;
+    clearInterval(t);
+    clearInterval(pushTimer);
+    await pushWork;
+  };
 }

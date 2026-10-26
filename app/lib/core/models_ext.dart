@@ -132,6 +132,18 @@ class HistoryPage {
   final String? nextCursor;
 }
 
+/// Server aggregate of session rewards for today's Vietnamese reward date.
+/// Independent of history/coin-ledger pagination and selected history day.
+class HistoryRewardToday {
+  HistoryRewardToday.fromJson(Map<String, dynamic> j)
+      : rewardDate = j['reward_date'] as String,
+        coinsAwarded = (j['coins_awarded'] as num).toInt(),
+        dailyCap = (j['daily_cap'] as num).toInt();
+  final String rewardDate;
+  final int coinsAwarded;
+  final int dailyCap;
+}
+
 // ---------------- Nhật ký (EP-07, BR-100) ----------------
 
 const journalMaxChars = 5000;
@@ -162,7 +174,8 @@ class Explanation {
         submittedAt = _dt(j['submitted_at']),
         editedAt = _dt(j['edited_at']),
         editDeadline = _dt(j['edit_deadline']),
-        canEdit = j['can_edit'] != false,
+        canEdit = j['can_edit'] == true,
+        version = j['version'] is num ? (j['version'] as num).toInt() : null,
         history = _list(j['history']),
         updatedAt = _dt(j['updated_at']);
 
@@ -171,6 +184,7 @@ class Explanation {
   final DateTime? editedAt;
   final DateTime? editDeadline;
   final bool canEdit;
+  final int? version;
 
   /// Bản cũ (chỉ có ở GET giải trình của chính mình), mới nhất trước.
   final List<Map<String, dynamic>> history;

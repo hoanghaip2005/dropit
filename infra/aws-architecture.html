@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DropIt! · Kiến trúc AWS</title>
+<style>
+:root{font-family:Inter,Segoe UI,sans-serif;color:#172b39;background:#f3f5f7}*{box-sizing:border-box}body{margin:0}main{max-width:1200px;margin:auto;padding:48px 24px}header{display:flex;justify-content:space-between;gap:24px;align-items:start}h1{font-size:clamp(28px,4vw,44px);letter-spacing:-1.7px;margin:10px 0}h2{font-size:20px;margin:0 0 12px}p{line-height:1.65;color:#526575;margin:8px 0}.eyebrow{font-size:12px;font-weight:800;letter-spacing:2px;color:#007d72}.status{background:#fff0d7;color:#80500a;border-radius:30px;padding:10px 16px;font-size:13px;white-space:nowrap}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:28px 0}.metric,.card{background:white;border-radius:18px;padding:20px;box-shadow:0 5px 24px #17364c06}.metric strong{font-size:25px;display:block}.metric span{font-size:12px;color:#627684}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}button{border:1px solid #d7e1e8;background:white;border-radius:24px;padding:10px 16px;color:#334e60;cursor:pointer;font:inherit;font-size:13px}button[aria-pressed=true]{background:#123e49;color:white;border-color:#123e49}button:focus-visible{outline:3px solid #e69f31;outline-offset:3px}.diagram{display:grid;grid-template-columns:220px 1fr 250px;gap:20px;align-items:start}.column{display:grid;gap:16px}.node{transition:opacity .2s,box-shadow .2s}.node.dim{opacity:.35}.node.active{box-shadow:0 0 0 2px #169888,0 10px 30px #16988815}.tag{font-size:11px;font-weight:800;letter-spacing:.5px;color:#078274;display:block;margin-bottom:10px}.icon{width:36px;height:36px;border-radius:10px;background:#e6f4f0;color:#137a69;display:grid;place-items:center;margin-bottom:12px;font-weight:800}.card h3{font-size:16px;margin:0 0 8px}.card p{font-size:13px}.price{display:inline-block;background:#eef4f7;color:#385a70;border-radius:6px;padding:4px 8px;font-size:12px;margin-top:10px}.machine{border:1px dashed #90b8c0;background:#eaf1f4;border-radius:22px;padding:18px}.machine-title{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:14px;font-size:15px;font-weight:700}.machine .card{margin-top:12px}.flow{padding:8px 4px;color:#397d83;font-size:12px;line-height:1.6;text-align:center}.flow b{display:block;font-size:19px}.db-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.bar{margin-top:22px;background:#123e49;border-radius:18px;padding:22px;color:#fff}.bar p{color:#d0e6e8;font-size:13px}.bar h3{margin:0 0 8px;font-size:16px}.detail{background:white;border-radius:18px;margin-top:24px;padding:24px;border-left:4px solid #159d89;min-height:112px}.detail p{margin-bottom:0}.bottom{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}.bottom .card p{font-size:14px}a{color:#087c75}footer{font-size:12px;line-height:1.7;color:#627684;margin-top:24px}.warning{color:#855410!important}ul{padding-left:18px;line-height:1.9;color:#526575;font-size:14px}@media(max-width:850px){.diagram{grid-template-columns:1fr}.column{grid-template-columns:1fr 1fr}.metrics{grid-template-columns:1fr 1fr}.bottom{grid-template-columns:1fr}header{display:block}.status{display:inline-block;margin-top:12px}}@media(max-width:460px){main{padding:28px 16px}.column,.db-row{grid-template-columns:1fr}.metric{padding:15px}.metric strong{font-size:21px}}@media print{button{display:none}.node.dim{opacity:1}main{padding:10px}.card{box-shadow:none}.bottom,.machine{break-inside:avoid}}
+</style>
+<main><header><div><div class="eyebrow">DROPIT! / AWS BLUEPRINT</div><h1>Nhỏ gọn để bắt đầu.</h1><p>Kiến trúc beta cho 50 người/tháng · 10 người học đồng thời.</p></div><span class="status">ĐỀ XUẤT · CHƯA TRIỂN KHAI AWS</span></header>
+
+<section aria-label="Sơ đồ kết nối tổng thể" style="margin:28px 0;background:white;border:1px solid #dce4ea;border-radius:18px;overflow:auto">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 650" role="img" aria-labelledby="map-title map-desc" style="display:block;width:100%;min-width:850px;font-family:Segoe UI,sans-serif">
+<title id="map-title">DropIt! — sơ đồ kiến trúc AWS beta</title><desc id="map-desc">Người dùng đăng nhập Cognito trực tiếp. HTTPS và WebSocket tới Caddy trên Lightsail, tới backend Node và PostgreSQL nội bộ. Backend tải JWKS từ Cognito, job sao lưu tới bucket private. IAM và Budgets là lớp quản trị riêng.</desc>
+<defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".7" fill="#dce4ea"/></pattern><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#507080"/></marker></defs>
+<rect width="1120" height="650" fill="url(#grid)"/>
+<rect x="255" y="30" width="835" height="580" rx="14" fill="#fff" fill-opacity=".8" stroke="#dd9a35" stroke-width="2"/>
+<text x="275" y="57" font-size="15" font-weight="700" fill="#986017">AWS account · Region dự kiến: Singapore</text>
+<rect x="295" y="230" width="505" height="260" rx="12" fill="#edf5fc" stroke="#6299c4" stroke-dasharray="6 4"/>
+<text x="315" y="254" font-size="14" font-weight="700" fill="#345f81">Lightsail · 1 GB RAM · $7/tháng · một máy</text>
+<g fill="none" stroke="#507080" stroke-width="2" marker-end="url(#arrow)">
+<path d="M205 170H335" marker-start="url(#arrow)"/>
+<path d="M125 215V315H330" marker-start="url(#arrow)"/>
+<path d="M520 315H575"/>
+<path d="M670 275V210H550" stroke-dasharray="5 4"/>
+<path d="M670 355V405" marker-start="url(#arrow)"/>
+<path d="M625 355V380H425V405" marker-start="url(#arrow)"/>
+<path d="M800 430H850"/>
+<path d="M765 315H850" stroke-dasharray="5 4"/>
+</g>
+<g font-size="11" fill="#3d5f73"><text x="216" y="148">HTTPS · đăng nhập / token</text><text x="137" y="302">HTTPS / WSS · access token</text><text x="529" y="300">proxy</text><text x="590" y="202">HTTPS · tải JWKS</text><text x="808" y="418">job</text><text x="808" y="302">email</text></g>
+<g stroke-width="1.5">
+<rect x="40" y="125" width="165" height="90" rx="9" fill="#fff" stroke="#78909c"/>
+<rect x="335" y="125" width="215" height="90" rx="9" fill="#fff1f2" stroke="#cb5f79"/>
+<rect x="330" y="275" width="190" height="80" rx="9" fill="#fff" stroke="#6299c4"/>
+<rect x="575" y="275" width="190" height="80" rx="9" fill="#fff" stroke="#6299c4"/>
+<rect x="330" y="405" width="190" height="60" rx="9" fill="#fff" stroke="#6299c4"/>
+<rect x="575" y="405" width="190" height="60" rx="9" fill="#fff" stroke="#6299c4"/>
+<rect x="850" y="390" width="215" height="90" rx="9" fill="#eff9ed" stroke="#6d9b57"/>
+<rect x="850" y="275" width="215" height="80" rx="9" fill="#fff" stroke="#b59acb" stroke-dasharray="5 4"/>
+<rect x="295" y="525" width="770" height="60" rx="9" fill="#fff8eb" stroke="#cba365"/>
+</g>
+<g text-anchor="middle" fill="#203746" font-size="14" font-weight="700">
+<text x="122" y="158">Người dùng</text><text x="122" y="183" font-size="12" font-weight="400">Flutter Web / Android</text>
+<text x="442" y="158">Amazon Cognito Lite</text><text x="442" y="184" font-size="12" font-weight="400">Email/password · $0 dự kiến*</text>
+<text x="425" y="307">Caddy + Flutter Web</text><text x="425" y="333" font-size="12" font-weight="400">HTTPS 443 · assets · proxy</text>
+<text x="670" y="307">Node.js + Socket.IO</text><text x="670" y="333" font-size="12" font-weight="400">JWT + quyền + phiên học</text>
+<text x="425" y="430">Uploads + log</text><text x="425" y="449" font-size="11" font-weight="400">Ổ đĩa máy · có hạn mức</text>
+<text x="670" y="430">PostgreSQL</text><text x="670" y="449" font-size="11" font-weight="400">Nội bộ · không mở Internet</text>
+<text x="957" y="420">Lightsail Object Storage</text><text x="957" y="442" font-size="12" font-weight="400">Private backup · $1/tháng</text><text x="957" y="461" font-size="11" font-weight="400">Job dump + uploads → mã hóa</text>
+<text x="957" y="307">Amazon SES</text><text x="957" y="333" font-size="12" font-weight="400">Tùy chọn sau · phí riêng</text>
+<text x="680" y="550">IAM · AWS Budgets · Cost Anomaly Detection</text><text x="680" y="571" font-size="12" font-weight="400">Lớp quản trị account · không nằm trên luồng app · chưa cấu hình</text>
+</g>
+<text x="40" y="625" font-size="11" fill="#617584">Nét đứt: tải khóa / dịch vụ tùy chọn. *Cognito phụ thuộc free tier account. Toàn bộ là kế hoạch, chưa deploy.</text>
+</svg></section>
+<section class="metrics" aria-label="Dự toán"><div class="metric"><strong>300.000đ</strong><span>Ngân sách tháng</span></div><div class="metric"><strong>$8 / tháng</strong><span>Máy chủ $7 + backup $1</span></div><div class="metric"><strong>≈ 240.000đ</strong><span>Gồm dự phòng thuế/phí minh họa</span></div><div class="metric"><strong>1 máy</strong><span>Không autoscaling · chưa kiểm tải</span></div></section>
+<section class="card" style="margin:24px 0;border-left:4px solid #d79530"><div class="eyebrow">DỰ TOÁN THEO KHỐI LƯỢNG · 25/10/2026</div><h2 style="margin-top:12px">50 MAU · tối đa 10 đồng thời</h2><p>Phạm vi beta một Lightsail, không phải kiến trúc đích ECS/RDS/ALB. Ba kịch bản giả định, không phải biên chi phí tuyệt đối.</p><div style="overflow:auto"><table style="width:100%;line-height:2;text-align:left"><tr><th>Thông số/tháng</th><th>Thấp</th><th>Cơ sở</th><th>Cao</th></tr><tr><td>Lượt người-phiên</td><td>200 × 25 phút</td><td>1.000 × 50 phút</td><td>3.000 × 50 phút</td></tr><tr><td>Heartbeat</td><td>60.000</td><td>600.000</td><td>1.800.000</td></tr><tr><td>Push gồm retry</td><td>800</td><td>10.000</td><td>120.000</td></tr><tr><td>Email</td><td>50</td><td>250</td><td>1.000</td></tr><tr><td>Backup 9 bản</td><td>0,54 GB</td><td>3,15 GB</td><td>18 GB</td></tr><tr><td>Egress subtotal giả định</td><td>10,416 GB</td><td>52,389 GB</td><td>157,168 GB</td></tr><tr><td><strong>Tổng USD</strong></td><td>$8,005</td><td>$8,025</td><td>$10,100</td></tr><tr><td><strong>VND + dự phòng 15%</strong></td><td>239.350đ</td><td>239.948đ</td><td>301.990đ</td></tr></table></div><p>Máy $7 + bucket $1/$1/$3 + SES $0,005/$0,025/$0,10. Cognito và SNS $0 khi account còn allowance phù hợp. 26.000đ/USD là tỷ giá giả định;15% không phải thuế suất xác nhận.</p><p><strong>Trung điểm hai cực: 270.670đ; trung bình ba kịch bản: 260.429đ.</strong> Không phải hóa đơn kỳ vọng. Kịch bản cao vượt ngân sách khoảng1.990đ; nếu cần máy2GB thì cơ sở tăng khoảng389.448đ.</p><p>Đo build50,77MB, heartbeat5giây. Chưa đo RAM/CPU/DB thực; 1GB chưa xác nhận đủ. Chưa tính domain mới, Apple Developer, account khác hay kiến trúc đích đầy đủ.</p><p><a href="COST-SCENARIOS.md">Chi tiết đầu vào, đơn giá, công thức và giới hạn</a> · <a href="cost-scenarios.json">Dữ liệu JSON</a></p></section><nav class="toolbar" aria-label="Khám phá luồng"><button data-mode="all" aria-pressed="true">Toàn cảnh</button><button data-mode="login" aria-pressed="false">1. Đăng nhập</button><button data-mode="study" aria-pressed="false">2. Học cùng nhóm</button><button data-mode="backup" aria-pressed="false">3. Sao lưu</button><button data-mode="cost" aria-pressed="false">4. Kiểm soát chi phí</button></nav>
+<section class="diagram" aria-label="Sơ đồ kiến trúc AWS">
+<div class="column"><article class="card node" data-flows="login study"><div class="icon">APP</div><h3>Người dùng</h3><p>Flutter Android hoặc trình duyệt. Web tải từ Lightsail; sau đó gọi HTTPS và WebSocket bảo mật.</p></article><div class="flow node" data-flows="login"><b>↓ ↑</b>Email / mật khẩu qua HTTPS<br>Nhận access token từ Cognito</div><article class="card node" data-flows="login"><span class="tag">AWS · XÁC THỰC</span><h3>Cognito Lite</h3><p>Đăng nhập, tài khoản do quản trị viên tạo. App lấy token trực tiếp; mật khẩu không đi qua backend DropIt!.</p><span class="price">$0 dự kiến với 50 MAU*</span></article></div>
+<div><div class="flow node" data-flows="login study"><b>↓ ↑</b>App ↔ Caddy: HTTPS / WSS · Gửi access token khi gọi API và mở socket</div><section class="machine node" data-flows="login study backup"><div class="machine-title"><span>AWS Lightsail · Linux 1 GB</span><span class="price">$7/tháng</span></div><article class="card node" data-flows="login study"><span class="tag">PUBLIC · CỔNG 443</span><h3>Caddy + Flutter Web</h3><p>HTTPS, phục vụ giao diện và assets; chuyển REST / Socket.IO tới backend. Chỉ web proxy công khai; SSH giới hạn IP quản trị.</p></article><div class="flow node" data-flows="login study"><b>↓ ↑</b>Reverse proxy nội bộ</div><article class="card node" data-flows="login study backup"><span class="tag">BACKEND · KHÔNG PUBLIC TRỰC TIẾP</span><h3>Node.js + Socket.IO</h3><p>Nhóm, phiên học, heartbeat, báo cáo, Coins. Kiểm token bằng Cognito JWKS công khai qua HTTPS; cache khóa. Kiểm quyền nghiệp vụ trên server.</p></article><div class="flow node" data-flows="study backup"><b>↓ ↑</b>DB và dữ liệu chỉ truy cập nội bộ máy</div><div class="db-row"><article class="card node" data-flows="study backup"><h3>PostgreSQL</h3><p>Tài khoản ứng dụng, nhóm, phiên, giao dịch. Không mở cổng DB ra Internet.</p></article><article class="card node" data-flows="study backup"><h3>Uploads + log</h3><p>Ảnh đại diện, dữ liệu tải lên. Giới hạn dung lượng; xoay vòng log, không ghi token.</p></article></div></section><p style="font-size:12px">Mọi thành phần trong khung dùng chung RAM/CPU/ổ đĩa. Không có RDS riêng.</p></div>
+<div class="column"><article class="card node" data-flows="backup"><span class="tag">AWS · BACKUP RIÊNG TƯ</span><h3>Lightsail Object Storage</h3><p>Job trên máy dump DB + sao lưu uploads, mã hóa rồi gửi HTTPS tới bucket riêng tư.</p><p>Đề xuất giữ 7 bản ngày + 2 bản tuần; tổng dưới 4 GB. Cần kiểm phục hồi.</p><span class="price">$1/tháng · gói 5 GB</span></article><article class="card node" data-flows="study"><span class="tag">GIAI ĐOẠN SAU · CHƯA TÍNH PHÍ</span><h3>Amazon SES</h3><p>Backend gửi email báo cáo/thông báo. Chỉ bật sau khi xác minh domain, chốt quota và dự toán riêng.</p></article><article class="card node" data-flows="cost"><span class="tag">AWS · QUYỀN TRUY CẬP</span><h3>IAM</h3><p>Tách quyền triển khai và runtime. Backend không có quyền tạo hoặc nâng gói máy chủ. Quyền backup chỉ đủ cho bucket riêng.</p></article></div>
+</section>
+<section class="bar node" data-flows="cost"><h3>Lớp giám sát chi phí toàn account</h3><p>AWS Budgets: cảnh báo $5 / $8 / $9 / $10 · Cost Anomaly Detection: phát hiện tăng bất thường · Người quản trị nhận cảnh báo và xử lý theo runbook.</p><p><strong>Không nằm trên đường truyền của app. Không tự bảo đảm dừng chi tiêu tại 300.000đ.</strong> Billing có độ trễ; transfer, storage và tài nguyên giữ lại có thể tiếp tục phát sinh phí.</p></section>
+<section class="detail" aria-live="polite"><h2 id="detail-title">Kiến trúc beta, chưa phải cấu hình production hoàn chỉnh</h2><p id="detail-body">Chọn từng luồng phía trên để xem trách nhiệm và đường đi dữ liệu. Một máy giúp dự toán đơn giản; đổi lại có thể gián đoạn khi bảo trì hoặc máy gặp sự cố.</p></section>
+
+<section class="card" style="margin:28px 0" id="network-detail">
+<h2>01 / Mạng của phương án đang chọn: Lightsail</h2>
+<p><strong>Không tạo EC2 instance, custom VPC, subnet, Internet Gateway, NAT Gateway hay ALB trong stack này.</strong> Lightsail dùng hạ tầng EC2 và mạng do dịch vụ quản lý; không có nghĩa đây là một EC2 instance được quản trị qua EC2 console.</p>
+<div style="overflow:auto;background:#f4f7fa;border-radius:12px;padding:24px">
+<pre style="font:14px/1.9 Consolas,monospace;min-width:740px;color:#234354;margin:0">Người dùng / Internet
+    │
+    ├── HTTPS 443 ── Cognito public endpoint (AWS quản lý, ngoài máy Lightsail)
+    │                   └── trả token cho app
+    │
+    └── DNS domain trỏ tới Static IPv4 của Lightsail
+                          │
+                  Lightsail IPv4 firewall
+                  ├── TCP 443: Internet → HTTPS / WSS
+                  ├── TCP 80: Internet → chuyển HTTPS / cấp chứng chỉ
+                  └── TCP 22: chỉ IP quản trị
+                          │
+             ┌──────────── Máy Lightsail Linux ──────────────┐
+             │ OS firewall + Caddy :443                      │
+             │     ├── Flutter web / assets                  │
+             │     └── reverse proxy → 127.0.0.1:3000         │
+             │                          Node + Socket.IO     │
+             │                              │                │
+             │                      PostgreSQL :5432         │
+             │                  localhost / Docker nội bộ    │
+             └───────────────────────────────────────────────┘
+                          │ kết nối outbound HTTPS 443
+                          ├── Cognito JWKS: tải khóa xác minh JWT
+                          ├── Bucket backup private: upload bản mã hóa
+                          └── SES API: tùy chọn sau, gửi email
+</pre></div>
+<p><strong>Không mở 3000 hoặc 5432 ra Internet.</strong> Caddy và backend trên cùng máy nên proxy dùng loopback. Nếu Docker: chỉ publish backend lên <code>127.0.0.1:3000</code>; DB chỉ ở network nội bộ, không publish host port. Docker port publishing phải được kiểm riêng, không chỉ tin OS firewall.</p>
+<p>Static IP phải gắn với máy để DNS ổn định; kiểm điều kiện tính phí khi IP bị bỏ trống. Nếu dùng IPv6, cấu hình firewall IPv6 tương ứng hoặc chưa bật đường truy cập IPv6. Lightsail firewall là kiểm soát inbound; không thay thế kiểm soát outbound ở hệ điều hành.</p>
+<p><strong>DNS không bắt buộc Route 53.</strong> Có thể dùng DNS của nhà cung cấp domain. Caddy cấp TLS trên máy, không cần ALB/ACM cho mô hình này. TCP 80 chỉ cần khi dùng HTTP challenge hoặc chuyển hướng; có thể chọn cơ chế cấp chứng chỉ khác khi triển khai.</p>
+</section>
+<section class="card" style="margin:28px 0">
+<h2>02 / Nếu muốn VPC + EC2: phương án thay thế</h2>
+<p>Đây là <strong>thay Lightsail bằng EC2</strong>, không phải thêm EC2 vào dự toán $8. Cần tính lại instance, EBS, public IPv4, backup, transfer và monitoring theo region.</p>
+<div style="overflow:auto;background:#f4f7fa;border-radius:12px;padding:24px">
+<pre style="font:14px/1.85 Consolas,monospace;min-width:780px;color:#234354;margin:0">AWS Region: ap-southeast-1 (dự kiến)
+│
+├── Cognito / SES / bucket endpoint công khai: dịch vụ AWS ngoài VPC của app
+│
+└── VPC 10.20.0.0/16
+    │
+    ├── Internet Gateway (IGW) ───────────── Internet
+    │       gắn vào VPC                       │
+    │                                        │
+    └── Public subnet 10.20.1.0/24 · 1 Availability Zone
+        │
+        ├── Route table liên kết subnet
+        │     10.20.0.0/16 → local
+        │     0.0.0.0/0    → IGW
+        │
+        └── EC2 + public IPv4 / Elastic IP + private IPv4
+            │   Security Group: inbound 443, 80;
+            │                   22 chỉ IP quản trị nếu dùng SSH
+            │   Outbound: HTTPS tới AWS endpoints;
+            │             DNS tới resolver, cập nhật OS theo chính sách
+            │
+            ├── Caddy → backend Node → PostgreSQL nội bộ
+            └── EBS: OS + dữ liệu; backup private bên ngoài máy
+
+Không NAT Gateway · Không ALB · Không RDS ở phương án máy đơn này
+</pre></div>
+<p><strong>Điều kiện ra Internet qua IPv4:</strong> subnet có route tới IGW, EC2 có public IPv4/EIP, Security Group và Network ACL cho phép luồng, OS firewall cho phép. Chỉ đặt tên subnet “public” không làm máy tự có Internet. IGW không phải reverse proxy, không kết thúc TLS và không thay firewall.</p>
+<p>Security Group có trạng thái: phản hồi của kết nối được phép tự đi qua. Network ACL không có trạng thái: nếu siết ACL phải tính cả cổng phản hồi. Không cần custom ACL phức tạp cho beta; tập trung Security Group và firewall đúng trước.</p>
+<p><strong>NAT Gateway</strong> chỉ cần trong một số mô hình private subnet cần chủ động ra Internet IPv4; máy public subnet có public IPv4 và IGW không cần NAT Gateway. NAT Gateway có phí theo giờ và dữ liệu, không đưa vào ngân sách hiện tại.</p>
+</section>
+<section class="card" style="margin:28px 0">
+<h2>03 / Khi nào mới tách private subnet?</h2>
+<p>Khi ngân sách và yêu cầu sẵn sàng tăng: Internet → ALB ở public subnets → backend ở private subnets → RDS ở private DB subnets. Các dịch vụ ALB/RDS thường cần cấu hình subnet trải nhiều Availability Zone theo yêu cầu dịch vụ; private subnet ra ngoài có thể cần NAT hoặc VPC endpoints phù hợp.</p>
+<p>Mô hình đó tăng chi phí cố định và vận hành, <strong>chưa chọn cho mức 300.000đ/tháng</strong>. Một máy hiện tại không có HA; hỏng máy hoặc bảo trì có thể gián đoạn cả app và DB.</p>
+<p><strong>Hiện trạng:</strong> mọi IP/CIDR/port trong sơ đồ là thiết kế đề xuất; chưa có VPC/EC2/Lightsail được tạo, chưa áp dụng firewall hay DNS. Cognito xác thực danh tính; backend vẫn kiểm quyền và phạm vi dữ liệu từng API/socket.</p>
+</section>
+<section class="bottom"><article class="card"><h2>Trước khi bật AWS</h2><ul><li>Kiểm giá region, free tier và dịch vụ account đang dùng.</li><li>Tạo cảnh báo, chốt quyền IAM trước khi tạo máy.</li><li>Kiểm tải 10 người và thử restore backup.</li><li>Thiết lập quota upload, log, kết nối và lưu backup.</li></ul></article><article class="card"><h2>Những khoản chưa nằm trong $8</h2><p>Tên miền mới, email SES, thuế/phí thực tế và overage. Cognito $0 chỉ khi account/organization còn đủ free tier phù hợp.</p><p class="warning">Máy 1 GB chưa được benchmark. Nếu không đạt: tính lại hoặc đổi hosting; không tự nâng lên gói $12.</p><p>RDS, ALB, NAT Gateway, Fargate, CloudFront: chưa đưa vào giai đoạn này.</p></article></section>
+
+<section class="card" style="margin-top:28px"><div class="eyebrow">KIẾN TRÚC ĐÍCH ĐẦY ĐỦ</div><h2 style="margin-top:14px">Các khối vận hành cần có từ đầu</h2><p>Sơ đồ beta phía trên là phương án ngân sách thấp. Bản đồ dưới là kiến trúc đích: đủ trách nhiệm vận hành, không có nghĩa tất cả tài nguyên đã tạo hoặc phải bật ngay. Không thể bảo đảm không bao giờ cần bổ sung khi tải và yêu cầu thay đổi.</p>
+<div style="overflow:auto;margin:20px 0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 900" role="img" aria-label="Kiến trúc đích AWS đầy đủ" style="min-width:900px;width:100%;font:14px Segoe UI,sans-serif">
+<defs><marker id="full-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#547080"/></marker></defs>
+<rect x="15" y="15" width="1070" height="870" rx="15" fill="#f6f8fa" stroke="#d3a154"/>
+<text x="40" y="45" font-weight="700">AWS · kiến trúc đích · region chính + bản sao phục hồi tách biệt</text>
+<g fill="none" stroke="#547080" stroke-width="2" marker-end="url(#full-arrow)">
+<path d="M180 110H230"/><path d="M420 110H470"/><path d="M660 110H730"/><path d="M825 150V220"/><path d="M825 300V355"/><path d="M730 395H660"/><path d="M565 435V500"/><path d="M825 435V500"/><path d="M825 435V620H660"/><path d="M730 395H705V260H660"/><path d="M230 260H180V150"/><path d="M325 300V395H470"/><path d="M565 580V620H470"/>
+</g>
+<g fill="#fff" stroke="#aabdc9">
+<rect x="40" y="70" width="140" height="80" rx="9"/><rect x="230" y="70" width="190" height="80" rx="9"/><rect x="470" y="70" width="190" height="80" rx="9"/><rect x="730" y="70" width="240" height="80" rx="9"/>
+<rect x="230" y="220" width="190" height="80" rx="9"/><rect x="470" y="220" width="190" height="80" rx="9"/><rect x="730" y="220" width="240" height="80" rx="9"/>
+<rect x="470" y="355" width="190" height="80" rx="9"/><rect x="730" y="355" width="240" height="80" rx="9"/>
+<rect x="470" y="500" width="190" height="80" rx="9"/><rect x="730" y="500" width="240" height="80" rx="9"/>
+<rect x="230" y="600" width="240" height="80" rx="9"/><rect x="470" y="600" width="190" height="80" rx="9"/>
+<rect x="40" y="725" width="1000" height="130" rx="12" fill="#fff6e7"/>
+</g>
+<g text-anchor="middle" fill="#203746">
+<text x="110" y="103" font-weight="700">Web / Android</text><text x="110" y="126" font-size="12">Người dùng</text>
+<text x="325" y="103" font-weight="700">Route 53 / DNS</text><text x="325" y="126" font-size="12">Domain · bản ghi · ACM TLS</text>
+<text x="565" y="103" font-weight="700">CloudFront + WAF</text><text x="565" y="126" font-size="12">CDN · bảo vệ · định tuyến</text>
+<text x="850" y="103" font-weight="700">S3 private web/assets</text><text x="850" y="126" font-size="12">Origin Access Control · versioning</text>
+<text x="325" y="253" font-weight="700">Cognito Lite</text><text x="325" y="276" font-size="12">Token · recovery · MFA theo nhu cầu</text>
+<text x="565" y="253" font-weight="700">S3 private uploads</text><text x="565" y="276" font-size="12">URL ký · quota · lifecycle</text>
+<text x="850" y="253" font-weight="700">ALB · API origin riêng</text><text x="850" y="276" font-size="12">TLS · REST / WebSocket</text>
+<text x="850" y="388" font-weight="700">ECS / backend Node</text><text x="850" y="411" font-size="12">Private subnet · IAM task role</text>
+<text x="565" y="388" font-weight="700">SES + SQS + DLQ</text><text x="565" y="411" font-size="12">Email · retry · chống gửi trùng</text>
+<text x="565" y="533" font-weight="700">EventBridge Scheduler</text><text x="565" y="556" font-size="12">Lịch báo cáo / job có khóa</text>
+<text x="850" y="533" font-weight="700">RDS PostgreSQL</text><text x="850" y="556" font-size="12">Private · backup / PITR · migrations</text>
+<text x="350" y="633" font-weight="700">Backup phục hồi</text><text x="350" y="656" font-size="12">S3 / snapshot · retention · restore test</text>
+<text x="565" y="633" font-weight="700">Redis / ElastiCache*</text><text x="565" y="656" font-size="12">Chỉ khi backend đã hỗ trợ scale</text>
+<text x="540" y="752" font-weight="700">LỚP VẬN HÀNH XUYÊN SUỐT — không phải đường truyền request</text>
+<text x="540" y="779">IAM · KMS · Secrets Manager · CloudTrail · CloudWatch log / metric / alarm</text>
+<text x="540" y="805">Budgets / Anomaly Detection · CI/CD + ECR · rollback · cảnh báo quản trị</text>
+<text x="540" y="832" font-size="12">VPC / security groups · egress có dự toán · dev/staging/prod tách biệt · kiểm restore và diễn tập sự cố</text>
+</g>
+<text x="45" y="190" font-size="12" fill="#637786">DNS chỉ phân giải tên. CloudFront có thể tới S3 hoặc API origin; các nhánh được mô tả trong bảng bên dưới.</text>
+</svg></div>
+<p><strong>Luồng thật:</strong> DNS phân giải tên; trình duyệt kết nối CloudFront. CloudFront lấy web từ S3 và chuyển API tới ALB; Android có thể gọi API origin trực tiếp. App đăng nhập trực tiếp Cognito. Backend kiểm JWT qua JWKS, đọc/ghi RDS, cấp quyền upload S3. Backend đưa email vào SQS; worker gửi SES, xử lý lỗi qua DLQ. Scheduler kích hoạt job backend, không gửi email trực tiếp.</p>
+<p class="warning">Sơ đồ thể hiện quan hệ logic; không phải sơ đồ mạng có thể deploy nguyên trạng. Cần chốt subnet/AZ, egress NAT hoặc VPC endpoints, health check và bảo vệ API origin trước khi triển khai kiến trúc đích. Các phần này có phí riêng.</p>
+</section>
+<section class="card" style="margin-top:20px"><h2>Đủ trách nhiệm ngay từ beta, tách dịch vụ khi cần</h2><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:14px;line-height:1.7"><thead><tr><th align="left">Trách nhiệm</th><th align="left">Beta 300.000đ — đề xuất</th><th align="left">Kiến trúc đích</th></tr></thead><tbody>
+<tr><td>DNS / TLS</td><td>DNS domain sẵn có + Caddy</td><td>Route 53 + ACM</td></tr>
+<tr><td>Web / assets</td><td>Lightsail + Caddy</td><td>S3 private + CloudFront / OAC</td></tr>
+<tr><td>API / WebSocket</td><td>Node trên một Lightsail</td><td>ALB + ECS; kiểm tương thích scale trước</td></tr>
+<tr><td>Database</td><td>PostgreSQL local, không public</td><td>RDS, Multi-AZ nếu cần khả dụng cao</td></tr>
+<tr><td>Upload</td><td>Ổ đĩa + quota + backup</td><td>S3 private, URL ký, lifecycle</td></tr>
+<tr><td>Job / email</td><td>DB outbox + worker một máy, SES có dự toán riêng</td><td>SQS + DLQ + SES + Scheduler</td></tr>
+<tr><td>Secret / mã hóa</td><td>File quyền hạn chặt, mã hóa backup; chốt cách giữ khóa</td><td>Secrets Manager + KMS theo loại dữ liệu</td></tr>
+<tr><td>Giám sát</td><td>Health check, log xoay vòng, cảnh báo dung lượng/sự cố</td><td>CloudWatch dashboards / alarm; giới hạn retention</td></tr>
+<tr><td>Kiểm soát</td><td>IAM, budget, audit admin, một instance</td><td>IAM roles, CloudTrail, WAF, kiểm soát account</td></tr>
+<tr><td>Phát hành</td><td>Build ngoài server, artifact phiên bản + rollback</td><td>CI/CD + ECR, staged rollout, migrations tương thích</td></tr>
+<tr><td>Phục hồi</td><td>Backup private + restore test</td><td>PITR + snapshot, bản sao tách account/region theo RPO/RTO</td></tr>
+</tbody></table></div><p>*Redis không tự giải quyết scale Socket.IO. Backend hiện có engine/state chạy trong process: phải thiết kế ownership phiên, shared state, khóa job và adapter; không bật nhiều replica rồi coi là an toàn.</p><p><strong>Chưa triển khai:</strong> cả cấu hình beta vận hành và kiến trúc đích. Không phải mọi khối trên đều cần một dịch vụ trả phí riêng ngay. Tổng $8 chỉ thuộc phương án beta cơ sở, không áp dụng kiến trúc đích đầy đủ; email, domain, observability và mạng cần tính thêm trước khi bật.</p></section>
+<section class="card" style="margin-top:24px"><h2>Guardrails đã cấu hình · 25/10/2026</h2><p>Budget account-wide <strong>DropIt-Monthly-10USD</strong>: actual vượt $5/$8/$9/$10; forecast vượt $9. Email recipient đã đọc lại đúng cấu hình.</p><p>Anomaly subscription <strong>DropIt-Low-Cost-Alerts</strong>: DAILY, tác động ≥$1 hoặc tăng ≥50%, trên service monitor có sẵn. Subscriber AWS báo CONFIRMED; chưa kiểm email cảnh báo thực tới inbox.</p><p>Các phần mô tả “chưa cấu hình” phía trên là baseline kiến trúc; cập nhật này áp dụng riêng Budgets/Anomaly. IAM runtime, compute và storage vẫn chưa triển khai. Không hard cap; không tự dừng tài nguyên.</p></section><footer>Dự toán ngày 25/10/2026 · Quy đổi lập kế hoạch 26.000đ/USD; dự phòng minh họa 15% trên $8, không phải thuế suất xác nhận. Không dựa credit dùng thử.<br>Nguồn: <a href="https://aws.amazon.com/lightsail/pricing/">Lightsail pricing</a> · <a href="https://aws.amazon.com/cognito/pricing/">Cognito pricing</a> · <a href="https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html">AWS Budgets</a><br>Sơ đồ mô tả kế hoạch. Chưa tạo AWS, chưa bật cảnh báo, backup job hoặc quota vận hành. Bản HTML độc lập, không dùng thư viện ngoài.</footer></main>
+<script>
+const details={all:['Kiến trúc beta, chưa phải cấu hình production hoàn chỉnh','Chọn từng luồng phía trên để xem trách nhiệm và đường đi dữ liệu. Một máy giúp dự toán đơn giản; đổi lại có thể gián đoạn khi bảo trì hoặc máy gặp sự cố.'],login:['1 · App đăng nhập trực tiếp với Cognito','Email và mật khẩu gửi tới Cognito HTTPS. App nhận access token rồi gửi tới backend qua Caddy. Backend kiểm chữ ký JWT bằng JWKS Cognito và kiểm issuer, client, token_use, hạn token; quyền xem dữ liệu vẫn do backend quyết định.'],study:['2 · Phiên học dùng REST + WebSocket','Web tải từ Caddy; web/Android gọi REST và Socket.IO qua HTTPS/WSS. Backend cập nhật PostgreSQL, xử lý heartbeat và trạng thái phiên. SES là phần email bổ sung, chưa có trong dự toán cơ sở.'],backup:['3 · Dữ liệu rời máy qua job sao lưu','Job trên Lightsail tạo bản sao DB và uploads, mã hóa rồi gửi tới bucket private. Quản lý vòng đời bản sao để giữ dưới hạn mức. Backup chỉ có giá trị sau khi thử khôi phục; hiện chưa có job triển khai.'],cost:['4 · Giới hạn tài nguyên trước, cảnh báo chi phí bổ sung','Một máy, một bucket, không autoscaling; tách quyền IAM và đặt quota ứng dụng. Budgets/Anomaly Detection theo dõi chi phí account và cảnh báo quản trị viên, không chặn mọi phát sinh phí. Các lớp này đang là kế hoạch.']};
+document.querySelectorAll('button[data-mode]').forEach(button=>button.addEventListener('click',()=>{const mode=button.dataset.mode;document.querySelectorAll('button[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));document.querySelectorAll('.node').forEach(n=>{const active=mode==='all'||n.dataset.flows.split(' ').includes(mode);n.classList.toggle('dim',!active);n.classList.toggle('active',active&&mode!=='all')});document.getElementById('detail-title').textContent=details[mode][0];document.getElementById('detail-body').textContent=details[mode][1]}));
+</script></html>

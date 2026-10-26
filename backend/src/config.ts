@@ -24,6 +24,11 @@ export type AppConfig = {
   databaseUrl: string;
   jwtSecret: string;
   devAuth: boolean; // POST /dev/token
+  cognitoRegion?: string;
+  cognitoPoolId?: string;
+  cognitoClientId?: string;
+  snsRegion?: string;
+  snsPlatformApplicationArn?: string; // SNS GCM platform application, FCM v1 for both mobile platforms
   scheduleMinLeadMs: number; // BR-79
   openSessionsIntervalMs: number; // job open-scheduled-sessions (DQ-03)
   engine: EngineConfig;
@@ -40,7 +45,12 @@ export type AppConfig = {
 };
 
 export function loadConfig(overrides: Omit<Partial<AppConfig>, 'engine'> & { engine?: Partial<EngineConfig> } = {}): AppConfig {
-  const nodeEnv = env.NODE_ENV || 'development';
+  const nodeEnv = overrides.nodeEnv ?? env.NODE_ENV ?? 'development';
+  const cognitoRegion = overrides.cognitoRegion ?? env.COGNITO_REGION;
+  const cognitoPoolId = overrides.cognitoPoolId ?? env.COGNITO_USER_POOL_ID;
+  const cognitoClientId = overrides.cognitoClientId ?? env.COGNITO_CLIENT_ID;
+  // Any Cognito configuration opts into real auth; incomplete config fails closed.
+  const hasCognito = Boolean(cognitoRegion || cognitoPoolId || cognitoClientId);
   const isTest = nodeEnv === 'test';
   const engine: EngineConfig = {
     graceMs: num('GRACE_MS', 3000),
@@ -62,7 +72,12 @@ export function loadConfig(overrides: Omit<Partial<AppConfig>, 'engine'> & { eng
     port: num('PORT', 3000),
     databaseUrl: env.DATABASE_URL || 'postgres://dropit:dropit@127.0.0.1:55433/dropit',
     jwtSecret: env.JWT_SECRET || 'dev-only-secret-change-me',
-    devAuth: nodeEnv === 'development',
+    devAuth: env.DEV_AUTH !== undefined ? env.DEV_AUTH === '1' : nodeEnv === 'development' && !hasCognito,
+    cognitoRegion,
+    cognitoPoolId,
+    cognitoClientId,
+    snsRegion: env.AWS_REGION,
+    snsPlatformApplicationArn: env.SNS_PLATFORM_APPLICATION_ARN,
     scheduleMinLeadMs: isTest ? num('SCHEDULE_MIN_LEAD_MS', 60000) : 60000,
     openSessionsIntervalMs: num('OPEN_SESSIONS_INTERVAL_MS', 30000),
     publicBaseUrl: env.PUBLIC_BASE_URL || `http://localhost:${num('PORT', 3000)}`,

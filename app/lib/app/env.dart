@@ -9,6 +9,9 @@ import 'package:flutter/foundation.dart';
 /// - `API_PREFIX`: tiền tố REST, mặc định `/v1` (design/03-api-socket.md P1).
 /// - `SOCKET_NAMESPACE`: mặc định `/session` (§3.1).
 class Env {
+  static const cognitoRegion = String.fromEnvironment('COGNITO_REGION');
+  static const cognitoUserPoolId = String.fromEnvironment('COGNITO_USER_POOL_ID');
+  static const cognitoClientId = String.fromEnvironment('COGNITO_CLIENT_ID');
   static const _base = String.fromEnvironment('API_BASE_URL');
   static const apiPrefix = String.fromEnvironment('API_PREFIX', defaultValue: '/v1');
   static const socketNamespace =

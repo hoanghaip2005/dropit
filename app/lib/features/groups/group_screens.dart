@@ -22,16 +22,19 @@ class GroupsScreen extends ConsumerWidget {
     }
 
     return AppScaffold(
-      header: AppHeader.brand(
-        caption: 'DropIt!',
-        title: 'Nhóm của tôi',
-        icon: Icons.groups_outlined,
-        trailing: CircleIconButton(
-          icon: Icons.vpn_key_outlined,
-          tooltip: 'Nhập mã nhóm',
-          onPressed: () => context.push('/join'),
-        ),
-      ),
+      header: context.ownerStyle
+          ? Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+              child: Align(alignment: Alignment.centerLeft, child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('DropIt! · Chủ nhóm', style: context.text.bodySmall!.copyWith(color: OwnerStyle.muted)),
+                  const SizedBox(height: 4),
+                  Text('Nhóm của tôi', style: context.text.headlineLarge!.copyWith(height: 36 / 28)),
+                ],
+              )),
+            )
+          : const AppHeader.large(caption: 'DropIt!', title: 'Nhóm của tôi'),
       body: AsyncBody<List<MyGroup>>(
         value: groups,
         onRetry: () => ref.invalidate(myGroupsProvider),
@@ -47,29 +50,29 @@ class GroupsScreen extends ConsumerWidget {
           onSecondaryAction: () => context.push('/groups/new'),
         ),
         builder: (list) {
-          final owned = list.where((g) => g.isOwner).length;
           return PageList(
             onRefresh: refresh,
             children: [
-              Text(
-                owned > 0
-                    ? 'Bạn là chủ nhóm của $owned nhóm. Mỗi nhóm hiện trạng thái riêng, không cộng chỉ số giữa các nhóm.'
-                    : 'Bạn chỉ thuộc 1 nhóm thành viên tại một thời điểm.',
-                style: context.text.bodyMedium!.copyWith(color: DT.textSecondary),
-              ),
-              PrimaryButton(
-                compact: true,
-                icon: Icons.group_add_outlined,
-                label: 'Tạo nhóm',
-                onPressed: () => context.push('/groups/new'),
+              Row(children: [
+                Expanded(child: PrimaryButton(
+                  compact: true,
+                  icon: Icons.add,
+                  label: 'Tạo nhóm',
+                  onPressed: () => context.push('/groups/new'),
+                )),
+                const SizedBox(width: DT.spaceSm),
+                Expanded(child: SecondaryButton(
+                  icon: Icons.vpn_key_outlined,
+                  label: 'Nhập mã nhóm',
+                  onPressed: () => context.push('/join'),
+                )),
+              ]),
+              Padding(
+                padding: const EdgeInsets.only(top: DT.spaceSm),
+                child: SectionHeader(ref.watch(ownerOnlyProvider) == true ? 'Nhóm bạn quản lý' : 'Nhóm đang tham gia',
+                  trailing: Text('${list.length} nhóm', style: context.text.bodySmall)),
               ),
               for (final g in list) _GroupCard(group: g),
-              if (!list.any((g) => !g.isOwner))
-                SecondaryButton(
-                  label: 'Nhập mã nhóm',
-                  icon: Icons.vpn_key_outlined,
-                  onPressed: () => context.push('/join'),
-                ),
             ],
           );
         },
@@ -87,45 +90,76 @@ class _GroupCard extends StatelessWidget {
     final t = context.text;
     final next = g.nextSession;
     return AppCard(
+      radius: context.ownerStyle ? DT.radiusLg : DT.radiusMd,
+      padding: EdgeInsets.all(context.ownerStyle ? 16 : 20),
+      gap: DT.spaceMd,
       onTap: () => context.push('/groups/${g.groupId}'),
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              width: 48, height: 48,
+              decoration: BoxDecoration(color: DT.accentSoftBg, borderRadius: BorderRadius.circular(16)),
+              child: const Icon(Icons.groups_rounded, color: DT.accent, size: 26),
+            ),
+            const SizedBox(width: DT.spaceSm),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(g.name, style: t.headlineSmall),
-                  Text('${g.memberCount} thành viên (tối thiểu 4, tối đa 10)', style: t.bodySmall),
+                  Text(g.name, style: t.headlineSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: DT.spaceXs),
+                  Text('${g.memberCount} thành viên', style: t.bodySmall!.copyWith(color: context.ownerStyle ? OwnerStyle.muted : DT.textSecondary)),
                 ],
               ),
             ),
-            StatusBadge(g.isOwner ? 'Chủ nhóm' : 'Thành viên', tone: g.isOwner ? BadgeTone.dark : BadgeTone.neutral),
+            const SizedBox(width: DT.spaceXs),
+            StatusBadge(g.isOwner ? 'Chủ nhóm' : 'Thành viên', tone: g.isOwner ? BadgeTone.accent : BadgeTone.neutral),
           ],
         ),
         if (g.status != 'ACTIVE') StatusBadge(groupStatusText(g.status), tone: BadgeTone.danger),
         // BR-117: chỉ số RIÊNG nhóm này, tháng hiện tại tạm tính đến hôm qua — không cộng nhiều nhóm
-        ListRow(
+        Container(
           key: Key('rate_${g.groupId}'),
-          title: g.isOwner ? 'Hoàn thành tháng này (cả nhóm)' : 'Hoàn thành tháng này (của bạn)',
-          subtitle: 'Tạm tính đến hôm qua',
-          trailing: Text(
-            g.monthCompletionRate == null ? '—' : '${g.monthCompletionRate!.toStringAsFixed(1)}%',
-            style: t.titleMedium!.copyWith(fontFeatures: DT.tabular),
-          ),
+          padding: const EdgeInsets.all(DT.spaceMd),
+          decoration: BoxDecoration(color: context.ownerStyle ? OwnerStyle.inset : DT.background, borderRadius: BorderRadius.circular(DT.radius)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Hoàn thành tháng này', style: t.titleMedium),
+                const SizedBox(height: DT.spaceXs),
+                Text(g.isOwner ? 'Cả nhóm · Đến hôm qua' : 'Của bạn · Đến hôm qua', style: t.bodySmall!.copyWith(color: context.ownerStyle ? OwnerStyle.muted : DT.textSecondary)),
+              ])),
+              const SizedBox(width: DT.spaceSm),
+              Text(g.monthCompletionRate == null ? '—' : '${g.monthCompletionRate!.toStringAsFixed(1)}%',
+                  style: t.headlineLarge!.copyWith(color: DT.accent, fontFeatures: DT.tabular)),
+            ]),
+            const SizedBox(height: DT.spaceMd),
+            if (g.monthCompletionRate == null)
+              Text('Chưa có dữ liệu tháng này', style: t.bodySmall!.copyWith(color: context.ownerStyle ? OwnerStyle.muted : DT.textSecondary))
+            else LinearProgressIndicator(value: (g.monthCompletionRate! / 100).clamp(0.0, 1.0),
+                minHeight: 6, borderRadius: BorderRadius.circular(DT.pill), backgroundColor: context.ownerStyle ? OwnerStyle.line : DT.surfaceDim),
+          ]),
         ),
-        ListRow(
-          title: 'Phiên kế tiếp',
-          divider: false,
-          trailing: StatusBadge(
-            next == null ? 'Chưa có lịch' : '${hhmm(next.startedAt)} ${dayLabel(next.startedAt).toLowerCase()}',
-            tone: next == null ? BadgeTone.neutral : BadgeTone.accent,
+        Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(color: context.ownerStyle ? OwnerStyle.inset : DT.surfaceHigh, borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Icons.calendar_today_outlined, size: 19, color: DT.textSecondary),
           ),
-        ),
-        if (g.isOwner)
-          Row(
+          const SizedBox(width: DT.spaceSm),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Phiên kế tiếp', style: t.bodySmall),
+            const SizedBox(height: DT.spaceXs),
+            Text(next == null ? 'Chưa có lịch' : '${hhmm(next.startedAt)} · ${dayLabel(next.startedAt)}', style: t.titleMedium),
+            if (next != null) Text('${next.durationMin} phút tập trung', style: t.bodySmall),
+          ])),
+        ]),
+        Divider(height: 1, color: context.ownerStyle ? OwnerStyle.line : DT.divider),
+        Row(
             children: [
+              if (g.isOwner) ...[
               Expanded(
                 child: SecondaryButton(
                   label: 'Lên lịch',
@@ -133,10 +167,12 @@ class _GroupCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: DT.spaceSm),
+              ],
               Expanded(
                 child: PrimaryButton(
                   compact: true,
                   label: 'Xem nhóm',
+                  trailingIcon: Icons.arrow_forward_rounded,
                   onPressed: () => context.push('/groups/${g.groupId}'),
                 ),
               ),
@@ -507,7 +543,7 @@ class GroupDetailScreen extends ConsumerWidget {
     }
 
     return AppScaffold(
-      header: AppHeader.brand(
+      header: isOwner ? const AppHeader.back(title: 'Chi tiết nhóm') : AppHeader.brand(
         caption: isOwner ? 'Chủ nhóm' : 'Thành viên',
         title: g?.name ?? 'Nhóm',
         leading: HeaderLeading.back,
@@ -519,11 +555,27 @@ class GroupDetailScreen extends ConsumerWidget {
           onRefresh: refresh,
           children: [
             if (isOwner) ...[
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              AppCard(
+                key: const Key('ownerGroupSummary'),
+                radius: DT.radiusLg,
+                gap: DT.spaceMd,
                 children: [
-                  Text('Phiên của nhóm', style: t.headlineSmall),
-                  Text('Chủ nhóm không tham gia phiên, chỉ quản lý lịch và xem kết quả sau phiên.', style: t.bodySmall),
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Container(width: 48, height: 48,
+                      decoration: BoxDecoration(color: DT.accentSoftBg, borderRadius: BorderRadius.circular(16)),
+                      child: const Icon(Icons.groups_outlined, color: DT.accent, size: 26)),
+                    const SizedBox(width: DT.spaceSm),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(g?.name ?? 'Nhóm', style: t.headlineMedium),
+                      const SizedBox(height: DT.spaceXs),
+                      Text('${m.memberCount}/10 thành viên', style: t.bodySmall!.copyWith(color: OwnerStyle.muted)),
+                    ])),
+                  ]),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    const StatusBadge('Chủ nhóm', tone: BadgeTone.accent),
+                    StatusBadge(groupStatusText(g?.status ?? 'ACTIVE'),
+                      tone: g?.status == null || g?.status == 'ACTIVE' ? BadgeTone.success : BadgeTone.danger),
+                  ]),
                 ],
               ),
               Row(
@@ -548,12 +600,13 @@ class GroupDetailScreen extends ConsumerWidget {
               ),
               _OwnerSessions(groupId: groupId),
               AppCard(
+                radius: DT.radiusLg,
                 onTap: () => context.push('/reports/$groupId'),
                 children: const [
                   InfoRow(
                     icon: Icons.analytics_outlined,
                     title: 'Báo cáo nhóm',
-                    subtitle: 'Tỉ lệ hoàn thành theo tháng, sắp theo tên A→Z.',
+                    subtitle: 'Xem kết quả theo tháng của nhóm này.',
                     trailing: Icon(Icons.chevron_right, color: DT.textSecondary),
                   ),
                 ],
@@ -562,17 +615,19 @@ class GroupDetailScreen extends ConsumerWidget {
                 const AppBanner(tone: BannerTone.accent, text: 'Nhóm dưới 4 thành viên — nên mời thêm.'),
             ],
             AppCard(
+              radius: isOwner ? DT.radiusLg : DT.radiusCard,
+              gap: DT.spaceMd,
               children: [
                 SectionHeader(
                   'Thành viên (${m.memberCount}/10)',
-                  subtitle: 'Sắp theo tên A→Z. Không hiện chuỗi, Coins hay trạng thái trực tuyến.',
+                  subtitle: isOwner ? 'Danh sách theo tên A–Z' : 'Sắp theo tên A→Z. Không hiện chuỗi, Coins hay trạng thái trực tuyến.',
                 ),
                 if (m.owner != null)
                   MemberTile(
                     name: m.owner!.displayName,
                     leading: memberAvatar(m.owner!, frames),
                     subtitle: 'Chủ nhóm',
-                    trailing: const StatusBadge('Chủ nhóm', tone: BadgeTone.dark),
+                    trailing: StatusBadge('Chủ nhóm', tone: isOwner ? BadgeTone.accent : BadgeTone.dark),
                     onTap: () => context.push('/users/${m.owner!.userId}'),
                     divider: m.members.isNotEmpty,
                   ),
@@ -631,6 +686,7 @@ Widget memberAvatar(PublicUser u, Map<String, String> frames, {double size = 40}
   return FramedAvatar(
     name: u.displayName,
     imageUrl: u.avatarUrl == null ? null : fixHost(u.avatarUrl!),
+    frameKey: key,
     frameColor: key == null || key.startsWith('default') ? null : previewColor(key),
     size: size,
   );
@@ -684,8 +740,14 @@ class _OwnerSessions extends ConsumerWidget {
     final s = ref.watch(schedulesProvider(groupId));
     final t = context.text;
     return AppCard(
+      radius: DT.radiusLg,
+      gap: DT.spaceMd,
       children: [
-        Text('Lịch phiên', style: t.headlineSmall),
+        Row(children: [
+          const Icon(Icons.calendar_today_outlined, size: 20, color: DT.accent),
+          const SizedBox(width: DT.spaceSm),
+          Text('Lịch phiên', style: t.headlineSmall),
+        ]),
         s.when(
           loading: () => const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: LinearProgressIndicator()),
           error: (e, _) => Row(

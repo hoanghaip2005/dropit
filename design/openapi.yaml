@@ -610,7 +610,11 @@ paths:
       x-moscow: Should
       x-us: [US-03.14]
       x-br: [BR-41, BR-119]
-      parameters: [ { $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' } ]
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - { in: query, name: from, schema: { type: string, format: date-time }, description: 'Bao gồm mốc bắt đầu; khi có cả hai mốc cần from < to.' }
+        - { in: query, name: to, schema: { type: string, format: date-time }, description: Không bao gồm mốc kết thúc }
       responses:
         '200':
           description: OK
@@ -719,7 +723,7 @@ paths:
               properties:
                 body: { type: string, minLength: 1, maxLength: 500, description: 'explanations.body (explanation_max_chars)' }
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Explanation' } } } }
+        '200': { description: 'OK — kèm quyền sửa, hạn sửa và bản cũ như GET', content: { application/json: { schema: { $ref: '#/components/schemas/MyExplanation' } } } }
         '400': { description: 'NOT_EXITED_IN_SESSION — loại sự kiện không phải EXITED (AC-04.05.3, đổi từ 403 ngày 2026-10-20)', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: 'FORBIDDEN_GROUP (sự kiện của người khác) | NOT_EXITED_IN_SESSION (chủ nhóm)', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } } }
@@ -883,6 +887,24 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
 
   # ---------------- EP-06 ----------------
+  /me/rewards/today:
+    get:
+      tags: [EP-06 Coins & Shop]
+      operationId: getMyRewardsToday
+      summary: Tổng thưởng phiên theo ngày VN và trần cấu hình, độc lập phân trang và số dư
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reward_date, coins_awarded, daily_cap]
+                properties:
+                  reward_date: { type: string, format: date }
+                  coins_awarded: { type: integer }
+                  daily_cap: { type: integer, minimum: 0 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /me/coins:
     get:
       tags: [EP-06 Coins & Shop]
@@ -1540,6 +1562,10 @@ components:
       properties:
         session_id: { type: string, format: uuid }
         group_name: { type: string }
+        session_mode: { type: string, enum: [SQUAD], description: 'Backend hiện tại chỉ có phiên nhóm; không suy mode theo số người.' }
+        joined_at: { type: [string, 'null'], format: date-time }
+        exited_at: { type: [string, 'null'], format: date-time }
+        ended_at: { type: [string, 'null'], format: date-time }
         started_at: { type: string, format: date-time }
         duration_min: { type: integer }
         final_state: { $ref: '#/components/schemas/MemberFinalState' }
@@ -1550,7 +1576,10 @@ components:
         cancelled_outage_exited: { type: boolean, description: BR-68 }
         coins_awarded: { type: integer, minimum: 0 }
         reward_cap_reached: { type: boolean }
-        streak_after: { type: integer }
+        reward_daily_cap: { type: integer, minimum: 0, description: Trần thưởng ngày theo cấu hình server }
+        explanation_submit_deadline: { type: string, format: date-time, description: Hạn gửi mới theo ends_at và cấu hình server }
+        has_explanation: { type: boolean, description: Có bản giải trình của chính người gọi để xem lại kể cả sau hạn gửi }
+        streak_after: { type: integer, description: Chuỗi hiện tại tại lúc truy vấn; không phải snapshot lịch sử }
         streak_broken: { type: boolean }
         new_badges: { type: array, items: { type: string } }
         exempted: { type: boolean }

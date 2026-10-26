@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -55,48 +56,148 @@ class ExplanationScreen extends ConsumerStatefulWidget {
 class _ExplanationScreenState extends ConsumerState<ExplanationScreen> {
   final _c = TextEditingController();
   bool _busy = false;
+  bool _prefilled = false;
   String? _err;
   Explanation? _sent;
-  bool _prefilled = false;
+  String _baseline = '';
+  bool _allowPop = false;
+  bool _permissionDenied = false;
+  Timer? _deadlineTimer;
+  DateTime? _armedDeadline;
 
   @override
   void dispose() {
+    _deadlineTimer?.cancel();
     _c.dispose();
     super.dispose();
   }
 
-  /// Nạp giải trình đã gửi (US-04.05) vào ô một lần.
-  void _prefill(Explanation? e) {
-    if (_prefilled || e == null) return;
-    _prefilled = true;
-    _sent = e;
-    _c.text = e.body;
+  Future<void> _close() async {
+    if (_busy) return;
+    if (_c.text != _baseline) {
+      final discard = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Bỏ thay đổi chưa lưu?'),
+          content: const Text('Nội dung đang viết sẽ không được lưu.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Tiếp tục viết'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Bỏ thay đổi'),
+            ),
+          ],
+        ),
+      );
+      if (discard != true || !mounted) return;
+    }
+    if (!mounted) return;
+    setState(() => _allowPop = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).maybePop();
+      } else {
+        context.go('/history/${widget.sessionId}');
+      }
+    });
+  }
+
+  void _armDeadline(DateTime? deadline) {
+    if (_armedDeadline == deadline) return;
+    _deadlineTimer?.cancel();
+    _armedDeadline = deadline;
+    if (deadline != null && deadline.isAfter(DateTime.now().toUtc())) {
+      _deadlineTimer = Timer(deadline.difference(DateTime.now().toUtc()), () {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  bool _editable(MySessionResult result, Explanation? full) {
+    if (_permissionDenied || result.finalState != 'EXITED') return false;
+    final now = DateTime.now().toUtc();
+    if (full != null) {
+      return full.canEdit &&
+          (full.editDeadline == null || now.isBefore(full.editDeadline!));
+    }
+    return result.canExplain &&
+        (result.explanationSubmitDeadline == null ||
+            now.isBefore(result.explanationSubmitDeadline!));
+  }
+
+  Future<void> _retry() async {
+    ref.invalidate(resultProvider(widget.sessionId));
+    ref.invalidate(myExplanationProvider(widget.sessionId));
   }
 
   Future<void> _submit() async {
-    if (_c.text.trim().isEmpty) {
-      setState(() => _err = 'Vui lòng nhập nội dung');
+    if (_busy) return;
+    final result = ref.read(resultProvider(widget.sessionId));
+    final mine = ref.read(myExplanationProvider(widget.sessionId));
+    if (!result.hasValue ||
+        result.isLoading ||
+        result.hasError ||
+        !mine.hasValue ||
+        mine.isLoading ||
+        mine.hasError ||
+        !_editable(result.requireValue, mine.requireValue)) {
       return;
     }
+    final text = _c.text.trim();
+    if (text.isEmpty || text.runes.length > explanationMaxChars) return;
     setState(() {
       _busy = true;
       _err = null;
     });
     try {
-      final e = await ref.read(apiProvider).submitExplanation(widget.sessionId, _c.text.trim());
+      final saved = await ref
+          .read(apiProvider)
+          .submitExplanation(
+            widget.sessionId,
+            text,
+            version: mine.requireValue?.version,
+          );
+      if (!mounted) return;
+      setState(() {
+        _sent = saved;
+        _prefilled = true;
+        _baseline = text;
+        _c.text = text;
+      });
       ref.invalidate(resultProvider(widget.sessionId));
       ref.invalidate(historyProvider);
+      ref.invalidate(historyPeriodProvider);
+      ref.invalidate(historyRewardTodayProvider);
       ref.invalidate(myExplanationProvider(widget.sessionId));
-      setState(() => _sent = e);
-      if (mounted) showSnack(context, 'Đã gửi giải trình. Chủ nhóm sẽ thấy trong app.');
-    } catch (e) {
-      final a = ApiError.from(e);
-      setState(() => _err = switch (a.code) {
-            'EXPLANATION_WINDOW_CLOSED' => 'Đã hết hạn gửi hoặc sửa giải trình cho lần rời app này.',
-            'NOT_EXITED_IN_SESSION' || 'FORBIDDEN_GROUP' => 'Không thể gửi giải trình cho sự kiện này.',
-            'VALIDATION_FAILED' => 'Tối đa 500 ký tự.',
-            _ => a.offline ? 'Chưa gửi được. Nội dung vẫn còn trên máy.' : a.message,
-          });
+      showSnack(context, 'Đã lưu giải trình.');
+    } catch (error) {
+      if (!mounted) return;
+      final a = ApiError.from(error);
+      if (a.code == 'EXPLANATION_WINDOW_CLOSED' ||
+          a.code == 'NOT_EXITED_IN_SESSION' ||
+          a.code == 'FORBIDDEN_GROUP') {
+        _permissionDenied = true;
+        ref.invalidate(resultProvider(widget.sessionId));
+        ref.invalidate(myExplanationProvider(widget.sessionId));
+      }
+      setState(
+        () => _err = switch (a.code) {
+          'EXPLANATION_WINDOW_CLOSED' => 'Đã hết hạn gửi hoặc sửa giải trình.',
+          'NOT_EXITED_IN_SESSION' ||
+          'FORBIDDEN_GROUP' => 'Bạn không có quyền giải trình cho phiên này.',
+          'VALIDATION_FAILED' => 'Nội dung tối đa 500 ký tự.',
+          'VERSION_CONFLICT' =>
+            'Giải trình đã thay đổi ở nơi khác. Tải lại trước khi lưu; bản đang viết vẫn được giữ.',
+          _ =>
+            a.offline
+                ? 'Chưa gửi được. Nội dung vẫn được giữ trên màn hình.'
+                : a.message,
+        },
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -104,71 +205,247 @@ class _ExplanationScreenState extends ConsumerState<ExplanationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final r = ref.watch(resultProvider(widget.sessionId)).value;
+    final result = ref.watch(resultProvider(widget.sessionId));
     final mine = ref.watch(myExplanationProvider(widget.sessionId));
-    if (mine.hasValue) _prefill(mine.value);
-    final full = mine.value;
-    final locked = full != null && !full.canEdit; // quá 24 giờ từ lần gửi đầu → chỉ xem (AC-04.05.5)
+    final ready =
+        result.hasValue &&
+        !result.isLoading &&
+        !result.hasError &&
+        mine.hasValue &&
+        !mine.isLoading &&
+        !mine.hasError;
+    final full = ready ? mine.requireValue : null;
+    if (ready && !_prefilled) {
+      _prefilled = true;
+      if (full != null) {
+        _c.text = full.body;
+        _baseline = full.body;
+        _sent = full;
+      }
+    }
+    if (ready) {
+      _armDeadline(
+        full?.editDeadline ??
+            (full == null
+                ? result.requireValue.explanationSubmitDeadline
+                : null),
+      );
+    }
+    final canEdit = ready && _editable(result.requireValue, full);
     final t = context.text;
-    return AppScaffold(
-      header: const AppHeader.back(title: 'Giải trình lần rời app', leading: HeaderLeading.close),
-      footer: ValueListenableBuilder<TextEditingValue>(
-        valueListenable: _c,
-        builder: (_, v, _) => PrimaryButton(
-          key: const Key('explanationSubmit'),
-          label: _sent == null ? 'Gửi' : 'Lưu thay đổi',
-          loading: _busy,
-          onPressed: v.text.trim().isEmpty || locked ? null : _submit,
+    final theme = Theme.of(context).copyWith(
+      textTheme: t.apply(
+        bodyColor: OwnerStyle.ink,
+        displayColor: OwnerStyle.ink,
+      ),
+    );
+    return PopScope(
+      canPop: _allowPop || (!_busy && _c.text == _baseline),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _close();
+      },
+      child: Theme(
+        data: theme,
+        child: AppScaffold(
+          backgroundColor: OwnerStyle.canvas,
+          header: AppHeader.back(
+            title: 'Giải trình',
+            leading: HeaderLeading.close,
+            onLeading: _close,
+          ),
+          footer: canEdit
+              ? ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _c,
+                  builder: (_, value, _) => PrimaryButton(
+                    key: const Key('explanationSubmit'),
+                    label: full == null && _sent == null
+                        ? 'Gửi giải trình'
+                        : 'Lưu thay đổi',
+                    loading: _busy,
+                    onPressed:
+                        _busy ||
+                            value.text.trim().isEmpty ||
+                            value.text.trim().runes.length > explanationMaxChars
+                        ? null
+                        : _submit,
+                  ),
+                )
+              : null,
+          children: [
+            if (!ready && (result.hasError || mine.hasError))
+              SizedBox(
+                height: 400,
+                child: ErrorState(
+                  error: result.error ?? mine.error!,
+                  onRetry: _retry,
+                  title: 'Chưa tải được thông tin giải trình.',
+                ),
+              )
+            else if (!ready)
+              const SizedBox(height: 320, child: SkeletonList())
+            else ...[
+              _ExplanationSessionCard(result.requireValue),
+              const AppCard(
+                color: Colors.white,
+                children: [
+                  Text('Chỉ bạn và chủ nhóm xem được nội dung.'),
+                  Text('Giải trình không đổi kết quả, Coins hoặc chuỗi.'),
+                ],
+              ),
+              if (full == null &&
+                  result.requireValue.explanationSubmitDeadline != null)
+                Text(
+                  'Hạn gửi: ${hhmm(result.requireValue.explanationSubmitDeadline)} ${ddmm(result.requireValue.explanationSubmitDeadline)}',
+                  style: t.bodySmall!.copyWith(color: OwnerStyle.muted),
+                ),
+              if (!canEdit)
+                AppBanner(
+                  key: const Key('explanationReadOnly'),
+                  tone: BannerTone.info,
+                  text: full != null
+                      ? 'Giải trình chỉ đọc. Đã hết hạn sửa hoặc không còn quyền sửa.'
+                      : 'Hiện không thể gửi giải trình cho phiên này.',
+                ),
+              AppCard(
+                color: Colors.white,
+                children: [
+                  const FieldLabel('Nội dung giải trình'),
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _c,
+                    builder: (_, value, _) {
+                      final count = value.text.trim().runes.length;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextField(
+                            key: const Key('explanationField'),
+                            controller: _c,
+                            readOnly: !canEdit || _busy,
+                            minLines: 5,
+                            maxLines: 12,
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              hintText: 'Mô tả ngắn lý do bạn rời phiên…',
+                              filled: true,
+                              fillColor: OwnerStyle.inset,
+                              errorText: count > explanationMaxChars
+                                  ? 'Tối đa 500 ký tự'
+                                  : null,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  DT.radiusCard,
+                                ),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '$count / 500',
+                            key: const Key('explanationCounter'),
+                            textAlign: TextAlign.right,
+                            style: t.bodySmall,
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+              if (_sent != null || full != null) ...[
+                AppCard(
+                  key: const Key('explanationSent'),
+                  color: Colors.white,
+                  children: [
+                    Text('Đã gửi giải trình', style: t.titleMedium),
+                    if (full != null && _c.text != full.body) ...[
+                      const Text('Nội dung đang lưu trên máy chủ:'),
+                      Text(full.body),
+                    ],
+                    if ((full ?? _sent)!.submittedAt != null)
+                      Text(
+                        'Gửi lúc ${hhmm((full ?? _sent)!.submittedAt)} ${ddmm((full ?? _sent)!.submittedAt)}',
+                        style: t.bodySmall,
+                      ),
+                    if ((full ?? _sent)!.editedAt != null)
+                      Text(
+                        'Đã sửa lúc ${hhmm((full ?? _sent)!.editedAt)} ${ddmm((full ?? _sent)!.editedAt)}',
+                        style: t.bodySmall,
+                      ),
+                    if ((full ?? _sent)!.addedAfterReport)
+                      const Text('Đã thêm sau khi tạo báo cáo.'),
+                    if (full?.editDeadline != null && canEdit)
+                      Text(
+                        'Hạn sửa: ${hhmm(full!.editDeadline)} ${ddmm(full.editDeadline)}',
+                        style: t.bodySmall,
+                      ),
+                  ],
+                ),
+              ],
+              if (full != null && full.history.isNotEmpty)
+                AppCard(
+                  key: const Key('explanationHistory'),
+                  color: Colors.white,
+                  children: [
+                    Text(
+                      'Lịch sử chỉnh sửa (${full.history.length})',
+                      style: t.titleMedium,
+                    ),
+                    for (final revision in full.history) ...[
+                      Text('${revision['body']}'),
+                      Text(
+                        'Viết lúc ${hhmm(DateTime.tryParse('${revision['written_at']}'))} ${ddmm(DateTime.tryParse('${revision['written_at']}'))} · thay lúc ${hhmm(DateTime.tryParse('${revision['replaced_at']}'))} ${ddmm(DateTime.tryParse('${revision['replaced_at']}'))}',
+                        style: t.bodySmall!.copyWith(color: OwnerStyle.muted),
+                      ),
+                    ],
+                  ],
+                ),
+              if (_err != null) ...[
+                AppBanner(tone: BannerTone.danger, text: _err!),
+                TextButton(
+                  onPressed: _busy ? null : _retry,
+                  child: const Text('Tải lại quyền và trạng thái'),
+                ),
+              ],
+            ],
+          ],
         ),
       ),
+    );
+  }
+}
+
+class _ExplanationSessionCard extends StatelessWidget {
+  const _ExplanationSessionCard(this.result);
+  final MySessionResult result;
+  @override
+  Widget build(BuildContext context) {
+    final mode = switch (result.sessionMode) {
+      'SQUAD' => 'Squad',
+      'SOLO' => 'Cá nhân',
+      _ => 'Chưa rõ chế độ',
+    };
+    final seconds = result.focusSeconds < 0 ? 0 : result.focusSeconds;
+    return AppCard(
+      color: Colors.white,
       children: [
-        _sessionHead(context, r),
-        if (r?.endsAtGuess != null)
-          Text('Gửi được đến ${hhmm(r!.endsAtGuess!.add(const Duration(days: 7)))} '
-              '${ddmm(r.endsAtGuess!.add(const Duration(days: 7)))}', style: t.bodySmall),
-        const _KnowCard([
-          'Giải trình không thay đổi kết quả phiên, không hoàn Coins và không khôi phục chuỗi cho ai.',
-          'Chỉ bạn và chủ nhóm thấy giải trình. Các thành viên khác không thấy.',
-          'Bạn chỉ gửi được một giải trình cho mỗi lần rời app; sửa được trong 24 giờ sau khi gửi.',
-          'Không xóa được sự kiện rời app. Nếu ghi nhầm, hãy giải trình hoặc khiếu nại.',
-        ]),
-        AppCard(children: [
-          const FieldLabel('Nội dung giải trình'),
-          CountedTextArea(
-            controller: _c,
-            max: explanationMaxChars,
-            minLines: 5,
-            overLimitText: 'Tối đa 500 ký tự',
-            fieldKey: const Key('explanationField'),
-          ),
-        ]),
-        if (_sent != null)
-          AppBanner(
-            key: const Key('explanationSent'),
-            tone: BannerTone.success,
-            text: [
-              'Đã gửi lúc ${hhmm(_sent!.submittedAt ?? _sent!.updatedAt)} ${ddmm(_sent!.submittedAt ?? _sent!.updatedAt)}.',
-              if (_sent!.editedAt != null) 'Đã sửa lúc ${hhmm(_sent!.editedAt)} ${ddmm(_sent!.editedAt)}.',
-              if (locked)
-                'Đã hết hạn sửa.'
-              else if (full?.editDeadline != null)
-                'Sửa được đến ${hhmm(full!.editDeadline)} ${ddmm(full.editDeadline)}.'
-              else
-                'Sửa được trong 24 giờ sau lần gửi đầu.',
-            ].join(' '),
-          ),
-        if (full != null && full.history.isNotEmpty)
-          AppCard(key: const Key('explanationHistory'), children: [
-            Text('Bản trước (${full.history.length})', style: t.titleMedium),
-            for (final h in full.history)
-              ListRow(
-                title: '“${h['body']}”',
-                subtitle: 'Viết lúc ${hhmm(DateTime.tryParse('${h['written_at']}'))} '
-                    '${ddmm(DateTime.tryParse('${h['written_at']}'))} · thay lúc ${hhmm(DateTime.tryParse('${h['replaced_at']}'))}',
-                divider: false,
-              ),
-          ]),
-        if (_err != null) AppBanner(tone: BannerTone.danger, text: _err!),
+        Text(
+          result.groupName ?? 'Phiên tập trung',
+          style: context.text.titleMedium,
+        ),
+        Text(
+          '$mode · ${ddmm(result.startedAt)}',
+          style: context.text.bodySmall,
+        ),
+        Text(
+          'Tập trung ${seconds ~/ 60} phút ${seconds % 60} giây',
+          style: context.text.bodyMedium,
+        ),
+        Text(
+          result.exitedAt == null
+              ? 'Chưa có thời điểm rời phiên'
+              : 'Rời lúc ${hhmm(result.exitedAt)} ${ddmm(result.exitedAt)}',
+          style: context.text.bodySmall,
+        ),
       ],
     );
   }
@@ -203,6 +480,8 @@ class _AppealCreateScreenState extends ConsumerState<AppealCreateScreen> {
       final a = await ref.read(apiProvider).createAppeal(widget.sessionId, _c.text.trim(), suspectSystemError: _system);
       ref.invalidate(resultProvider(widget.sessionId));
       ref.invalidate(historyProvider);
+      ref.invalidate(historyPeriodProvider);
+      ref.invalidate(historyRewardTodayProvider);
       if (mounted) {
         showSnack(
             context,

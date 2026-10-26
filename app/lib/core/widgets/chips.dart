@@ -17,7 +17,7 @@ class StatusBadge extends StatelessWidget {
         BadgeTone.accent => (DT.accentSoftBg, DT.accent),
         BadgeTone.success => (DT.successSoftBg, DT.success),
         BadgeTone.danger => (DT.warningSoftBg, DT.onWarningSoft),
-        BadgeTone.dark => (DT.primary, Colors.white),
+        BadgeTone.dark => (DT.textPrimary, Colors.white),
       };
 
   @override
@@ -35,7 +35,7 @@ class StatusBadge extends StatelessWidget {
   }
 }
 
-/// Chip Coins: nền cam nhạt `#FFF1EC`, chữ `#B02F00`, biểu tượng đồng xu.
+/// Chip Coins: nền cam nhạt `#FFF3E8`, chữ `#C2410C`, biểu tượng đồng xu.
 /// [onCard] = chip trắng có bóng (header employee_home: "420 Coins").
 class CoinChip extends StatelessWidget {
   const CoinChip(this.text, {super.key, this.onCard = false, this.icon = Icons.monetization_on});
@@ -78,7 +78,7 @@ class PersonChip extends StatelessWidget {
       );
 }
 
-/// Bộ chọn viên thuốc (25 / 50 phút; "Tuần này / Tháng này"). Mục chọn nền đen chữ trắng.
+/// Bộ chọn viên thuốc; mục chọn cam nhạt, chữ cam và viền rõ.
 class PillToggle<T> extends StatelessWidget {
   const PillToggle({super.key, required this.options, required this.value, required this.onChanged, this.big = false});
   final List<PillOption<T>> options;
@@ -99,8 +99,8 @@ class PillToggle<T> extends StatelessWidget {
             selected: options[i].value == value,
             button: true,
             child: Material(
-              color: options[i].value == value ? DT.primary : (big ? DT.surfaceHigh : Colors.transparent),
-              shape: const StadiumBorder(),
+              color: options[i].value == value ? DT.accentSoftBg : (big ? (context.ownerStyle ? OwnerStyle.inset : DT.surfaceHigh) : Colors.transparent),
+              shape: StadiumBorder(side: BorderSide(color: !context.ownerStyle && options[i].value == value ? DT.accent.withValues(alpha: .45) : Colors.transparent)),
               child: InkWell(
                 customBorder: const StadiumBorder(),
                 onTap: () => onChanged(options[i].value),
@@ -109,12 +109,12 @@ class PillToggle<T> extends StatelessWidget {
                   child: Column(children: [
                     Text(options[i].label,
                         style: (big ? t.titleMedium : t.labelLarge)!.copyWith(
-                            color: options[i].value == value ? Colors.white : DT.textSecondary,
+                            color: options[i].value == value ? DT.accent : DT.textSecondary,
                             fontWeight: FontWeight.w600)),
                     if (options[i].caption != null)
                       Text(options[i].caption!,
                           style: t.bodySmall!.copyWith(
-                              color: options[i].value == value ? Colors.white70 : DT.textSecondary)),
+                              color: options[i].value == value ? DT.accent : DT.textSecondary)),
                   ]),
                 ),
               ),
@@ -146,21 +146,25 @@ class FilterChipPill extends StatelessWidget {
   final bool selected;
   final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) => Material(
-        color: selected ? DT.primary : DT.card,
-        shape: const StadiumBorder(),
-        elevation: selected ? 0 : 0.5,
+  Widget build(BuildContext context) => Semantics(selected: selected, button: true, child: Material(
+        color: selected ? DT.accentSoftBg : DT.card,
+        shape: StadiumBorder(side: BorderSide(color: context.ownerStyle ? Colors.transparent : (selected ? DT.accent.withValues(alpha: .45) : DT.outline))),
+        elevation: 0,
         shadowColor: Colors.black12,
         child: InkWell(
           customBorder: const StadiumBorder(),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
-            child: Text(label,
-                style: context.text.labelLarge!.copyWith(color: selected ? Colors.white : DT.textSecondary)),
+            child: ConstrainedBox(constraints: const BoxConstraints(minHeight: 26),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (selected) ...[const Icon(Icons.check_rounded, size: 16, color: DT.accent), const SizedBox(width: 6)],
+                Text(label, style: context.text.labelLarge!.copyWith(color: selected ? DT.accent : DT.textSecondary,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500)),
+              ])),
           ),
         ),
-      );
+      ));
 }
 
 /// Chấm trang onboarding: chấm hiện tại dài 28, đen; chấm khác 8, xám.

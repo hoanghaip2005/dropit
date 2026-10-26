@@ -18,9 +18,12 @@
     "db:reset": "node scripts/db-reset.mjs",
     "demo": "tsx scripts/demo-session.ts",
     "db:seed": "node scripts/db-seed.mjs",
+    "db:seed:reports": "tsx scripts/seed-reports.ts",
     "db:migrate": "node scripts/db-migrate.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-sns": "^3.1156.0",
+    "@fastify/cors": "^11.3.1",
     "fastify": "5.2.1",
     "jose": "5.9.6",
     "kysely": "0.27.5",

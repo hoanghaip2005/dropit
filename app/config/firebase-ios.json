@@ -1,0 +1,12 @@
+{
+  "API_BASE_URL": "https://dropit.tutty-lab-demo.com",
+  "COGNITO_REGION": "ap-southeast-1",
+  "COGNITO_USER_POOL_ID": "ap-southeast-1_iCogdmW0v",
+  "COGNITO_CLIENT_ID": "6vkgari2smj7qp1114lheihom0",
+  "PUSH_ENABLED": "true",
+  "FIREBASE_PROJECT_ID": "dropit-89d28",
+  "FIREBASE_MESSAGING_SENDER_ID": "136773953250",
+  "FIREBASE_API_KEY": "AIzaSyC22sLttYtYcn7QVNKIg6dSggAKoffAecI",
+  "FIREBASE_APP_ID": "1:136773953250:ios:a29004805bc9cccc4520bb",
+  "FIREBASE_IOS_BUNDLE_ID": "com.bakhi.dropit.dropit"
+}

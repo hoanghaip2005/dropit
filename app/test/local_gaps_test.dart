@@ -165,6 +165,14 @@ class FakeApi extends DropItApi {
   Future<AttendanceMonth> attendance(String month) async => AttendanceMonth.fromJson({'month': month, 'days': []});
 }
 
+/// Phiên fixture tường minh; không khôi phục danh tính từ khóa dev cũ.
+class FixtureAuthController extends AuthController {
+  @override
+  AuthState build() => const AuthState(
+    token: 'fixture-session', userLabel: 'An', deviceId: 'fixture-device',
+  );
+}
+
 late SharedPreferences prefs;
 
 Future<void> scrollTo(WidgetTester t, Finder f) async {
@@ -176,7 +184,7 @@ Future<void> scrollTo(WidgetTester t, Finder f) async {
 Widget app(Widget child, FakeApi api, {List extra = const []}) => ProviderScope(
       key: UniqueKey(), // mỗi lần dựng là một container mới (mô phỏng mở lại màn)
       retry: (_, _) => null,
-      overrides: [apiProvider.overrideWithValue(api), prefsProvider.overrideWithValue(prefs), ...extra],
+      overrides: [apiProvider.overrideWithValue(api), prefsProvider.overrideWithValue(prefs), authProvider.overrideWith(FixtureAuthController.new), ...extra],
       child: MaterialApp(theme: buildLightTheme(), home: child),
     );
 
@@ -191,14 +199,14 @@ Widget routed(String initial, Map<String, Widget Function(GoRouterState)> pages,
   return ProviderScope(
     key: UniqueKey(),
     retry: (_, _) => null,
-    overrides: [apiProvider.overrideWithValue(api), prefsProvider.overrideWithValue(prefs), ...extra],
+    overrides: [apiProvider.overrideWithValue(api), prefsProvider.overrideWithValue(prefs), authProvider.overrideWith(FixtureAuthController.new), ...extra],
     child: MaterialApp.router(theme: buildLightTheme(), routerConfig: router),
   );
 }
 
 void main() {
   setUp(() async {
-    SharedPreferences.setMockInitialValues({'dev_user': 'An'});
+    SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
   });
 
@@ -427,9 +435,10 @@ void main() {
     await t.pumpWidget(app(const ExplanationScreen(sessionId: 's1'), api));
     await t.pumpAndSettle();
     expect(find.text('Bản mới'), findsOneWidget);
+    await scrollTo(t, find.textContaining('Đã sửa lúc 11:00'));
+    expect(find.textContaining('Đã sửa lúc 11:00 19/10/2026'), findsOneWidget);
     await scrollTo(t, find.byKey(const Key('explanationHistory')));
-    expect(find.textContaining('Đã sửa lúc 11:00'), findsOneWidget);
-    expect(find.text('“Bản cũ”'), findsOneWidget);
+    expect(find.text('Bản cũ'), findsOneWidget);
   });
 
   test('BR-102: nhãn "Thêm sau khi tạo báo cáo" + "Đã sửa lúc" trong dòng báo cáo', () {

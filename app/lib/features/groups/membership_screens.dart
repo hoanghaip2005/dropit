@@ -160,22 +160,15 @@ class PublicProfileScreen extends ConsumerWidget {
           final u = d.user;
           final bgKey = u.backgroundItemId == null ? null : shop[u.backgroundItemId];
           final frameKey = u.frameItemId == null ? null : shop[u.frameItemId];
-          final bg = bgKey == null || bgKey.startsWith('default') ? null : previewColor(bgKey);
           return PageList(children: [
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: DT.spaceLg),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(DT.radiusLg),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: bg == null ? const [DT.accentSoftBg, DT.background] : [bg, Color.lerp(bg, DT.background, 0.75)!],
-                ),
-              ),
+            CosmeticSurface(
+              artKey: bgKey,
+              padding: const EdgeInsets.symmetric(vertical: DT.spaceLg, horizontal: DT.spaceMd),
               child: Column(children: [
                 FramedAvatar(
                   name: u.displayName,
                   imageUrl: u.avatarUrl == null ? null : fixHost(u.avatarUrl!),
+                  frameKey: frameKey,
                   frameColor: frameKey == null || frameKey.startsWith('default') ? null : previewColor(frameKey),
                   size: 108,
                 ),
@@ -194,7 +187,8 @@ class PublicProfileScreen extends ConsumerWidget {
                       key: const Key('profileStreak'),
                       icon: Icons.local_fire_department,
                       title: 'Chuỗi ${d.shownStreak} ngày'),
-                for (final b in d.shownBadges) InfoRow(icon: Icons.military_tech_outlined, title: badgeName(b)),
+                for (final b in d.shownBadges)
+                  ListRow(leading: AchievementEmblem(code: b, size: 48), title: badgeName(b)),
               ]),
           ]);
         },

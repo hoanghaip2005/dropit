@@ -67,7 +67,7 @@ void main() {
   late ProviderContainer c;
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues({'dev_token': 't', 'onboarded': true});
+    SharedPreferences.setMockInitialValues({'onboarded': true});
     final prefs = await SharedPreferences.getInstance();
     socket = FakeSocket();
     watcher = FakeWatcher();
@@ -80,6 +80,7 @@ void main() {
       sessionSocketFactoryProvider.overrideWithValue(({required String token, required String deviceId}) => socket),
       focusWatcherFactoryProvider.overrideWithValue(() => watcher),
     ]);
+    await c.read(authProvider.notifier).setToken('t', 'Test');
   });
 
   tearDown(() => c.dispose());
@@ -100,6 +101,39 @@ void main() {
     expect(join['session_id'], sid);
     expect(join['event_id'], isA<String>());
     expect(watcher.started, isFalse, reason: 'chưa ghi khi ở phòng chờ (NFR-P02)');
+  });
+
+  test('mở lại màn phiên → resume khi join trả trạng thái đã tham gia', () async {
+    socket.reply = (e, p) => switch (e) {
+      'session:join' => {'ok': false, 'code': 'SESSION_NOT_ACTIVE', 'state': 'DISCONNECTED', 'detail': 'Dùng session:resume để nối lại'},
+      'session:resume' => {'ok': true, 'state': 'FOCUSING'},
+      _ => {'ok': true},
+    };
+    final v = await boot();
+    expect(socket.names(), ['session:join', 'session:resume']);
+    expect(v.phase, SessionPhase.focusing);
+  });
+
+  test('mở lại phiên đã rời → EXITED, không tiếp tục ghi', () async {
+    socket.reply = (e, p) => switch (e) {
+      'session:join' => {'ok': false, 'code': 'SESSION_NOT_ACTIVE', 'state': 'EXITED'},
+      'session:resume' => {'ok': true, 'state': 'EXITED'},
+      _ => {'ok': true},
+    };
+    final v = await boot();
+    expect(v.phase, SessionPhase.exited);
+    expect(watcher.started, isFalse);
+  });
+
+  test('mở lại sau hạn giữ chỗ → LOST', () async {
+    socket.reply = (e, p) => switch (e) {
+      'session:join' => {'ok': false, 'code': 'SESSION_NOT_ACTIVE', 'state': 'LOST'},
+      'session:resume' => {'ok': false, 'code': 'SESSION_LOST', 'state': 'LOST'},
+      _ => {'ok': true},
+    };
+    final v = await boot();
+    expect(v.phase, SessionPhase.lost);
+    expect(watcher.started, isFalse);
   });
 
   test('join bị từ chối → error với thông điệp tiếng Việt', () async {
