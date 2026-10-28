@@ -34,3 +34,11 @@ bootstrap.sh (run explicitly bash; initial Lightsail wrapper used sh, rerun succ
 ## Push update
 
 SNS FCM v1 application and scoped runtime IAM user provisioned; see infra/apple/DEPLOYMENT.md for current status. Earlier missing-Firebase/SNS statements are superseded. Native delivery/APNs and FCM API enable completion still unverified. Backend active, HTTPS health200 after configuration.
+
+## Web cache retirement — 28/10/2026
+
+Production index points to bootstrap-canonical-20261028.js, main-session-retry-final-20261028.js. Root and query-string URL return identical index with no-store. Bootstrap removes only legacy `v` query parameter, preserving route and other parameters.
+
+Every future web deployment MUST copy `infra/lightsail/flutter_service_worker.js` to web root after Flutter build; --pwa-strategy=none generates an empty file that does not retire a previously installed offline worker. Retirement worker skipWaiting/activate deletes flutter-* caches only, unregisters, navigates same-origin open windows to their existing URLs. It does not clear auth/sessionStorage. Keep worker URL available with no-store until legacy clients have migrated.
+
+Verified HTTP root/query same bootstrap, worker617bytes no-store; browser visiting ?v=auth-20261028#/login ends at /#/login. Legacy cached root may need one browser reload to trigger worker update; no claim all existing clients migrated immediately.

@@ -3,6 +3,11 @@
 
 // This app uses live deployments without offline service-worker caching.
 (async () => {
+  const canonicalUrl = new URL(window.location.href);
+  if (canonicalUrl.searchParams.has('v')) {
+    canonicalUrl.searchParams.delete('v');
+    window.history.replaceState(window.history.state, '', canonicalUrl);
+  }
   {
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
