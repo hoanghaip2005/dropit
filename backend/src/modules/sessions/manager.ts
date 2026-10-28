@@ -81,7 +81,7 @@ export class SessionManager {
         .select(['sessions.id', 'sessions.group_id', 'sessions.started_at', 'sessions.duration_min', 'sessions.session_day', 'groups.owner_id', 'groups.name'])
         .where('sessions.id', '=', sessionId).executeTakeFirstOrThrow();
       const rt = new SessionRuntime(
-        { id: s.id, groupId: s.group_id, startedAt: s.started_at.getTime(), durationMin: s.duration_min as 25 | 50 },
+        { id: s.id, groupId: s.group_id, startedAt: s.started_at.getTime(), durationMin: s.duration_min },
         this.ctx.cfg.engine,
       );
       let resolveDone!: () => void;
@@ -119,7 +119,8 @@ export class SessionManager {
       this.enqueue(e, async () => {
         if (reason === 'joined') {
           await db.insertInto('session_members')
-            .values({ session_id: sid, user_id: m.userId, state: 'WAITING', joined_at: new Date(m.joinedAt), exited_at: null, ended_at: null, end_reason: null })
+            .values({ session_id: sid, user_id: m.userId, state: snap.state as MemberState, late_join: m.joinedAt >= rt.info.startedAt,
+              joined_at: new Date(m.joinedAt), exited_at: null, ended_at: null, end_reason: null })
             .onConflict((oc) => oc.columns(['session_id', 'user_id']).doNothing()).execute();
           return;
         }
@@ -137,6 +138,7 @@ export class SessionManager {
     });
 
     rt.on('exited', (m, forfeitedNow) => this.onExited(e, m, forfeitedNow));
+    rt.on('admissionClosed', () => this.enqueue(e, () => this.onAdmissionClosed(e)));
 
     rt.on('status', (st) => {
       if (st === 'COUNTDOWN') this.enqueue(e, () => db.updateTable('sessions').set({ status: 'COUNTDOWN' }).where('id', '=', sid).where('status', '=', 'SCHEDULED').execute());
@@ -241,6 +243,13 @@ export class SessionManager {
     const db = this.ctx.db;
     const sid = e.rt.info.id;
     await db.updateTable('sessions').set({ status: 'ACTIVE' }).where('id', '=', sid).where('status', 'in', ['SCHEDULED', 'COUNTDOWN']).execute();
+    if (this.ctx.cfg.engine.lateJoinMs <= 0) await this.onAdmissionClosed(e);
+  }
+
+  private async onAdmissionClosed(e: Entry) {
+    if (e.rt.status !== 'ACTIVE') return;
+    const db = this.ctx.db;
+    const sid = e.rt.info.id;
     const members = await db.selectFrom('group_members').select('user_id')
       .where('group_id', '=', e.groupId).where('left_at', 'is', null).execute();
     const now = new Date();

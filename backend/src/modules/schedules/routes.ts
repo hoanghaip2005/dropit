@@ -7,6 +7,8 @@ import { AppError, E } from '../../shared/errors.js';
 import { pgCode } from '../../shared/db.js';
 import { vnDay } from '../../shared/time.js';
 import { requireOwner, roleIn } from '../groups/service.js';
+import { decodeCursor, encodeCursor } from '../../shared/cursor.js';
+import { validateDuration } from '../../shared/session-policy.js';
 import { sessionCols, toSummary } from '../sessions/summary.js';
 
 const hhmmDdmm = (d: Date) => {
@@ -52,7 +54,7 @@ export async function updateSession(ctx: Ctx, userId: string, sessionId: string,
   assertBeforeCountdown(ctx, s);
   if (s.group_status !== 'ACTIVE') throw new AppError(409, 'SESSION_IN_PROGRESS', 'Nhóm không ở trạng thái HOẠT ĐỘNG — không đổi lịch được', 'BR-108');
   const duration = input.duration_min ?? s.duration_min;
-  if (duration !== 25 && duration !== 50) throw new AppError(422, 'DURATION_OUT_OF_RANGE', 'Thời lượng chỉ 25 hoặc 50 phút', 'BR-02');
+  validateDuration(duration);
   const start = input.started_at ? new Date(input.started_at) : new Date(s.started_at);
   if (input.started_at) {
     if (start.getTime() < Date.now() + ctx.cfg.scheduleMinLeadMs)
@@ -119,7 +121,7 @@ export function occurrences(startIso: string, weekdays: number[], endDate: strin
 export async function createRecurring(ctx: Ctx, userId: string, groupId: string, startIso: string, duration: number, rec: z.infer<typeof Recurrence>) {
   const g = await requireOwner(ctx, userId, groupId);
   if (g.status !== 'ACTIVE') throw new AppError(409, 'SESSION_IN_PROGRESS', 'Nhóm không ở trạng thái HOẠT ĐỘNG, không đặt lịch được', 'BR-108');
-  if (duration !== 25 && duration !== 50) throw new AppError(422, 'DURATION_OUT_OF_RANGE', 'Thời lượng chỉ 25 hoặc 50 phút', 'BR-02');
+  validateDuration(duration);
   const start = new Date(startIso);
   if (start.getTime() < Date.now() + ctx.cfg.scheduleMinLeadMs)
     throw new AppError(422, 'START_IN_PAST', 'Giờ bắt đầu phải sau giờ server ít nhất 1 phút', 'BR-79');
@@ -163,7 +165,7 @@ export async function createRecurring(ctx: Ctx, userId: string, groupId: string,
 export async function createOneOffSession(ctx: Ctx, userId: string, groupId: string, startIso: string, duration: number) {
   const g = await requireOwner(ctx, userId, groupId);
   if (g.status !== 'ACTIVE') throw new AppError(409, 'SESSION_IN_PROGRESS', 'Nhóm không ở trạng thái HOẠT ĐỘNG, không đặt lịch được', 'BR-108');
-  if (duration !== 25 && duration !== 50) throw new AppError(422, 'DURATION_OUT_OF_RANGE', 'Thời lượng chỉ 25 hoặc 50 phút', 'BR-02');
+  validateDuration(duration);
   const start = new Date(startIso);
   if (start.getTime() < Date.now() + ctx.cfg.scheduleMinLeadMs)
     throw new AppError(422, 'START_IN_PAST', 'Giờ bắt đầu phải sau giờ server ít nhất 1 phút', 'BR-79');
@@ -205,14 +207,19 @@ export function scheduleRoutes(app: FastifyInstance, ctx: Ctx) {
   app.get('/v1/groups/:group_id/schedules', async (req) => {
     const me = await currentUser(req, ctx.db, ctx.verifier);
     const { group_id } = parse(GroupId, req.params);
-    const q = parse(z.object({ from: z.string().datetime({ offset: true }).optional(), to: z.string().datetime({ offset: true }).optional() }), req.query);
+    const q = parse(z.object({ from: z.string().datetime({ offset: true }).optional(), to: z.string().datetime({ offset: true }).optional(), limit: z.coerce.number().int().min(1).max(50).default(10), cursor: z.string().optional() }), req.query);
+    const cursor = decodeCursor(q.cursor);
+    if (q.cursor && (!cursor || !z.string().uuid().safeParse(cursor.id).success)) throw new AppError(422, 'INVALID_CURSOR', 'Con trỏ phân trang không hợp lệ');
     const { g, role } = await roleIn(ctx, me.id, group_id);
     if (!role) throw E.forbiddenGroup();
     let qb = ctx.db.selectFrom('sessions').select([...sessionCols]).where('group_id', '=', group_id);
     if (q.from) qb = qb.where('started_at', '>=', new Date(q.from));
     if (q.to) qb = qb.where('started_at', '<', new Date(q.to));
-    const rows = await qb.orderBy('started_at', 'asc').limit(200).execute();
-    return { items: rows.map((r) => toSummary(ctx, { ...r, group_name: g.name })) };
+    if (cursor) qb = qb.where((eb) => eb.or([eb('started_at', '<', cursor.t), eb.and([eb('started_at', '=', cursor.t), eb('id', '<', cursor.id)])]));
+    const rows = await qb.orderBy('started_at', 'desc').orderBy('id', 'desc').limit(q.limit + 1).execute();
+    const page = rows.slice(0, q.limit);
+    const last = page.at(-1);
+    return { items: page.map((r) => toSummary(ctx, { ...r, group_name: g.name })), next_cursor: rows.length > q.limit && last ? encodeCursor(last.started_at, last.id) : null };
   });
 
   // US-02.11 (openapi updateSession / cancelSession)

@@ -1,3 +1,4 @@
+import { sessionReward } from '../../shared/session-policy.js';
 // Giải trình (BR-85) & khiếu nại (BR-86…BR-88, máy trạng thái T-BA-37).
 import { sql, type Transaction } from 'kysely';
 import type { Ctx } from '../../context.js';
@@ -254,7 +255,7 @@ async function applyExemption(ctx: Ctx, tx: Tx, sessionId: string, userId: strin
   } else {
     await tx.updateTable('sessions').set({ forfeited: false, forfeited_at: null, forfeit_trigger_user_id: null }).where('id', '=', sessionId).execute();
     if (s.forfeited) {
-      const base = s.duration_min === 25 ? ctx.cfg.engine.coins25 : ctx.cfg.engine.coins50;
+      const base = sessionReward(s.duration_min, ctx.cfg.engine);
       for (const r of rows) {
         const eligible = r.state === 'COMPLETED' || (r.state === 'EXITED' && r.exempted);
         if (eligible) {

@@ -48,7 +48,7 @@ export type SessionInfo = {
   id: string;
   groupId: string;
   startedAt: number; // giờ lịch (BR-04)
-  durationMin: 25 | 50;
+  durationMin: number;
 };
 
 export type C2SType =
@@ -62,6 +62,7 @@ export interface EngineEvents {
   status: [status: RtStatus];
   deliver: [userId: string, env: Envelope];
   ended: [];
+  admissionClosed: [];
 }
 
 export class SessionRuntime extends EventEmitter<EngineEvents> {
@@ -91,6 +92,9 @@ export class SessionRuntime extends EventEmitter<EngineEvents> {
     const at = (t: number, fn: () => void) => this.timers.push(setTimeout(fn, Math.max(0, t - now)));
     at(this.info.startedAt - this.cfg.countdownMs, () => this.startCountdown());
     at(this.info.startedAt, () => this.activate());
+    if (this.cfg.lateJoinMs > 0) {
+      at(Math.min(this.endsAt, this.info.startedAt + this.cfg.lateJoinMs), () => this.emit('admissionClosed'));
+    }
     at(this.endsAt, () => this.end());
     this.sweepTimer = setInterval(() => this.sweep(), this.cfg.sweepMs);
   }
@@ -173,7 +177,9 @@ export class SessionRuntime extends EventEmitter<EngineEvents> {
       }
       return this.err('SESSION_NOT_ACTIVE', ex.state, 'Dùng session:resume để nối lại');
     }
-    if (this.status !== 'SCHEDULED' && this.status !== 'COUNTDOWN') return this.err('LATE_JOIN_CLOSED');
+    const late = this.status === 'ACTIVE';
+    if (this.status !== 'SCHEDULED' && this.status !== 'COUNTDOWN' &&
+      !(late && now < Math.min(this.endsAt, this.info.startedAt + this.cfg.lateJoinMs))) return this.err('LATE_JOIN_CLOSED');
     const m: MemberRt = {
       userId, displayName, state: 'WAITING', endReason: null, locked: false, awayInLobby: false,
       graceUsed: 0, graceDeadline: null, graceTimer: null, lastSeenAt: now, disconnectedAt: null,
@@ -181,6 +187,10 @@ export class SessionRuntime extends EventEmitter<EngineEvents> {
       focusMs: 0, segStart: null, queue: [],
     };
     this.members.set(userId, m);
+    if (late) {
+      m.state = 'FOCUSING';
+      m.segStart = now;
+    }
     this.emit('member', m, 'WAITING', 'joined');
     return this.ok(m);
   }

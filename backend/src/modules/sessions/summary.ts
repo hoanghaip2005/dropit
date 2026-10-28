@@ -24,7 +24,9 @@ export function toSummary(ctx: Ctx, s: SessionRow) {
     ends_at: s.ends_at.toISOString(),
     duration_min: s.duration_min,
     lobby_opens_at: new Date(s.started_at.getTime() - ctx.cfg.engine.lobbyOpenMs).toISOString(),
-    late_join_deadline: null, // US-03.11 (Should) chưa làm → late_join_max_min = 0 (BR-08)
+    late_join_deadline: ctx.cfg.engine.lateJoinMs > 0
+      ? new Date(Math.min(s.ends_at.getTime(), s.started_at.getTime() + ctx.cfg.engine.lateJoinMs)).toISOString()
+      : null,
     forfeited: s.forfeited,
     cancel_reason: s.cancel_reason,
     server_ts: new Date().toISOString(),

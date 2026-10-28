@@ -28,6 +28,15 @@ export function groupRoutes(app: FastifyInstance, ctx: Ctx) {
     return svc.getGroup(ctx, me.id, group_id);
   });
 
+  app.delete('/v1/groups/:group_id', async (req, reply) => {
+    const me = await currentUser(req, ctx.db, ctx.verifier);
+    const { group_id } = parse(GroupId, req.params);
+    return idempotent(req, reply, ctx.db, me.id, async () => {
+      await svc.dissolveGroup(ctx, me.id, group_id);
+      return { status: 204 };
+    });
+  });
+
   app.get('/v1/groups/:group_id/invite-code', async (req) => {
     const me = await currentUser(req, ctx.db, ctx.verifier);
     const { group_id } = parse(GroupId, req.params);

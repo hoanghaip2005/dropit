@@ -10,6 +10,7 @@ export type EngineConfig = {
   hbTimeoutMs: number; // heartbeat_timeout_s (BR-66)
   holdMs: number; // disconnect_hold_s (BR-19)
   lobbyOpenMs: number; // lobby_open_min (BR-63)
+  lateJoinMs: number; // Admission remains open after scheduled start; no extra reward/time.
   minuteMs: number; // độ dài 1 "phút" phiên — 60000 trừ môi trường test
   sweepMs: number; // chu kỳ quét heartbeat/LOST
   lockReclassify: boolean; // Q-151 / DQ-F07 — mặc định TẮT (BR hiện hành không có)
@@ -59,6 +60,7 @@ export function loadConfig(overrides: Omit<Partial<AppConfig>, 'engine'> & { eng
     hbTimeoutMs: num('HB_TIMEOUT_MS', 10000),
     holdMs: num('HOLD_MS', 10000),
     lobbyOpenMs: num('LOBBY_OPEN_MS', 10 * 60000),
+    lateJoinMs: num('LATE_JOIN_MS', isTest ? 0 : 60000),
     minuteMs: isTest ? num('SESSION_MINUTE_MS', 60000) : 60000,
     sweepMs: num('SWEEP_MS', 250),
     lockReclassify: env.LOCK_RECLASSIFY === '1',

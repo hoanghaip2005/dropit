@@ -3,6 +3,7 @@ import { SessionRuntime, type Envelope } from '../../src/modules/sessions/engine
 import type { EngineConfig } from '../../src/config.js';
 
 const cfg: EngineConfig = {
+  lateJoinMs: 0,
   graceMs: 3000, graceMax: 1, countdownMs: 5000, hbTimeoutMs: 10000, holdMs: 10000,
   lobbyOpenMs: 600000, minuteMs: 60000, sweepMs: 250, lockReclassify: false,
   coins25: 10, coins50: 25, coinsDailyCap: 100,

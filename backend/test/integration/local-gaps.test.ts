@@ -53,7 +53,7 @@ describe('US-02.11 Sửa / hủy lịch (+ AC-03.01.4)', () => {
     expect(n?.data).toMatchObject({ session_id: sid, duration_min: 50 });
     // BR-79: giờ mới < giờ server + lead → 422
     expect((await t.api('PATCH', `/v1/sessions/${sid}`, owner.token, { started_at: new Date(Date.now() - 60000).toISOString() })).body.code).toBe('START_IN_PAST');
-    expect((await t.api('PATCH', `/v1/sessions/${sid}`, owner.token, { duration_min: 30 })).body.code).toBe('DURATION_OUT_OF_RANGE');
+    expect((await t.api('PATCH', `/v1/sessions/${sid}`, owner.token, { duration_min: 241 })).body.code).toBe('DURATION_OUT_OF_RANGE');
     // NFR-11 / D-10
     expect((await t.api('PATCH', `/v1/sessions/${sid}`, members[0].token, { duration_min: 25 })).body.code).toBe('NOT_GROUP_OWNER');
     expect((await t.api('DELETE', `/v1/sessions/${sid}`, members[0].token)).body.code).toBe('NOT_GROUP_OWNER');

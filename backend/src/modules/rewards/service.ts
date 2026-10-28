@@ -1,3 +1,4 @@
+import { sessionReward } from '../../shared/session-policy.js';
 // Module rewards: chốt phiên trong MỘT transaction (D-05, 01 §2.2) — trạng thái cuối, Coins
 // (D-09: 25'→10, 50'→25, trần 100/ngày VN), điểm danh (BR-46), chuỗi (BR-47…BR-50).
 import { sql, type Transaction } from 'kysely';
@@ -32,7 +33,7 @@ export async function finalizeSession(db: DB, cfg: EngineConfig, sessionId: stri
     if (s.status === 'COMPLETED' || s.status === 'CANCELLED') return [];
     const rows = await tx.selectFrom('session_members').selectAll().where('session_id', '=', sessionId).execute();
     const day = s.session_day;
-    const base = s.duration_min === 25 ? cfg.coins25 : cfg.coins50;
+    const base = sessionReward(s.duration_min, cfg);
     const out: MemberResult[] = [];
 
     for (const r of rows) {

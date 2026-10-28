@@ -56,6 +56,7 @@ export async function activeMembership(ctx: Ctx, userId: string) {
     .innerJoin('groups', 'groups.id', 'group_members.group_id')
     .select(['group_members.group_id', 'group_members.consent_version', 'group_members.joined_at', 'groups.name', 'groups.consent_version as group_consent_version'])
     .where('group_members.user_id', '=', userId)
+    .where('groups.status', '<>', 'DISSOLVED')
     .where('group_members.left_at', 'is', null)
     .executeTakeFirst();
 }
@@ -144,6 +145,44 @@ export async function getGroup(ctx: Ctx, userId: string, groupId: string) {
     member_count: await memberCount(ctx, groupId),
     owner: await publicUser(ctx, g.owner_id),
   };
+}
+
+/** Owner-only soft dissolution. History/report rows remain readable, access is closed. */
+export async function dissolveGroup(ctx: Ctx, userId: string, groupId: string) {
+  const outcome = await ctx.db.transaction().execute(async (tx) => {
+    const g = await tx.selectFrom('groups').selectAll().where('id', '=', groupId).forUpdate().executeTakeFirst();
+    if (!g) throw E.notFound('Không tìm thấy nhóm');
+    if (g.owner_id !== userId) throw E.notOwner();
+    if (g.status === 'DISSOLVED') return { members: [] as string[], name: g.name };
+    const sessions = await tx.selectFrom('sessions').select(['id', 'status', 'started_at'])
+      .where('group_id', '=', groupId).where('status', 'in', ['SCHEDULED', 'COUNTDOWN', 'ACTIVE']).forUpdate().execute();
+    const now = new Date();
+    if (sessions.some((s) => s.status !== 'SCHEDULED' ||
+      (ctx.sessions.runtimeStatus(s.id) && ctx.sessions.runtimeStatus(s.id) !== 'SCHEDULED') ||
+      s.started_at.getTime() - ctx.cfg.engine.countdownMs <= now.getTime())) {
+      throw new AppError(409, 'SESSION_IN_PROGRESS', 'Không thể xóa nhóm khi phiên đang đếm ngược hoặc hoạt động');
+    }
+    const members = await tx.selectFrom('group_members').select('user_id').where('group_id', '=', groupId).where('left_at', 'is', null).execute();
+    // Stop loaded lobby timers synchronously before their activation can race the writes.
+    for (const session of sessions) ctx.sessions.cancelLoaded(session.id);
+    const sessionIds = sessions.map((s) => s.id);
+    if (sessionIds.length) {
+      await tx.updateTable('session_members').set({ state: 'VOID', end_reason: 'SESSION_CANCELLED', ended_at: now })
+        .where('session_id', 'in', sessionIds).where('is_final', '=', false as never).execute();
+      await tx.updateTable('sessions').set({ status: 'CANCELLED', cancel_reason: 'GROUP_DISSOLVED', cancelled_at: now })
+        .where('id', 'in', sessionIds).where('status', '=', 'SCHEDULED').execute();
+    }
+    await tx.updateTable('schedules').set({ cancelled_at: now }).where('group_id', '=', groupId).where('cancelled_at', 'is', null).execute();
+    await tx.updateTable('group_members').set({ left_at: now, leave_reason: 'GROUP_DISSOLVED', removal_effective_at: null })
+      .where('group_id', '=', groupId).where('left_at', 'is', null).execute();
+    await tx.updateTable('groups').set({ status: 'DISSOLVED', dissolved_at: now }).where('id', '=', groupId).execute();
+    return { members: members.map((m) => m.user_id), name: g.name };
+  });
+  if (outcome.members.length) await ctx.notifications.notify(outcome.members, {
+    type: 'GROUP_DISSOLVED', title: outcome.name, body: 'Chủ nhóm đã xóa nhóm. Các phiên chưa bắt đầu đã hủy; kết quả cá nhân được giữ lại.',
+    data: { group_id: groupId }, dedupeKey: `GROUP_DISSOLVED:${groupId}`,
+  });
+  return { group_id: groupId, status: 'DISSOLVED' as const };
 }
 
 export async function rotateInviteCode(ctx: Ctx, userId: string, groupId: string) {

@@ -1,3 +1,4 @@
+import { sessionReward } from '../../shared/session-policy.js';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
@@ -35,7 +36,7 @@ export async function myResult(ctx: Ctx, userId: string, sessionId: string) {
     .where('user_id', '=', userId).where('ref_session_id', '=', sessionId).execute();
   const broke = logs.some((l) => l.kind === 'STREAK_BREAK') && !logs.some((l) => l.kind === 'STREAK_RESTORE');
   const u = await ctx.db.selectFrom('users').select('current_streak').where('id', '=', userId).executeTakeFirstOrThrow();
-  const base = s.duration_min === 25 ? ctx.cfg.engine.coins25 : ctx.cfg.engine.coins50;
+  const base = sessionReward(s.duration_min, ctx.cfg.engine);
   const appeal = await ctx.db.selectFrom('appeals').select('id').where('session_id', '=', sessionId).where('user_id', '=', userId).executeTakeFirst();
   const explanation = await ctx.db.selectFrom('explanations').select('id')
     .where('session_id', '=', sessionId).where('user_id', '=', userId).executeTakeFirst();
