@@ -221,6 +221,26 @@ class DropItApi {
     return itemsOf(r.data).map(SessionSummary.fromJson).toList();
   });
 
+  Future<({List<SessionSummary> items, String? nextCursor})> schedulesPage(
+    String groupId, {
+    String? cursor,
+    int limit = 5,
+  }) => _wrap(() async {
+    final response = await _dio.get(
+      '/groups/$groupId/schedules',
+      queryParameters: {'limit': limit, 'cursor': ?cursor},
+    );
+    final data = Map<String, dynamic>.from(response.data as Map);
+    return (
+      items: itemsOf(data).map(SessionSummary.fromJson).toList(),
+      nextCursor: data['next_cursor'] as String?,
+    );
+  });
+
+  Future<void> deleteGroup(String groupId) => _wrap(() async {
+    await _dio.delete('/groups/$groupId', options: _idem());
+  });
+
   Future<void> createSchedule(
     String groupId,
     DateTime startUtc,

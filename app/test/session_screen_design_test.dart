@@ -16,9 +16,10 @@ class ScreenController extends SessionController {
   @override
   SessionView build() => initial;
   @override
-  Future<void> leave() async {
+  Future<bool> leave() async {
     leaveCalls++;
     state = state.copyWith(leaving: true);
+    return false;
   }
 
   @override

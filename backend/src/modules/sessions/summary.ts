@@ -7,6 +7,7 @@ export type SessionRow = {
   group_name?: string;
   status: SessionStatus;
   started_at: Date;
+  created_at: Date;
   ends_at: Date;
   duration_min: number;
   forfeited: boolean;
@@ -23,7 +24,8 @@ export function toSummary(ctx: Ctx, s: SessionRow) {
     started_at: s.started_at.toISOString(),
     ends_at: s.ends_at.toISOString(),
     duration_min: s.duration_min,
-    lobby_opens_at: new Date(s.started_at.getTime() - ctx.cfg.engine.lobbyOpenMs).toISOString(),
+    // Check-in opens as soon as the schedule exists; users may enter early.
+    lobby_opens_at: s.created_at.toISOString(),
     late_join_deadline: ctx.cfg.engine.lateJoinMs > 0
       ? new Date(Math.min(s.ends_at.getTime(), s.started_at.getTime() + ctx.cfg.engine.lateJoinMs)).toISOString()
       : null,
@@ -34,7 +36,7 @@ export function toSummary(ctx: Ctx, s: SessionRow) {
 }
 
 export const sessionCols = [
-  'sessions.id', 'sessions.group_id', 'sessions.status', 'sessions.started_at', 'sessions.ends_at',
+  'sessions.id', 'sessions.group_id', 'sessions.status', 'sessions.started_at', 'sessions.created_at', 'sessions.ends_at',
   'sessions.duration_min', 'sessions.forfeited', 'sessions.cancel_reason',
 ] as const;
 

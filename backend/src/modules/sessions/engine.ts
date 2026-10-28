@@ -88,8 +88,12 @@ export class SessionRuntime extends EventEmitter<EngineEvents> {
 
   /** Hẹn COUNTDOWN / ACTIVE / ends_at theo giờ server. */
   schedule() {
-    const now = Date.now();
-    const at = (t: number, fn: () => void) => this.timers.push(setTimeout(fn, Math.max(0, t - now)));
+    // Check-in can open weeks before the scheduled start. Node timeouts above
+    // 2^31-1 ms overflow to 1ms, so re-arm long waits in bounded chunks.
+    const at = (t: number, fn: () => void) => {
+      const remaining = Math.max(0, t - Date.now());
+      this.timers.push(setTimeout(remaining > 2147483647 ? () => at(t, fn) : fn, Math.min(remaining, 2147483647)));
+    };
     at(this.info.startedAt - this.cfg.countdownMs, () => this.startCountdown());
     at(this.info.startedAt, () => this.activate());
     if (this.cfg.lateJoinMs > 0) {
@@ -123,7 +127,8 @@ export class SessionRuntime extends EventEmitter<EngineEvents> {
     for (const m of this.members.values()) {
       if (m.state !== 'WAITING') continue;
       if (m.socketId === null) {
-        this.finish(m, 'ABSENT', 'NO_SHOW'); // WAITING mất kết nối đến started_at (Q-153)
+        // Check-in remains reversible through the admission grace period.
+        continue;
       } else if (m.awayInLobby && !m.locked) {
         m.lastSeenAt = now;
         this.startGrace(m, 'away_at_start'); // BR-64: GRACE từ started_at, trừ lượt
@@ -153,6 +158,13 @@ export class SessionRuntime extends EventEmitter<EngineEvents> {
     this.checkAllDone();
   }
 
+  /** Finalize missing check-ins only after the admission window closes. */
+  closeAdmission() {
+    for (const m of this.members.values()) {
+      if (m.state === 'WAITING' && m.socketId === null) this.finish(m, 'ABSENT', 'NO_SHOW');
+    }
+  }
+
   /** Hủy phiên (sự cố/hủy). Người chưa kết thúc → VOID (BR-22). */
   cancel() {
     if (this.status === 'COMPLETED' || this.status === 'CANCELLED') return;
@@ -170,9 +182,15 @@ export class SessionRuntime extends EventEmitter<EngineEvents> {
     if (ex) {
       if (ex.socketId && ex.socketId !== socketId) return this.err('SESSION_ALREADY_JOINED_ELSEWHERE', ex.state);
       if (ex.state === 'WAITING') {
+        if (this.status === 'ACTIVE' && now >= Math.min(this.endsAt, this.info.startedAt + this.cfg.lateJoinMs)) return this.err('LATE_JOIN_CLOSED');
         ex.socketId = socketId;
         ex.deviceId = deviceId ?? ex.deviceId;
         ex.lastSeenAt = now;
+        ex.awayInLobby = false;
+        if (this.status === 'ACTIVE') {
+          ex.segStart = now;
+          this.transition(ex, 'FOCUSING', 'late_checkin');
+        }
         return this.ok(ex);
       }
       return this.err('SESSION_NOT_ACTIVE', ex.state, 'Dùng session:resume để nối lại');
@@ -273,11 +291,17 @@ export class SessionRuntime extends EventEmitter<EngineEvents> {
         break;
       case 'session:leave':
         // D-29, BR-118
-        if (m.state === 'WAITING') this.finish(m, 'ABSENT', 'LOBBY_LEAVE'); // Q-149 (giả định)
+        if (m.state === 'WAITING') {
+          // Leaving check-in is reversible until the admission deadline.
+          m.socketId = null;
+          m.awayInLobby = true;
+          m.lastSeenAt = now;
+          this.emit('member', m, 'WAITING', 'lobby_left');
+        }
         else if (m.state === 'FOCUSING' || m.state === 'GRACE' || m.state === 'PAUSED') this.exit(m, 'USER_LEAVE');
         break;
     }
-    return this.ok(m);
+    return { ...this.ok(m), ...(type === 'session:leave' && m.state === 'WAITING' ? { left_lobby: true } : {}) };
   }
 
   /** Socket đóng. */
@@ -287,7 +311,7 @@ export class SessionRuntime extends EventEmitter<EngineEvents> {
     m.socketId = null;
     // BR-66: đã báo khóa → không coi là DISCONNECTED. GRACE vẫn chạy (GRACE không vào DISCONNECTED).
     if ((m.state === 'FOCUSING' || m.state === 'PAUSED') && !m.locked) this.toDisconnected(m, Date.now(), 'socket_closed');
-    // WAITING: giữ, nếu đến started_at chưa nối lại → ABSENT (Q-153)
+    // WAITING remains reversible until admissionClosed.
   }
 
   /** session:resume từ socket mới (§3.4). DQ-A07: chỉ cùng device_id. */
@@ -301,6 +325,7 @@ export class SessionRuntime extends EventEmitter<EngineEvents> {
     if (m.socketId && m.socketId !== socketId) ack = this.err('SESSION_ALREADY_JOINED_ELSEWHERE', m.state);
     else if (m.deviceId && deviceId !== m.deviceId) ack = this.err('SESSION_ALREADY_JOINED_ELSEWHERE', m.state, 'Chỉ nối lại từ cùng thiết bị (DQ-A07)');
     else if (m.state === 'LOST') ack = this.err('SESSION_LOST', 'LOST');
+    else if (m.state === 'WAITING') ack = this.join(userId, m.displayName, socketId, deviceId);
     else if (m.state === 'DISCONNECTED') {
       if (now < (m.disconnectedAt ?? 0) + this.cfg.holdMs) {
         m.socketId = socketId;
@@ -340,7 +365,7 @@ export class SessionRuntime extends EventEmitter<EngineEvents> {
       started_at: new Date(this.info.startedAt).toISOString(),
       ends_at: new Date(this.endsAt).toISOString(),
       remaining_s: Math.max(0, Math.round((this.endsAt - Math.max(now, this.info.startedAt)) / 1000)),
-      participant_count: [...this.members.values()].filter((x) => x.state !== 'ABSENT').length,
+      participant_count: [...this.members.values()].filter((x) => x.state !== 'ABSENT' && (x.state !== 'WAITING' || x.socketId !== null)).length,
       my_state: m?.state ?? null,
       my_grace_deadline: m?.graceDeadline ? new Date(m.graceDeadline).toISOString() : null,
       pause_left: 0,
@@ -348,7 +373,7 @@ export class SessionRuntime extends EventEmitter<EngineEvents> {
       forfeit_trigger_display_name: trig?.displayName ?? null,
       // Phòng chờ (V-06): tên người đang WAITING — chỉ khi chưa ACTIVE; không có trạng thái thời gian thực khác (NFR-P06)
       lobby_members: this.status === 'SCHEDULED' || this.status === 'COUNTDOWN'
-        ? [...this.members.values()].filter((x) => x.state === 'WAITING').map((x) => x.displayName)
+        ? [...this.members.values()].filter((x) => x.state === 'WAITING' && x.socketId !== null).map((x) => x.displayName)
             .sort((a, b) => a.localeCompare(b, 'vi', { sensitivity: 'base' }))
         : [],
     });

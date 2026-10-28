@@ -82,8 +82,8 @@ class ProfileScreen extends ConsumerWidget {
                     const SizedBox(height: DT.spaceSm),
                     const StatusBadge('Chủ nhóm', tone: BadgeTone.accent),
                   ]),
-                  SecondaryButton(label: 'Sửa hồ sơ', icon: Icons.edit_outlined,
-                    onPressed: () => context.push('/profile/edit')),
+                  SecondaryButton(key: const Key('editProfileName'), label: 'Đổi tên', icon: Icons.edit_outlined,
+                    onPressed: () => showEditNameDialog(context, m.displayName)),
                 ],
               )
             else CosmeticSurface(
@@ -125,13 +125,13 @@ class ProfileScreen extends ConsumerWidget {
                   shadowColor: Colors.black26,
                   child: InkWell(
                     customBorder: const StadiumBorder(),
-                    onTap: () => context.push('/profile/edit'),
+                    onTap: () => showEditNameDialog(context, m.displayName),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
                         const Icon(Icons.edit_outlined, size: 16, color: DT.textSecondary),
                         const SizedBox(width: 6),
-                        Text('Sửa hồ sơ', style: t.labelLarge),
+                        Text('Đổi tên', key: const Key('editProfileName'), style: t.labelLarge),
                       ]),
                     ),
                   ),
@@ -280,79 +280,122 @@ class _Link extends StatelessWidget {
       );
 }
 
-/// V-23 Sửa hồ sơ (tên hiển thị).
-class EditProfileScreen extends ConsumerStatefulWidget {
-  const EditProfileScreen({super.key});
+/// Chỉnh tên tại hồ sơ; camera đổi avatar vẫn ở hero.
+Future<void> showEditNameDialog(BuildContext context, String currentName) =>
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _EditNameDialog(currentName: currentName),
+    );
+
+class _EditNameDialog extends ConsumerStatefulWidget {
+  const _EditNameDialog({required this.currentName});
+  final String currentName;
   @override
-  ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
+  ConsumerState<_EditNameDialog> createState() => _EditNameDialogState();
 }
 
-class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
-  final _c = TextEditingController();
+class _EditNameDialogState extends ConsumerState<_EditNameDialog> {
+  final _form = GlobalKey<FormState>();
+  late final TextEditingController _name;
   bool _busy = false;
-  String? _err;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _c.text = ref.read(meProvider).value?.displayName ?? '';
+    _name = TextEditingController(text: widget.currentName);
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
   }
 
   Future<void> _save() async {
-    final v = _c.text.trim();
-    if (v.isEmpty) {
-      setState(() => _err = 'Nhập tên hiển thị');
-      return;
-    }
-    setState(() => _busy = true);
+    if (_busy || !_form.currentState!.validate()) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
-      await ref.read(apiProvider).updateMe(v);
+      await ref.read(apiProvider).updateMe(_name.text.trim());
+      if (!mounted) return;
       ref.invalidate(meProvider);
-      if (mounted) context.pop();
-    } catch (e) {
-      setState(() => _err = ApiError.from(e).message);
+      Navigator.of(context).pop();
+    } catch (error) {
+      if (mounted) setState(() => _error = ApiError.from(error).message);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) => AppScaffold(
-        header: const AppHeader.back(title: 'Sửa hồ sơ', leading: HeaderLeading.close),
-        footer: PrimaryButton(label: 'Lưu', loading: _busy, onPressed: _save),
-        children: [
-          Builder(builder: (context) {
-            final m = ref.watch(meProvider).value;
-            return AppCard(children: [
-              Row(children: [
-                FramedAvatar(
-                  name: m?.displayName ?? _c.text,
-                  imageUrl: m?.avatarUrl == null ? null : fixHost(m!.avatarUrl!),
-                  size: 72,
-                ),
-                const SizedBox(width: DT.spaceMd),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Ảnh đại diện', style: context.text.titleMedium),
-                    Text('JPG, PNG hoặc WebP, tối đa 5 MB.', style: context.text.bodySmall),
-                  ]),
-                ),
-              ]),
-              SecondaryButton(
-                key: const Key('pickAvatar'),
-                label: 'Đổi ảnh đại diện',
-                icon: Icons.photo_library_outlined,
-                onPressed: () => pickAndUploadAvatar(context, ref),
+  Widget build(BuildContext context) => PopScope(
+    canPop: !_busy,
+    child: AlertDialog(
+      title: const Text('Đổi tên hiển thị'),
+      content: SizedBox(
+        width: 360,
+        child: Form(
+          key: _form,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                key: const Key('profileNameInput'),
+                controller: _name,
+                autofocus: true,
+                enabled: !_busy,
+                maxLength: 30,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(labelText: 'Tên hiển thị'),
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Nhập tên hiển thị.'
+                    : value.trim().length < 2
+                    ? 'Tên tối thiểu 2 ký tự.'
+                    : value.trim().length > 30
+                    ? 'Tên tối đa 30 ký tự.'
+                    : null,
+                onFieldSubmitted: (_) => _save(),
               ),
-            ]);
-          }),
-          AppCard(children: [
-            const FieldLabel('Tên hiển thị'),
-            TextField(controller: _c, maxLength: 40, decoration: inCardInput(error: _err)),
-          ]),
-          const HintText('Tên này hiện cho thành viên cùng nhóm và trong thông báo rời phiên.'),
-        ],
-      );
+              const SizedBox(height: 8),
+              const Text(
+                'Tên này hiển thị với thành viên cùng nhóm.',
+                textAlign: TextAlign.start,
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                AppBanner(
+                  key: const Key('profileNameError'),
+                  tone: BannerTone.danger,
+                  text: _error!,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(),
+          child: const Text('Hủy'),
+        ),
+        FilledButton(
+          key: const Key('profileNameSave'),
+          onPressed: _busy ? null : _save,
+          child: _busy
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Lưu'),
+        ),
+      ],
+    ),
+  );
 }
 
 /// V-29 Coins của tôi và lịch sử.

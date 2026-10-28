@@ -6,6 +6,42 @@ beforeAll(async () => { t = await startServer({ lateJoinMs: 700, minuteMs: 2000 
 afterAll(async () => t?.close());
 
 describe('Group management and custom schedules', () => {
+  it('members can read invite code but cannot rotate it', async () => {
+    const { owner, members, groupId, inviteCode } = await t.groupWith(1);
+    const path = `/v1/groups/${groupId}/invite-code`;
+    expect((await t.api('GET', path, members[0].token)).body.code).toBe(inviteCode);
+    const outsider = await t.user('Outsider');
+    expect((await t.api('GET', path, outsider.token)).status).toBe(403);
+    expect((await t.api('POST', path, members[0].token)).status).toBe(403);
+    expect((await t.api('GET', path, owner.token)).status).toBe(200);
+  });
+
+  it('opens check-in when schedule is created, permits leaving and rejoining without absence', async () => {
+    const { owner, members, groupId } = await t.groupWith(1);
+    const sid = await t.schedule(owner.token, groupId, 3600000, 17);
+    const summary = await t.api('GET', `/v1/sessions/${sid}`, members[0].token);
+    expect(Date.parse(summary.body.lobby_opens_at)).toBeLessThanOrEqual(Date.now());
+    const sock = await t.sock(members[0].token);
+    expect(await emit(sock, 'session:join', { session_id: sid })).toMatchObject({ ok: true, state: 'WAITING' });
+    expect(await emit(sock, 'session:leave', { session_id: sid })).toMatchObject({ ok: true, state: 'WAITING', left_lobby: true });
+    await sleep(50);
+    expect((await t.db.selectFrom('session_members').select('state').where('session_id', '=', sid).executeTakeFirstOrThrow()).state).toBe('WAITING');
+    expect(await emit(sock, 'session:join', { session_id: sid })).toMatchObject({ ok: true, state: 'WAITING' });
+    sock.disconnect();
+  });
+
+  it('rejoins after start within grace even after leaving check-in before start', async () => {
+    const { owner, members, groupId } = await t.groupWith(1);
+    const sid = await t.schedule(owner.token, groupId, 1000, 1);
+    const sock = await t.sock(members[0].token);
+    expect(await emit(sock, 'session:join', { session_id: sid })).toMatchObject({ ok: true, state: 'WAITING' });
+    expect(await emit(sock, 'session:leave', { session_id: sid })).toMatchObject({ ok: true, left_lobby: true });
+    await waitFor(async () => (await t.db.selectFrom('sessions').select('status').where('id', '=', sid).executeTakeFirst())?.status === 'ACTIVE');
+    expect(await emit(sock, 'session:resume', { session_id: sid })).toMatchObject({ ok: true, state: 'FOCUSING' });
+    await waitFor(async () => (await t.db.selectFrom('sessions').select('status').where('id', '=', sid).executeTakeFirst())?.status === 'COMPLETED');
+    expect((await t.db.selectFrom('session_members').select('state').where('session_id', '=', sid).executeTakeFirstOrThrow()).state).toBe('COMPLETED');
+    sock.disconnect();
+  });
   it('accepts 1..240 minutes, rejects invalid durations and paginates without duplicates', async () => {
     const { owner, groupId } = await t.groupWith(0);
     const start = new Date(Date.now() + 86400000);
@@ -75,5 +111,19 @@ describe('Group management and custom schedules', () => {
     const sock = await t.sock(members[0].token);
     expect(await emit(sock, 'session:join', { session_id: sid })).toMatchObject({ ok: false, code: 'SESSION_NOT_ACTIVE' });
     sock.disconnect();
+  });
+
+  it('empty one-minute session still cancels when admission and end share the deadline', async () => {
+    const config = t.srv.ctx.cfg.engine;
+    const previous = config.lateJoinMs;
+    config.lateJoinMs = config.minuteMs;
+    try {
+      const { owner, groupId } = await t.groupWith(1);
+      const sid = await t.schedule(owner.token, groupId, 1000, 1);
+      await waitFor(async () => (await t.db.selectFrom('sessions').select('status').where('id', '=', sid).executeTakeFirst())?.status === 'CANCELLED');
+      expect((await t.db.selectFrom('sessions').select('cancel_reason').where('id', '=', sid).executeTakeFirstOrThrow()).cancel_reason).toBe('NO_ATTENDEE');
+    } finally {
+      config.lateJoinMs = previous;
+    }
   });
 });

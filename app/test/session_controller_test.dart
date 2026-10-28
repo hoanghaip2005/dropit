@@ -242,11 +242,12 @@ void main() {
     expect(socket.names(), isNot(contains('session:leave')));
   });
 
-  test('Rời phiên ở phòng chờ → ABSENT; trong phiên → EXITED', () async {
+  test('Rời check-in giữ WAITING, không ghi vắng', () async {
     await boot();
-    socket.reply = (e, p) => e == 'session:leave' ? {'ok': true, 'state': 'ABSENT'} : {'ok': true};
-    await ctl().leave();
-    expect(view().phase, SessionPhase.absent);
+    socket.reply = (e, p) => e == 'session:leave' ? {'ok': true, 'state': 'WAITING', 'left_lobby': true} : {'ok': true};
+    expect(await ctl().leave(), isTrue);
+    expect(view().phase, SessionPhase.waiting);
+    expect(view().leaving, isFalse);
   });
 
   test('Rời phiên khi FOCUSING → EXITED, dừng ghi', () async {
@@ -290,6 +291,25 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 2100));
     expect(view().phase, SessionPhase.cancelled);
     expect(socket.names().length, before);
+  });
+
+  test('Early entry reconnects automatically when the lobby opens', () async {
+    var attempts = 0;
+    socket.reply = (event, payload) {
+      if (event == 'session:join') {
+        if (++attempts == 1) {
+          return {'ok': false, 'code': 'LOBBY_NOT_OPEN',
+            'lobby_opens_at': DateTime.now().toUtc().add(const Duration(milliseconds: 100)).toIso8601String()};
+        }
+        return {'ok': true, 'state': 'WAITING'};
+      }
+      return {'ok': true};
+    };
+    await boot();
+    expect(view().errorCode, 'LOBBY_NOT_OPEN');
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+    expect(view().phase, SessionPhase.waiting);
+    expect(attempts, 2);
   });
 
   test('sự kiện của phiên khác bị bỏ qua', () async {

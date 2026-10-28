@@ -205,7 +205,9 @@ export async function rotateInviteCode(ctx: Ctx, userId: string, groupId: string
 }
 
 export async function getInviteCode(ctx: Ctx, userId: string, groupId: string) {
-  const g = await requireOwner(ctx, userId, groupId);
+  const { g, role } = await roleIn(ctx, userId, groupId);
+  if (!role) throw E.forbiddenGroup();
+  if (g.status !== 'ACTIVE') throw E.forbiddenGroup();
   return { code: g.invite_code.trim(), created_at: g.invite_code_rotated_at.toISOString() };
 }
 

@@ -407,6 +407,11 @@ void main() {
       container.invalidate(shopItemsProvider);
       await tester.pump();
       expect(find.byKey(const Key('buyButton')), findsNothing);
+      expect(find.text('Không tìm thấy vật phẩm'), findsNothing);
+      expect(
+        find.text('Hoa Anh Đào với tên dài để kiểm tra bố cục'),
+        findsOneWidget,
+      );
       pending.completeError(Exception('offline'));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('buyButton')), findsNothing);

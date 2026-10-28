@@ -134,7 +134,7 @@ export class SessionManager {
           } : {}),
         }).where('session_id', '=', sid).where('user_id', '=', m.userId).where('is_final', '=', false as never).execute();
       });
-      if (from !== m.state || reason === 'joined') this.pushStateToAll(e); // phòng chờ: cập nhật lobby_members
+      if (from !== m.state || reason === 'joined' || reason === 'lobby_left') this.pushStateToAll(e); // check-in: cập nhật lobby_members
     });
 
     rt.on('exited', (m, forfeitedNow) => this.onExited(e, m, forfeitedNow));
@@ -152,6 +152,7 @@ export class SessionManager {
 
     rt.on('ended', () => {
       this.enqueue(e, async () => {
+        await this.onAdmissionClosed(e, true);
         const results = await finalizeSession(db, this.ctx.cfg.engine, sid);
         this.log(`${sid.slice(0, 8)} chốt phiên: ${results.map((r) => `${r.user_id.slice(-4)}=${r.state}/${r.coins_awarded}c`).join(', ')}`);
         for (const r of results) {
@@ -246,13 +247,27 @@ export class SessionManager {
     if (this.ctx.cfg.engine.lateJoinMs <= 0) await this.onAdmissionClosed(e);
   }
 
-  private async onAdmissionClosed(e: Entry) {
-    if (e.rt.status !== 'ACTIVE') return;
+  private async onAdmissionClosed(e: Entry, atEnd = false) {
+    // At a one-minute session the admission and end timers share a deadline.
+    // The engine may already be ENDING while this queued callback runs.
+    if (e.rt.status !== 'ACTIVE' && e.rt.status !== 'ENDING' && !atEnd) return;
     const db = this.ctx.db;
     const sid = e.rt.info.id;
+    const session = await db.selectFrom('sessions').select('status').where('id', '=', sid).executeTakeFirst();
+    if (!session || session.status === 'CANCELLED' || session.status === 'COMPLETED') return;
     const members = await db.selectFrom('group_members').select('user_id')
       .where('group_id', '=', e.groupId).where('left_at', 'is', null).execute();
     const now = new Date();
+    // Members who left check-in (or disconnected) before the deadline are
+    // absent only now. Until this point they remain WAITING and can rejoin.
+    const missingCheckins = [...e.rt.members.values()].filter((m) => m.state === 'WAITING' && m.socketId === null).map((m) => m.userId);
+    e.rt.closeAdmission();
+    if (missingCheckins.length) {
+      // Persist before same-deadline finalization; member event writes are queued
+      // after this callback and cannot be relied upon by finalizeSession yet.
+      await db.updateTable('session_members').set({ state: 'ABSENT', end_reason: 'NO_SHOW', ended_at: now })
+        .where('session_id', '=', sid).where('user_id', 'in', missingCheckins).where('is_final', '=', false as never).execute();
+    }
     const absent = members.filter((m) => !e.rt.members.has(m.user_id));
     if (absent.length)
       await db.insertInto('session_members')
@@ -316,12 +331,16 @@ export class SessionManager {
   private async entryFor(sessionId: string): Promise<Entry | { ok: false; code: string; detail?: string }> {
     const e = this.runtimes.get(sessionId);
     if (e) return e;
-    const s = await this.ctx.db.selectFrom('sessions').select(['status', 'started_at']).where('id', '=', sessionId).executeTakeFirst();
+    const s = await this.ctx.db.selectFrom('sessions').select(['status', 'started_at', 'created_at']).where('id', '=', sessionId).executeTakeFirst();
     if (!s) return { ok: false, code: 'NOT_FOUND' };
     if (s.status === 'COMPLETED' || s.status === 'CANCELLED') return { ok: false, code: 'SESSION_NOT_ACTIVE' };
-    const opens = s.started_at.getTime() - this.ctx.cfg.engine.lobbyOpenMs;
+    if (s.status === 'SCHEDULED' && s.started_at.getTime() < Date.now() - 2000) {
+      await this.cancelInDb(sessionId, 'SERVER_OUTAGE');
+      return { ok: false, code: 'SESSION_NOT_ACTIVE' };
+    }
+    const opens = s.created_at.getTime();
     if (Date.now() < opens) return { ok: false, code: 'LOBBY_NOT_OPEN', detail: new Date(opens).toISOString() };
-    await this.loadDue();
+    if (!this.loading.has(sessionId)) await this.load(sessionId);
     return this.runtimes.get(sessionId) ?? { ok: false, code: 'SESSION_NOT_ACTIVE' };
   }
 
@@ -339,10 +358,8 @@ export class SessionManager {
     if (gm.consent_version < gm.gv) return { ok: false, code: 'CONSENT_REQUIRED' }; // BR-06
     for (const [id, other] of this.runtimes) {
       const om = other.rt.members.get(userId);
-      if (id !== sessionId && om && !FINAL.has(om.state)) return { ok: false, code: 'ALREADY_IN_OTHER_SESSION' }; // BR-09
+      if (id !== sessionId && om && !FINAL.has(om.state) && (om.state !== 'WAITING' || om.socketId !== null)) return { ok: false, code: 'ALREADY_IN_OTHER_SESSION' }; // BR-09
     }
-    if (Date.now() < e.rt.info.startedAt - this.ctx.cfg.engine.lobbyOpenMs)
-      return { ok: false, code: 'LOBBY_NOT_OPEN', lobby_opens_at: new Date(e.rt.info.startedAt - this.ctx.cfg.engine.lobbyOpenMs).toISOString() } as Ack;
     const ack = e.rt.join(userId, socket.data.displayName, socket.id, socket.data.deviceId ?? null);
     if (ack.ok) this.attach(socket, e);
     void eventId;

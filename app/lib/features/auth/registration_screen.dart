@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../core/api.dart';
 import '../../core/auth.dart';
+import '../../core/invite_navigation.dart';
 
 /// Registration intent selects the next screen, never grants a server role.
 class RegistrationScreen extends ConsumerStatefulWidget {
@@ -109,7 +110,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       await ref.read(authProvider.notifier).acceptSession(session);
       if (!mounted) return;
       await ref.read(apiProvider).updateMe(_name.text.trim());
-      if (mounted) context.go(_owner ? '/groups/new' : '/join');
+      if (mounted) context.go(inviteReturnOf(context) ?? (_owner ? '/groups/new' : '/join'));
     });
   }
 
@@ -218,7 +219,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextButton.icon(
-                    onPressed: _busy ? null : () => context.go('/login'),
+                    onPressed: _busy ? null : () => context.go(authRouteWithInvite('/login', inviteReturnOf(context))),
                     icon: const Icon(Icons.arrow_back),
                     label: const Text('Đăng nhập'),
                   ),
@@ -335,19 +336,14 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                                     ),
                                 validator: (value) {
                                   final p = value ?? '';
-                                  return p.length < 12 ||
-                                          p.length > 256 ||
-                                          !RegExp('[a-z]').hasMatch(p) ||
-                                          !RegExp('[A-Z]').hasMatch(p) ||
-                                          !RegExp('[0-9]').hasMatch(p) ||
-                                          !RegExp(r'[^a-zA-Z0-9\s]').hasMatch(p)
-                                      ? 'Cần ít nhất 12 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.'
+                                  return p.length < 6 || p.length > 256
+                                      ? 'Mật khẩu cần từ 6 đến 256 ký tự.'
                                       : null;
                                 },
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Ít nhất 12 ký tự: chữ hoa, chữ thường, số và ký tự đặc biệt.',
+                                'Từ 6 ký tự; không bắt buộc chữ hoa, số hoặc ký tự đặc biệt.',
                                 style: t.bodySmall!.copyWith(
                                   color: OwnerStyle.muted,
                                 ),

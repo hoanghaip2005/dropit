@@ -131,14 +131,14 @@ describe('Phiên thời gian thực end-to-end (EP-03, D-05, D-09)', () => {
     for (const s of socks) s.close();
   });
 
-  it('mất kết nối quá hạn → LOST, KHÔNG forfeited, người khác vẫn nhận thưởng (D-19); session:leave ở phòng chờ → ABSENT (BR-118)', async () => {
+  it('mất kết nối quá hạn → LOST, KHÔNG forfeited; rời check-in chỉ vắng khi hết hạn vào phiên', async () => {
     const { owner, members, groupId } = await t.groupWith(4);
     const sid = await t.schedule(owner.token, groupId);
     await waitFor(() => t.srv.ctx.sessions.runtimes.has(sid));
     const socks = await Promise.all(members.slice(0, 3).map((m) => t.sock(m.token)));
     for (const s of socks) await emit(s, 'session:join', { session_id: sid });
     // Chi bấm "Rời phiên" ở phòng chờ
-    expect(await emit(socks[2], 'session:leave', { session_id: sid })).toMatchObject({ ok: true, state: 'ABSENT' });
+    expect(await emit(socks[2], 'session:leave', { session_id: sid })).toMatchObject({ ok: true, state: 'WAITING', left_lobby: true });
     // event_id trùng → ack cũ, duplicate (BR-31)
     const eid = randomUUID();
     const a1 = await socks[1].timeout(5000).emitWithAck('member:screen_locked', { event_id: eid, session_id: sid });
@@ -154,7 +154,7 @@ describe('Phiên thời gian thực end-to-end (EP-03, D-05, D-09)', () => {
     const by = (u: string) => r.find((x) => x.user_id === u)!;
     expect(by(members[0].id)).toMatchObject({ state: 'LOST', end_reason: 'DISCONNECT_TIMEOUT', coins_awarded: 0 });
     expect(by(members[1].id)).toMatchObject({ state: 'COMPLETED', coins_awarded: 10 });
-    expect(by(members[2].id)).toMatchObject({ state: 'ABSENT', end_reason: 'LOBBY_LEAVE' });
+    expect(by(members[2].id)).toMatchObject({ state: 'ABSENT', end_reason: 'NO_SHOW' });
     expect(by(members[3].id)).toMatchObject({ state: 'ABSENT', end_reason: 'NO_SHOW' }); // DQ-F01 + BR-08
     expect((await status(sid)).forfeited).toBe(false);
     const exitedNoti = await t.db.selectFrom('notifications').select('id').where('type', '=', 'MEMBER_EXITED').where('user_id', '=', owner.id).execute();

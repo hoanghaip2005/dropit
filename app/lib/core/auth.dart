@@ -144,7 +144,7 @@ class ProductionAuthApi {
           'UsernameExistsException' =>
             'Email đã được đăng ký. Hãy đăng nhập hoặc xác minh email.',
           'InvalidPasswordException' =>
-            'Mật khẩu cần ít nhất 12 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.',
+          'Mật khẩu cần từ 6 ký tự theo yêu cầu của dịch vụ đăng nhập.',
           'CodeMismatchException' => 'Mã xác minh chưa đúng.',
           'ExpiredCodeException' => 'Mã xác minh đã hết hạn. Hãy gửi lại mã.',
           'LimitExceededException' || 'TooManyRequestsException' =>

@@ -129,7 +129,7 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.text('Đang tải Coins…'), findsOneWidget);
+      expect(find.text('…'), findsOneWidget);
       expect(find.text('Chưa đủ Coins'), findsNothing);
       expect(find.text('Đã sở hữu'), findsOneWidget);
       expect(find.text('Đang dùng'), findsNothing);

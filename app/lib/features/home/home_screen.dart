@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,22 +27,27 @@ class HomeScreen extends ConsumerWidget {
     final memberGroup = groups.value?.where((g) => !g.isOwner).firstOrNull;
     final first = me?.displayName.trim().split(' ').last ?? '';
     final header = AppHeader.large(
-      caption: memberGroup == null ? 'DropIt!' : 'DropIt! · ${memberGroup.name}',
+      caption: memberGroup == null
+          ? 'DropIt!'
+          : 'DropIt! · ${memberGroup.name}',
       title: first.isEmpty ? 'Xin chào!' : 'Chào $first!',
-      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (me != null && (memberGroup != null))
-          InkWell(
-            borderRadius: BorderRadius.circular(DT.pill),
-            onTap: () => context.push('/coins'),
-            child: CoinChip('${me.coinsBalance} Coins', onCard: true),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (me != null && (memberGroup != null))
+            InkWell(
+              borderRadius: BorderRadius.circular(DT.pill),
+              onTap: () => context.push('/coins'),
+              child: CoinChip('${me.coinsBalance} Coins', onCard: true),
+            ),
+          const SizedBox(width: DT.spaceSm),
+          CircleIconButton(
+            icon: Icons.notifications_none,
+            tooltip: 'Hộp thông báo',
+            onPressed: () => context.push('/notifications'),
           ),
-        const SizedBox(width: DT.spaceSm),
-        CircleIconButton(
-          icon: Icons.notifications_none,
-          tooltip: 'Hộp thông báo',
-          onPressed: () => context.push('/notifications'),
-        ),
-      ]),
+        ],
+      ),
     );
     return AppScaffold(
       header: header,
@@ -62,65 +68,116 @@ class HomeScreen extends ConsumerWidget {
         builder: (list) {
           final memberGroups = list.where((g) => !g.isOwner).toList();
           final owned = list.where((g) => g.isOwner).toList();
-          return PageList(onRefresh: () => _refresh(ref), children: [
-            if (memberGroups.isNotEmpty) ...[
-              const _UpcomingCard(),
-              const _MySummary(),
-              const HintText('Lịch do chủ nhóm đặt. Bạn không tự tạo phiên.', icon: null),
-            ] else
-              AppCard(children: [
-                Text('Bạn chưa là thành viên nhóm nào.', style: context.text.titleMedium),
-                Text('Nhập mã 8 ký tự do chủ nhóm gửi để tham gia phiên.', style: context.text.bodySmall),
-                const SizedBox(height: DT.spaceXs),
-                SecondaryButton(
-                    label: 'Nhập mã nhóm', icon: Icons.vpn_key_outlined, onPressed: () => context.push('/join')),
-              ]),
-            if (owned.isNotEmpty) ...[
-              const SectionHeader('Nhóm tôi quản lý',
-                  subtitle: 'Chủ nhóm không tham gia phiên, chỉ quản lý lịch và xem kết quả.'),
-              for (final g in owned)
+          return PageList(
+            onRefresh: () => _refresh(ref),
+            children: [
+              if (memberGroups.isNotEmpty) ...[
+                const _UpcomingCard(),
+                const _MySummary(),
+              ] else
                 AppCard(
-                  onTap: () => context.push('/groups/${g.groupId}'),
                   children: [
-                    Row(children: [
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(g.name, style: context.text.headlineSmall),
-                          Text('${g.memberCount} thành viên (tối thiểu 4, tối đa 10)', style: context.text.bodySmall),
-                        ]),
-                      ),
-                      const Icon(Icons.chevron_right, color: DT.textSecondary),
-                    ]),
-                    ListRow(
-                      title: 'Phiên kế tiếp',
-                      divider: false,
-                      trailing: StatusBadge(
-                        g.nextSession == null
-                            ? 'Chưa có lịch'
-                            : '${hhmm(g.nextSession!.startedAt)} ${dayLabel(g.nextSession!.startedAt).toLowerCase()}',
-                        tone: g.nextSession == null ? BadgeTone.neutral : BadgeTone.accent,
-                      ),
+                    Text(
+                      'Bạn chưa là thành viên nhóm nào.',
+                      style: context.text.titleMedium,
+                    ),
+                    Text(
+                      'Nhập mã 8 ký tự do chủ nhóm gửi để tham gia phiên.',
+                      style: context.text.bodySmall,
+                    ),
+                    const SizedBox(height: DT.spaceXs),
+                    SecondaryButton(
+                      label: 'Nhập mã nhóm',
+                      icon: Icons.vpn_key_outlined,
+                      onPressed: () => context.push('/join'),
                     ),
                   ],
                 ),
+              if (owned.isNotEmpty) ...[
+                const SectionHeader('Nhóm tôi quản lý'),
+                for (final g in owned)
+                  AppCard(
+                    onTap: () => context.push('/groups/${g.groupId}'),
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(g.name, style: context.text.headlineSmall),
+                                Text(
+                                  '${g.memberCount} thành viên (tối thiểu 4, tối đa 10)',
+                                  style: context.text.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: DT.textSecondary,
+                          ),
+                        ],
+                      ),
+                      ListRow(
+                        title: 'Phiên kế tiếp',
+                        divider: false,
+                        trailing: StatusBadge(
+                          g.nextSession == null
+                              ? 'Chưa có lịch'
+                              : '${hhmm(g.nextSession!.startedAt)} ${dayLabel(g.nextSession!.startedAt).toLowerCase()}',
+                          tone: g.nextSession == null
+                              ? BadgeTone.neutral
+                              : BadgeTone.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
             ],
-          ]);
+          );
         },
       ),
     );
   }
 }
 
-class _UpcomingCard extends ConsumerWidget {
+class _UpcomingCard extends ConsumerStatefulWidget {
   const _UpcomingCard();
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_UpcomingCard> createState() => _UpcomingCardState();
+}
+
+class _UpcomingCardState extends ConsumerState<_UpcomingCard> {
+  Timer? _clock;
+  int _seconds = 0;
+  @override
+  void initState() {
+    super.initState();
+    _clock = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+      if (++_seconds % 15 == 0) ref.invalidate(upcomingProvider);
+    });
+  }
+
+  @override
+  void dispose() {
+    _clock?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final up = ref.watch(upcomingProvider);
     final t = context.text;
     return up.when(
       loading: () => Container(
         height: 180,
-        decoration: BoxDecoration(color: DT.skeleton, borderRadius: BorderRadius.circular(DT.radiusCard)),
+        decoration: BoxDecoration(
+          color: DT.skeleton,
+          borderRadius: BorderRadius.circular(DT.radiusCard),
+        ),
       ),
       error: (e, _) => AppBanner(
         tone: BannerTone.danger,
@@ -131,45 +188,76 @@ class _UpcomingCard extends ConsumerWidget {
       ),
       data: (s) {
         if (s == null) {
-          return AppCard(children: [
-            Text('Phiên kế tiếp của nhóm', style: t.labelLarge!.copyWith(color: DT.accent)),
-            Text('Chưa có phiên nào được đặt lịch.', style: t.headlineSmall),
-            Text('Chủ nhóm sẽ đặt lịch, bạn nhận thông báo trước giờ phiên.', style: t.bodySmall),
-          ]);
+          return AppCard(
+            children: [
+              Text(
+                'Phiên kế tiếp của nhóm',
+                style: t.labelLarge!.copyWith(color: DT.accent),
+              ),
+              Text('Chưa có phiên nào được đặt lịch.', style: t.headlineSmall),
+              Text(
+                'Chủ nhóm sẽ đặt lịch, bạn nhận thông báo trước giờ phiên.',
+                style: t.bodySmall,
+              ),
+            ],
+          );
         }
         final left = s.startedAt.difference(DateTime.now().toUtc());
-        final coins = s.durationMin >= 50 ? 25 : 10;
-        return AppCard(children: [
-          Row(children: [
-            Expanded(child: Text('Phiên kế tiếp của nhóm', style: t.labelLarge!.copyWith(color: DT.accent))),
-            if (!left.isNegative && left.inHours < 24)
-              StatusBadge(
-                left.inMinutes < 60 ? 'Còn ${left.inMinutes} phút' : 'Còn ${left.inHours} giờ',
-                tone: BadgeTone.accent,
-              ),
-          ]),
-          Text('Bắt đầu lúc ${hhmm(s.startedAt)}', style: t.headlineSmall!.copyWith(fontFeatures: DT.tabular)),
-          Text(
-            '${dayLabel(s.startedAt)} ${hhmm(s.startedAt)} · ${s.durationMin} phút${s.groupName == null ? '' : ' · ${s.groupName}'}',
-            style: t.bodyMedium!.copyWith(color: DT.textSecondary),
-          ),
-          Row(children: [
-            const Icon(Icons.monetization_on, size: 18, color: DT.success),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text('+$coins Coins mỗi người nếu cả phiên hoàn thành',
-                  style: t.labelLarge!.copyWith(color: DT.success)),
+        final coins = sessionRewardCoins(s.durationMin);
+        return AppCard(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Phiên kế tiếp của nhóm',
+                    style: t.labelLarge!.copyWith(color: DT.accent),
+                  ),
+                ),
+                if (!left.isNegative && left.inHours < 24)
+                  StatusBadge(
+                    left.inMinutes < 60
+                        ? 'Còn ${left.inMinutes} phút'
+                        : 'Còn ${left.inHours} giờ',
+                    tone: BadgeTone.accent,
+                  ),
+              ],
             ),
-          ]),
-          const SizedBox(height: DT.spaceXs),
-          PrimaryButton(
-            compact: true,
-            label: 'Vào phòng chờ',
-            onPressed: () => context.push('/session/${s.sessionId}'),
-          ),
-          if (s.lobbyOpensAt != null)
-            Text('Phòng chờ mở lúc ${hhmm(s.lobbyOpensAt)}', textAlign: TextAlign.center, style: t.bodySmall),
-        ]);
+            Text(
+              'Bắt đầu lúc ${hhmm(s.startedAt)}',
+              style: t.headlineSmall!.copyWith(fontFeatures: DT.tabular),
+            ),
+            Text(
+              '${dayLabel(s.startedAt)} ${hhmm(s.startedAt)} · ${s.durationMin} phút${s.groupName == null ? '' : ' · ${s.groupName}'}',
+              style: t.bodyMedium!.copyWith(color: DT.textSecondary),
+            ),
+            Row(
+              children: [
+                const Icon(Icons.monetization_on, size: 18, color: DT.success),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '+$coins Coins mỗi người nếu cả phiên hoàn thành',
+                    style: t.labelLarge!.copyWith(color: DT.success),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DT.spaceXs),
+            PrimaryButton(
+              compact: true,
+              label: left.isNegative
+                  ? 'Vào phiên ngay'
+                  : 'Check-in · Vào phòng chờ',
+              onPressed: () => context.push('/session/${s.sessionId}'),
+            ),
+            Text(
+              'Check-in trước giờ bắt đầu. Có thể rời phòng chờ rồi quay lại; phiên tự bắt đầu đúng giờ.',
+              textAlign: TextAlign.center,
+              style: t.bodySmall,
+            ),
+          ],
+        );
       },
     );
   }
@@ -183,29 +271,42 @@ class _MySummary extends ConsumerWidget {
     final today = ref.watch(coinsTodayProvider).value ?? 0;
     final t = context.text;
     return me.maybeWhen(
-      data: (m) => Column(children: [
-        AppCard(
-          key: const Key('coinsToday'),
-          onTap: () => context.push('/coins'),
-          children: [
-            Row(children: [
-              Expanded(child: Text('Coins hôm nay', style: t.labelLarge)),
-              Text('$today / 100',
-                  style: t.labelMedium!.copyWith(color: DT.textSecondary, fontFeatures: DT.tabular)),
-            ]),
-            ProgressBar(value: today / 100),
-            Text('Trần 100 Coins mỗi ngày. Số dư: ${m.coinsBalance} Coins, chỉ đổi đồ trang trí.', style: t.bodySmall),
-          ],
-        ),
-        const SizedBox(height: DT.spaceMd),
-        AppCard(children: [
-          InfoRow(
-            icon: Icons.local_fire_department,
-            title: 'Chuỗi của bạn: ${m.currentStreak} ngày',
-            subtitle: 'Chỉ bạn thấy. Chuỗi không cộng Coins.',
+      data: (m) => Column(
+        children: [
+          AppCard(
+            key: const Key('coinsToday'),
+            onTap: () => context.push('/coins'),
+            children: [
+              Row(
+                children: [
+                  Expanded(child: Text('Coins hôm nay', style: t.labelLarge)),
+                  Text(
+                    '$today / 100',
+                    style: t.labelMedium!.copyWith(
+                      color: DT.textSecondary,
+                      fontFeatures: DT.tabular,
+                    ),
+                  ),
+                ],
+              ),
+              ProgressBar(value: today / 100),
+              Text(
+                'Trần 100 Coins mỗi ngày. Số dư: ${m.coinsBalance} Coins, chỉ đổi đồ trang trí.',
+                style: t.bodySmall,
+              ),
+            ],
           ),
-        ]),
-      ]),
+          const SizedBox(height: DT.spaceMd),
+          AppCard(
+            children: [
+              InfoRow(
+                icon: Icons.local_fire_department,
+                title: '${m.currentStreak} ngày',
+              ),
+            ],
+          ),
+        ],
+      ),
       orElse: () => const SizedBox.shrink(),
     );
   }

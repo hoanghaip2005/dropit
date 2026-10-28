@@ -357,6 +357,9 @@ class OwnerScheduleHubScreen extends ConsumerWidget {
     final groups = ref.watch(myGroupsProvider);
     final t = context.text;
     Future<void> refresh() async {
+      for (final group in groups.value ?? <MyGroup>[]) {
+        if (group.isOwner) ref.invalidate(schedulesProvider(group.groupId));
+      }
       ref.invalidate(myGroupsProvider);
       await ref.read(myGroupsProvider.future).then((_) {}, onError: (_) {});
     }
@@ -406,7 +409,17 @@ class _GroupSchedules extends ConsumerWidget {
                 title: '${hhmm(up[i].startedAt)} · ${dayLabel(up[i].startedAt)}',
                 subtitle: '${up[i].durationMin} phút',
                 divider: i < up.length - 1,
-                trailing: const StatusBadge('Đã lên lịch', tone: BadgeTone.accent),
+                onTap: () => _edit(context, ref, up[i].sessionId),
+                trailing: TextButton.icon(
+                  key: ValueKey('editSchedule-${up[i].sessionId}'),
+                  onPressed: () => _edit(context, ref, up[i].sessionId),
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Sửa'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: OwnerStyle.ink,
+                    minimumSize: const Size(64, 48),
+                  ),
+                ),
               ),
           ]);
         },
@@ -418,6 +431,13 @@ class _GroupSchedules extends ConsumerWidget {
         onPressed: () => context.push('/groups/${group.groupId}/schedule'),
       ),
     ]);
+  }
+
+  Future<void> _edit(BuildContext context, WidgetRef ref, String sessionId) async {
+    await context.push('/owner/sessions/$sessionId/edit');
+    if (!context.mounted) return;
+    ref.invalidate(schedulesProvider(group.groupId));
+    ref.invalidate(myGroupsProvider);
   }
 }
 

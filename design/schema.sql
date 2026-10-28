@@ -70,9 +70,9 @@ CREATE TABLE system_params (
 );
 
 INSERT INTO system_params(key, value, configurable, description) VALUES
- ('duration_min',            '[25,50]', false, 'BR-02'),
+ ('duration_min',            '{"min":1,"max":240}', false, 'BR-02'),
  ('countdown_s',             '5',   true, 'BR-04'),
- ('late_join_max_min',       '5',   true, 'BR-07'),
+ ('late_join_max_min',       '1',   true, 'BR-07'),
  ('grace_s',                 '3',   true, 'BR-11'),
  ('grace_max_per_session',   '1',   true, 'BR-13'),
  ('pause_max_count',         '1',   true, 'BR-16'),
@@ -288,7 +288,7 @@ CREATE TABLE schedules (
   group_id       uuid NOT NULL REFERENCES groups(id),
   created_by     uuid NOT NULL REFERENCES users(id),
   start_time     time NOT NULL,                      -- giờ địa phương Asia/Ho_Chi_Minh
-  duration_min   smallint NOT NULL CHECK (duration_min IN (25, 50)),   -- BR-02
+  duration_min   smallint NOT NULL CHECK (duration_min BETWEEN 1 AND 240),   -- BR-02
   weekdays       smallint[] NOT NULL CHECK (array_length(weekdays,1) BETWEEN 1 AND 7
                                             AND weekdays <@ ARRAY[1,2,3,4,5,6,7]::smallint[]), -- ISO 1=T2
   start_date     date NOT NULL,
@@ -303,7 +303,7 @@ CREATE TABLE sessions (
   id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id                uuid NOT NULL REFERENCES groups(id),
   schedule_id             uuid REFERENCES schedules(id),       -- NULL = phiên đơn lẻ
-  duration_min            smallint NOT NULL CHECK (duration_min IN (25, 50)),  -- BR-02
+  duration_min            smallint NOT NULL CHECK (duration_min BETWEEN 1 AND 240),  -- BR-02
   started_at              timestamptz NOT NULL,                 -- giờ lịch (BR-04)
   ends_at                 timestamptz NOT NULL,                 -- = started_at + duration_min phút (CHECK bên dưới)
   session_day             date NOT NULL,                        -- ngày của started_at theo day_timezone

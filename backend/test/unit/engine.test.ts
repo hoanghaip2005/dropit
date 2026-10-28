@@ -40,6 +40,13 @@ afterEach(() => {
 });
 
 describe('Engine phiên — vòng đời', () => {
+  it('far-future check-in does not overflow the countdown timeout', () => {
+    vi.setSystemTime(T0);
+    rt = new SessionRuntime({ id: 'far', groupId: 'g1', startedAt: T0 + 40 * 86400000, durationMin: 25 }, cfg);
+    rt.schedule();
+    vi.advanceTimersByTime(1000);
+    expect(rt.status).toBe('SCHEDULED');
+  });
   it('SCHEDULED → COUNTDOWN tại started_at − 5s → ACTIVE tại started_at; mọi người FOCUSING', () => {
     setup();
     vi.advanceTimersByTime(55000);
@@ -227,10 +234,11 @@ describe('Idempotency event_id (BR-31)', () => {
 });
 
 describe('Rời phiên chủ động (D-29, BR-118)', () => {
-  it('session:leave khi WAITING → ABSENT (LOBBY_LEAVE), không forfeited', () => {
+  it('leaving check-in before start stays reversible without absence or forfeiture', () => {
     setup();
-    expect(send('a', 'session:leave').state).toBe('ABSENT');
-    expect(rt.members.get('a')!.endReason).toBe('LOBBY_LEAVE');
+    expect(send('a', 'session:leave')).toMatchObject({ ok: true, state: 'WAITING', left_lobby: true });
+    expect(rt.members.get('a')!.endReason).toBeNull();
+    expect(rt.join('a', 'A', 'new-a', 'dev-a')).toMatchObject({ ok: true, state: 'WAITING' });
     goActive();
     expect(rt.forfeited).toBe(false);
     expect(exited).toEqual([]);
@@ -265,10 +273,12 @@ describe('Phòng chờ / COUNTDOWN (BR-64, Q-153)', () => {
     expect(st('a')).toBe('EXITED');
   });
 
-  it('WAITING mất kết nối đến started_at → ABSENT (NO_SHOW)', () => {
+  it('disconnected check-in waits until admission deadline before absence', () => {
     setup();
     rt.socketClosed('a', 'sock-a');
     goActive();
+    expect(st('a')).toBe('WAITING');
+    rt.closeAdmission();
     expect(st('a')).toBe('ABSENT');
     expect(rt.forfeited).toBe(false);
   });
@@ -302,7 +312,7 @@ describe('Engine — rút đồng ý giữa phiên (BR-26, D-23) và phòng ch�
   it('session:state.lobby_members: tên người WAITING sắp theo tên, rỗng khi ACTIVE', () => {
     setup(['c', 'a', 'b']);
     expect(rt.stateFor('a').lobby_members).toEqual(['A', 'B', 'C']);
-    send('b', 'session:leave'); // WAITING → ABSENT
+    send('b', 'session:leave'); // Check-in leaves remain reversible.
     expect(rt.stateFor('a').lobby_members).toEqual(['A', 'C']);
     goActive();
     expect(rt.stateFor('a').lobby_members).toEqual([]);

@@ -79,7 +79,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
         ref.read(meProvider.future),
       ]);
       if (mounted) {
-        showSnack(context, remove ? 'Đã gỡ vật phẩm.' : 'Đã trang bị.');
+        showSnack(context, remove ? 'Đã gỡ.' : 'Đã trang bị.');
       }
     } catch (_) {
       if (mounted) {
@@ -109,9 +109,8 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     final meState = ref.watch(meProvider);
     final invState = ref.watch(inventoryProvider);
     final items = ref.watch(shopItemsProvider);
-    final me = !meState.isLoading && !meState.hasError ? meState.value : null;
-    final inventoryKnown =
-        !invState.isLoading && !invState.hasError && invState.hasValue;
+    final me = meState.hasError ? null : meState.value;
+    final inventoryKnown = !invState.hasError && invState.hasValue;
     final inv = inventoryKnown ? invState.value! : const <OwnedItem>[];
     final t = context.text.apply(
       bodyColor: OwnerStyle.ink,
@@ -120,35 +119,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     final kind = itemKinds[_cat];
     return AppScaffold(
       backgroundColor: OwnerStyle.canvas,
-      header: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        child: Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 12,
-          runSpacing: 8,
-          children: [
-            Text('DropIt!', style: t.titleLarge),
-            TextButton.icon(
-              key: const Key('shopCoins'),
-              onPressed: () => context.push('/coins'),
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: DT.accent,
-                minimumSize: const Size(44, 44),
-              ),
-              icon: const Icon(Icons.toll_outlined, size: 18),
-              label: Text(
-                me == null
-                    ? (meState.hasError
-                          ? 'Số dư chưa tải được'
-                          : 'Đang tải Coins…')
-                    : '${me.coinsBalance} Coins${me.cachedAt == null ? '' : ' · Chưa cập nhật'}',
-              ),
-            ),
-          ],
-        ),
-      ),
+      header: const SizedBox.shrink(),
       body: Column(
         children: [
           Padding(
@@ -156,14 +127,28 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             child: Row(
               children: [
                 Expanded(child: Text('Shop', style: t.headlineLarge)),
-                TextButton(
+                TextButton.icon(
+                  key: const Key('shopCoins'),
+                  onPressed: () => context.push('/coins'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: DT.accent,
+                    minimumSize: const Size(36, 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  icon: const Icon(Icons.toll_outlined, size: 17),
+                  label: Text(
+                    me == null
+                        ? (meState.hasError ? '—' : '…')
+                        : '${me.coinsBalance}',
+                  ),
+                ),
+                const SizedBox(width: 4),
+                IconButton(
                   key: const Key('myItems'),
                   onPressed: () => context.push('/shop/mine'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: OwnerStyle.ink,
-                    minimumSize: const Size(44, 44),
-                  ),
-                  child: const Text('Đồ của tôi'),
+                  tooltip: 'Kho đồ',
+                  color: OwnerStyle.ink,
+                  icon: const Icon(Icons.inventory_2_outlined),
                 ),
               ],
             ),
@@ -291,7 +276,12 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                                                 );
                                             return _ShopCard(
                                               item: item,
-                                              myName: me?.displayName ?? '',
+                                              me: me,
+                                              frameKey: equippedFrameKey(
+                                                me,
+                                                all,
+                                                inv,
+                                              ),
                                               owned: owned,
                                               equipped: equipped,
                                               inventoryKnown: inventoryKnown,
@@ -338,10 +328,81 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   }
 }
 
+/// Current equipment comes from profile, with inventory fallback while it reloads.
+String? equippedFrameKey(
+  MeProfile? me,
+  List<ShopItem> catalog,
+  List<OwnedItem> inventory,
+) {
+  final id =
+      me?.frameItemId ??
+      inventory
+          .where((i) => i.kind == 'AVATAR_FRAME' && i.equipped)
+          .firstOrNull
+          ?.itemId;
+  return catalog.where((i) => i.itemId == id).firstOrNull?.previewKey;
+}
+
+/// The try-on uses the current avatar, rather than a sample face or initial.
+class ShopArtworkPreview extends StatelessWidget {
+  const ShopArtworkPreview({
+    super.key,
+    required this.item,
+    required this.me,
+    this.frameKey,
+    required this.size,
+  });
+  final ShopItem item;
+  final MeProfile? me;
+  final String? frameKey;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    if (item.kind == 'BACKGROUND') {
+      return ItemPreview(
+        kind: item.kind,
+        colorKey: item.previewKey,
+        label: item.name,
+        size: size,
+        name: me?.displayName,
+      );
+    }
+    final selectedFrame = item.kind == 'AVATAR_FRAME'
+        ? item.previewKey
+        : frameKey;
+    final avatar = FramedAvatar(
+      name: me?.displayName ?? '',
+      imageUrl: me?.avatarUrl == null ? null : fixHost(me!.avatarUrl!),
+      frameKey: selectedFrame,
+      frameColor: selectedFrame == null ? null : previewColor(selectedFrame),
+      size: item.kind == 'TITLE' ? size * .60 : size,
+    );
+    if (item.kind != 'TITLE') return avatar;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Column(
+        children: [
+          Expanded(flex: 6, child: Center(child: avatar)),
+          const SizedBox(height: 6),
+          Expanded(
+            flex: 4,
+            child: Center(
+              child: TitleAdornment(artKey: item.previewKey, label: item.name),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ShopCard extends StatelessWidget {
   const _ShopCard({
     required this.item,
-    required this.myName,
+    required this.me,
+    required this.frameKey,
     required this.owned,
     required this.equipped,
     required this.inventoryKnown,
@@ -350,7 +411,8 @@ class _ShopCard extends StatelessWidget {
     required this.onEquip,
   });
   final ShopItem item;
-  final String myName;
+  final MeProfile? me;
+  final String? frameKey;
   final bool owned;
   final bool equipped;
   final bool inventoryKnown;
@@ -379,12 +441,11 @@ class _ShopCard extends StatelessWidget {
                 ),
                 padding: const EdgeInsets.all(8),
                 child: Center(
-                  child: ItemPreview(
-                    kind: item.kind,
-                    colorKey: item.previewKey,
-                    label: item.name,
+                  child: ShopArtworkPreview(
+                    item: item,
+                    me: me,
+                    frameKey: frameKey,
                     size: constraints.maxWidth - 16,
-                    name: myName,
                   ),
                 ),
               ),
@@ -397,10 +458,6 @@ class _ShopCard extends StatelessWidget {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: t.titleMedium!.copyWith(color: OwnerStyle.ink),
-        ),
-        Text(
-          itemKindText(item.kind),
-          style: t.bodySmall!.copyWith(color: OwnerStyle.muted),
         ),
         Text(
           '${item.price} Coins',
@@ -440,7 +497,7 @@ class _ShopCard extends StatelessWidget {
           ),
         _Pill(
           key: Key('shopDetail-${item.itemId}'),
-          label: 'Xem vật phẩm',
+          label: 'Xem',
           bg: owned ? OwnerStyle.inset : OwnerStyle.primary,
           fg: owned ? OwnerStyle.ink : Colors.white,
           onTap: () => context.push('/shop/item/${item.itemId}'),
@@ -470,12 +527,14 @@ class _Pill extends StatelessWidget {
     style: FilledButton.styleFrom(
       backgroundColor: bg,
       foregroundColor: fg,
-      minimumSize: const Size.fromHeight(44),
+      minimumSize: const Size.fromHeight(36),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      textStyle: Theme.of(context).textTheme.labelMedium,
       disabledBackgroundColor: OwnerStyle.line,
       disabledForegroundColor: OwnerStyle.muted,
     ),
     child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -486,6 +545,7 @@ class _Pill extends StatelessWidget {
     ),
   );
 }
+
 /// V-31 Chi tiết vật phẩm; mua và trang bị là hai thao tác riêng.
 class ShopItemScreen extends ConsumerStatefulWidget {
   const ShopItemScreen({super.key, required this.itemId});
@@ -557,7 +617,7 @@ class _ShopItemScreenState extends ConsumerState<ShopItemScreen> {
       try {
         await _reload();
         if (_current(version)) {
-          _message = 'Đã mua vật phẩm. Bạn có thể trang bị khi muốn.';
+          _message = 'Đã mua.';
         }
       } catch (_) {
         if (_current(version)) {
@@ -620,7 +680,7 @@ class _ShopItemScreenState extends ConsumerState<ShopItemScreen> {
       try {
         await _reload();
         if (_current(version)) {
-          _message = remove ? 'Đã gỡ vật phẩm.' : 'Đã trang bị vật phẩm.';
+          _message = null;
         }
       } catch (_) {
         if (_current(version)) {
@@ -647,14 +707,13 @@ class _ShopItemScreenState extends ConsumerState<ShopItemScreen> {
     final catalog = ref.watch(shopItemsProvider);
     final meState = ref.watch(meProvider);
     final inventory = ref.watch(inventoryProvider);
-    final catalogKnown = !catalog.isLoading && !catalog.hasError;
+    final catalogKnown = catalog.hasValue && !catalog.hasError;
     final item = catalogKnown
         ? catalog.value?.where((i) => i.itemId == widget.itemId).firstOrNull
         : null;
-    final me = !meState.isLoading && !meState.hasError ? meState.value : null;
+    final me = meState.hasError ? null : meState.value;
     final balance = me?.cachedAt == null ? me?.coinsBalance : null;
-    final inventoryKnown =
-        !inventory.isLoading && !inventory.hasError && inventory.hasValue;
+    final inventoryKnown = !inventory.hasError && inventory.hasValue;
     final mine = inventoryKnown ? inventory.value! : const <OwnedItem>[];
     final owned =
         item != null &&
@@ -706,7 +765,7 @@ class _ShopItemScreenState extends ConsumerState<ShopItemScreen> {
       children: children,
     );
     Widget? footer;
-    if (item != null) {
+    if (item != null && !catalog.isLoading) {
       final label = _busy
           ? 'Đang cập nhật…'
           : owned
@@ -813,11 +872,6 @@ class _ShopItemScreenState extends ConsumerState<ShopItemScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      itemKindText(item.kind),
-                      style: t.labelLarge!.copyWith(color: OwnerStyle.muted),
-                    ),
-                    const SizedBox(height: 8),
                     Text(item.name, style: t.headlineLarge),
                     if (owned)
                       Text(
@@ -828,7 +882,15 @@ class _ShopItemScreenState extends ConsumerState<ShopItemScreen> {
                 ),
                 card([
                   Text('Xem thử vật phẩm', style: t.titleMedium),
-                  _TryOn(item: item, me: me),
+                  _TryOn(
+                    item: item,
+                    me: me,
+                    frameKey: equippedFrameKey(
+                      me,
+                      catalog.value ?? const [],
+                      mine,
+                    ),
+                  ),
                   if (me == null)
                     Text(
                       meState.hasError
@@ -836,10 +898,6 @@ class _ShopItemScreenState extends ConsumerState<ShopItemScreen> {
                           : 'Đang tải hồ sơ…',
                       style: t.bodySmall,
                     ),
-                  Text(
-                    'Sở hữu vĩnh viễn · Chỉ dùng để trang trí',
-                    style: t.bodySmall!.copyWith(color: OwnerStyle.muted),
-                  ),
                 ]),
                 card([
                   Text('Chi tiết giao dịch', style: t.titleMedium),
@@ -869,10 +927,6 @@ class _ShopItemScreenState extends ConsumerState<ShopItemScreen> {
                       key: const Key('noRefund'),
                       style: t.labelLarge,
                     ),
-                  Text(
-                    'Mua để lưu vào Đồ của tôi. Trang bị riêng khi muốn sử dụng.',
-                    style: t.bodySmall!.copyWith(color: OwnerStyle.muted),
-                  ),
                 ]),
                 if (meState.hasError ||
                     me?.cachedAt != null ||
@@ -906,9 +960,10 @@ class _ShopItemScreenState extends ConsumerState<ShopItemScreen> {
 }
 
 class _TryOn extends StatelessWidget {
-  const _TryOn({required this.item, required this.me});
+  const _TryOn({required this.item, required this.me, required this.frameKey});
   final ShopItem item;
   final MeProfile? me;
+  final String? frameKey;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
@@ -926,10 +981,14 @@ class _TryOn extends StatelessWidget {
                 imageUrl: me?.avatarUrl == null
                     ? null
                     : fixHost(me!.avatarUrl!),
-                frameKey: item.kind == 'AVATAR_FRAME' ? item.previewKey : null,
+                frameKey: item.kind == 'AVATAR_FRAME'
+                    ? item.previewKey
+                    : frameKey,
                 frameColor: item.kind == 'AVATAR_FRAME'
                     ? previewColor(item.previewKey)
-                    : null,
+                    : frameKey == null
+                    ? null
+                    : previewColor(frameKey!),
                 size: size,
               ),
               if (name.isNotEmpty) ...[
@@ -951,6 +1010,7 @@ class _TryOn extends StatelessWidget {
     },
   );
 }
+
 /// Đồ của tôi (US-06.05): trang bị / gỡ theo loại; gỡ → món mặc định (BR-95).
 class InventoryScreen extends ConsumerWidget {
   const InventoryScreen({super.key});
@@ -983,13 +1043,18 @@ class InventoryScreen extends ConsumerWidget {
                       children: [
                         Text(
                           'Chưa có ${itemKindText(kind).toLowerCase()}.',
-                          style: t.bodyMedium!.copyWith(color: DT.textSecondary),
+                          style: t.bodyMedium!.copyWith(
+                            color: DT.textSecondary,
+                          ),
                         ),
                       ],
                     );
                   }
                   return AppCard(
-                    padding: const EdgeInsets.symmetric(horizontal: DT.spaceMd, vertical: DT.spaceXs),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DT.spaceMd,
+                      vertical: DT.spaceXs,
+                    ),
                     children: [
                       for (var i = 0; i < mine.length; i++)
                         ListRow(
@@ -999,12 +1064,19 @@ class InventoryScreen extends ConsumerWidget {
                             height: 44,
                             child: mine[i].isDefault
                                 ? Container(
-                                    decoration: const BoxDecoration(color: DT.surfaceHigh, shape: BoxShape.circle),
-                                    child: const Icon(Icons.radio_button_unchecked, color: DT.textSecondary),
+                                    decoration: const BoxDecoration(
+                                      color: DT.surfaceHigh,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.radio_button_unchecked,
+                                      color: DT.textSecondary,
+                                    ),
                                   )
                                 : ItemPreview(
                                     kind: kind,
-                                    colorKey: keyOf[mine[i].itemId] ?? mine[i].itemId,
+                                    colorKey:
+                                        keyOf[mine[i].itemId] ?? mine[i].itemId,
                                     size: 44,
                                   ),
                           ),
@@ -1012,13 +1084,22 @@ class InventoryScreen extends ConsumerWidget {
                           subtitle: mine[i].isDefault ? 'Món mặc định' : null,
                           trailing: mine[i].equipped
                               ? (mine[i].isDefault
-                                    ? const StatusBadge('Đang dùng', tone: BadgeTone.success)
+                                    ? const StatusBadge(
+                                        'Đang dùng',
+                                        tone: BadgeTone.success,
+                                      )
                                     : TextButton(
-                                        onPressed: () => equipItem(context, ref, kind, null),
+                                        onPressed: () =>
+                                            equipItem(context, ref, kind, null),
                                         child: const Text('Đang dùng · Gỡ'),
                                       ))
                               : TextButton(
-                                  onPressed: () => equipItem(context, ref, kind, mine[i].itemId),
+                                  onPressed: () => equipItem(
+                                    context,
+                                    ref,
+                                    kind,
+                                    mine[i].itemId,
+                                  ),
                                   child: const Text('Trang bị'),
                                 ),
                         ),
@@ -1027,7 +1108,9 @@ class InventoryScreen extends ConsumerWidget {
                 },
               ),
             ],
-            const HintText('Món đang trang bị hiện cho người cùng nhóm. Coins và chuỗi không hiện.'),
+            const HintText(
+              'Món đang trang bị hiện cho người cùng nhóm. Coins và chuỗi không hiện.',
+            ),
           ],
         ),
       ),

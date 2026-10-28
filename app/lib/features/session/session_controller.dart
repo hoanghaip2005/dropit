@@ -25,7 +25,12 @@ enum SessionPhase {
 }
 
 class ExitBanner {
-  const ExitBanner({required this.eventId, required this.name, required this.at, required this.triggeredForfeit});
+  const ExitBanner({
+    required this.eventId,
+    required this.name,
+    required this.at,
+    required this.triggeredForfeit,
+  });
   final String eventId;
   final String name;
   final DateTime? at;
@@ -87,12 +92,17 @@ class SessionView {
 
   /// "Phiên đang được ghi" khi và chỉ khi đang trong phiên ACTIVE (NFR-P08).
   bool get recording =>
-      phase == SessionPhase.focusing || phase == SessionPhase.grace || phase == SessionPhase.disconnected;
+      phase == SessionPhase.focusing ||
+      phase == SessionPhase.grace ||
+      phase == SessionPhase.disconnected;
 
   bool get canLeave =>
-      phase == SessionPhase.waiting || phase == SessionPhase.focusing || phase == SessionPhase.grace;
+      phase == SessionPhase.waiting ||
+      phase == SessionPhase.focusing ||
+      phase == SessionPhase.grace;
 
-  DateTime serverNow([DateTime? deviceNow]) => (deviceNow ?? DateTime.now()).toUtc().add(offset);
+  DateTime serverNow([DateTime? deviceNow]) =>
+      (deviceNow ?? DateTime.now()).toUtc().add(offset);
 
   SessionView copyWith({
     SessionPhase? phase,
@@ -113,26 +123,25 @@ class SessionView {
     bool? screenLocked,
     String? cancelReason,
     List<String>? lobbyMembers,
-  }) =>
-      SessionView(
-        phase: phase ?? this.phase,
-        connected: connected ?? this.connected,
-        startedAt: startedAt ?? this.startedAt,
-        endsAt: endsAt ?? this.endsAt,
-        participantCount: participantCount ?? this.participantCount,
-        forfeited: forfeited ?? this.forfeited,
-        forfeitTriggerName: forfeitTriggerName ?? this.forfeitTriggerName,
-        graceDeadline: graceDeadline ?? this.graceDeadline,
-        offset: offset ?? this.offset,
-        banners: banners ?? this.banners,
-        errorCode: errorCode ?? this.errorCode,
-        errorMessage: errorMessage ?? this.errorMessage,
-        leaveError: clearLeaveError ? null : (leaveError ?? this.leaveError),
-        leaving: leaving ?? this.leaving,
-        screenLocked: screenLocked ?? this.screenLocked,
-        cancelReason: cancelReason ?? this.cancelReason,
-        lobbyMembers: lobbyMembers ?? this.lobbyMembers,
-      );
+  }) => SessionView(
+    phase: phase ?? this.phase,
+    connected: connected ?? this.connected,
+    startedAt: startedAt ?? this.startedAt,
+    endsAt: endsAt ?? this.endsAt,
+    participantCount: participantCount ?? this.participantCount,
+    forfeited: forfeited ?? this.forfeited,
+    forfeitTriggerName: forfeitTriggerName ?? this.forfeitTriggerName,
+    graceDeadline: graceDeadline ?? this.graceDeadline,
+    offset: offset ?? this.offset,
+    banners: banners ?? this.banners,
+    errorCode: errorCode ?? this.errorCode,
+    errorMessage: errorMessage ?? this.errorMessage,
+    leaveError: clearLeaveError ? null : (leaveError ?? this.leaveError),
+    leaving: leaving ?? this.leaving,
+    screenLocked: screenLocked ?? this.screenLocked,
+    cancelReason: cancelReason ?? this.cancelReason,
+    lobbyMembers: lobbyMembers ?? this.lobbyMembers,
+  );
 }
 
 /// Nguồn tín hiệu rời app/khóa màn hình (bọc package focus_lifecycle để test).
@@ -152,7 +161,9 @@ class PackageFocusWatcher implements FocusWatcher {
   Future<void> stop() => _fl.stop();
 }
 
-final focusWatcherFactoryProvider = Provider<FocusWatcher Function()>((ref) => PackageFocusWatcher.new);
+final focusWatcherFactoryProvider = Provider<FocusWatcher Function()>(
+  (ref) => PackageFocusWatcher.new,
+);
 
 const heartbeatInterval = Duration(seconds: 5); // BR-19 heartbeat_s
 
@@ -177,7 +188,10 @@ class SessionController extends Notifier<SessionView> {
   @override
   SessionView build() {
     final auth = ref.read(authProvider);
-    final socket = ref.read(sessionSocketFactoryProvider)(token: auth.token ?? '', deviceId: auth.deviceId);
+    final socket = ref.read(sessionSocketFactoryProvider)(
+      token: auth.token ?? '',
+      deviceId: auth.deviceId,
+    );
     _socket = socket;
     _sub = socket.events.listen(_onEvent);
     ref.onDispose(_dispose);
@@ -190,11 +204,13 @@ class SessionController extends Notifier<SessionView> {
       }
     });
     // Không được sửa provider khác trong onDispose → dời sang microtask (container có thể đã hủy).
-    ref.onDispose(() => scheduleMicrotask(() {
-          try {
-            live.clearIf(sessionId);
-          } catch (_) {}
-        }));
+    ref.onDispose(
+      () => scheduleMicrotask(() {
+        try {
+          live.clearIf(sessionId);
+        } catch (_) {}
+      }),
+    );
     _tick = Timer.periodic(const Duration(milliseconds: 250), (_) => _onTick());
     scheduleMicrotask(socket.connect);
     return const SessionView();
@@ -211,11 +227,11 @@ class SessionController extends Notifier<SessionView> {
   }
 
   Map<String, dynamic> _env([Map<String, dynamic> extra = const {}]) => {
-        'event_id': _uuid.v4(),
-        'session_id': sessionId,
-        'client_ts': DateTime.now().toUtc().toIso8601String(),
-        ...extra,
-      };
+    'event_id': _uuid.v4(),
+    'session_id': sessionId,
+    'client_ts': DateTime.now().toUtc().toIso8601String(),
+    ...extra,
+  };
 
   // ---------------- Sự kiện vào ----------------
   void _onEvent(SocketEvent e) {
@@ -235,12 +251,17 @@ class SessionController extends Notifier<SessionView> {
       case '_disconnect':
         state = state.copyWith(
           connected: false,
-          phase: state.phase == SessionPhase.focusing ? SessionPhase.disconnected : null,
+          phase: state.phase == SessionPhase.focusing
+              ? SessionPhase.disconnected
+              : null,
         );
       case '_connect_error':
         state = state.copyWith(connected: false);
         if (!_joined && d['code'] == 'UNAUTHENTICATED') {
-          _fail('UNAUTHENTICATED', 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+          _fail(
+            'UNAUTHENTICATED',
+            'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+          );
         }
       case 'session:state':
         _applyServerState(d);
@@ -251,7 +272,10 @@ class SessionController extends Notifier<SessionView> {
           offset: _offsetFrom(d['server_ts']),
         );
       case 'member:grace':
-        state = state.copyWith(phase: SessionPhase.grace, graceDeadline: _dt(d['grace_deadline']));
+        state = state.copyWith(
+          phase: SessionPhase.grace,
+          graceDeadline: _dt(d['grace_deadline']),
+        );
       case 'member:state':
         _applyMyState('${d['my_state']}');
       case 'MEMBER_EXITED':
@@ -259,20 +283,31 @@ class SessionController extends Notifier<SessionView> {
       case 'SESSION_CANCELLED':
       case 'SESSION_CANCELLED_OUTAGE':
       case 'SESSION_CANCELLED_OUTAGE_EXITED':
-        state = state.copyWith(phase: SessionPhase.cancelled, cancelReason: '${d['reason'] ?? e.name}');
+        state = state.copyWith(
+          phase: SessionPhase.cancelled,
+          cancelReason: '${d['reason'] ?? e.name}',
+        );
         _stopRecording();
       case 'SESSION_RESULT':
         state = state.copyWith(phase: SessionPhase.ended);
         _stopRecording();
       case 'SESSION_UPDATED':
         // Chủ nhóm đổi giờ/thời lượng (US-02.11): phòng chờ cũ đóng, vào lại theo giờ mới.
-        _fail('SESSION_RESCHEDULED', 'Chủ nhóm vừa đổi giờ phiên. Vào lại phòng chờ theo giờ mới.');
+        _fail(
+          'SESSION_RESCHEDULED',
+          'Chủ nhóm vừa đổi giờ phiên. Vào lại phòng chờ theo giờ mới.',
+        );
         _stopRecording();
       case 'MEMBER_REMOVED':
-        state = state.copyWith(phase: SessionPhase.cancelled, cancelReason: 'REMOVED');
+        state = state.copyWith(
+          phase: SessionPhase.cancelled,
+          cancelReason: 'REMOVED',
+        );
         _stopRecording();
       case 'error':
-        if (d['code'] == 'TOKEN_EXPIRED') state = state.copyWith(connected: false);
+        if (d['code'] == 'TOKEN_EXPIRED') {
+          state = state.copyWith(connected: false);
+        }
     }
   }
 
@@ -282,10 +317,16 @@ class SessionController extends Notifier<SessionView> {
     final first = !_joined;
     var ack = await _requestRetry(
       first ? 'session:join' : 'session:resume',
-      _env({if (!first && _lastServerEventId != null) 'last_server_event_id': _lastServerEventId}),
+      _env({
+        if (!first && _lastServerEventId != null)
+          'last_server_event_id': _lastServerEventId,
+      }),
     );
     // Mở lại màn tạo controller mới: server vẫn giữ trạng thái người đã vào.
-    if (first && ack?['ok'] == false && ack?['code'] == 'SESSION_NOT_ACTIVE' && ack?['state'] != null) {
+    if (first &&
+        ack?['ok'] == false &&
+        ack?['code'] == 'SESSION_NOT_ACTIVE' &&
+        ack?['state'] != null) {
       ack = await _requestRetry('session:resume', _env());
     }
     if (!ref.mounted || _entryFinished) return;
@@ -293,15 +334,33 @@ class SessionController extends Notifier<SessionView> {
       // An ack timeout does not imply a transport disconnect. Retry even when
       // Socket.IO remains connected, otherwise the lobby can stall until start.
       _entryRetry = Timer(const Duration(seconds: 2), () {
-        if (ref.mounted && !_entryFinished && _socket?.connected == true) _joinOrResume();
+        if (ref.mounted && !_entryFinished && _socket?.connected == true) {
+          _joinOrResume();
+        }
       });
       return;
     }
     if (ack['ok'] == false) {
       final code = '${ack['code']}';
+      if (code == 'LOBBY_NOT_OPEN') {
+        final opens = _dt(ack['lobby_opens_at'] ?? ack['detail']);
+        _fail(code, _joinErrorText(code));
+        final wait =
+            opens?.difference(state.serverNow()) ?? const Duration(seconds: 5);
+        _entryRetry = Timer(
+          wait.isNegative ? const Duration(seconds: 1) : wait,
+          () {
+            if (ref.mounted && !_entryFinished) retryEntry();
+          },
+        );
+        return;
+      }
       if (code == 'SESSION_LOST') {
         _applyMyState('LOST');
-      } else if (ack['state'] == 'EXITED' || ack['state'] == 'ABSENT' || ack['state'] == 'COMPLETED' || ack['state'] == 'VOID') {
+      } else if (ack['state'] == 'EXITED' ||
+          ack['state'] == 'ABSENT' ||
+          ack['state'] == 'COMPLETED' ||
+          ack['state'] == 'VOID') {
         _applyMyState('${ack['state']}');
       } else if (first) {
         _fail(code, '${ack['detail'] ?? _joinErrorText(code)}');
@@ -314,29 +373,50 @@ class SessionController extends Notifier<SessionView> {
   }
 
   static String _joinErrorText(String code) => switch (code) {
-        'LOBBY_NOT_OPEN' => 'Phòng chờ chưa mở.',
-        'LATE_JOIN_CLOSED' => 'Phiên đã bắt đầu. Bạn không vào được phiên này.',
-        'OWNER_CANNOT_JOIN_SESSION' => 'Chủ nhóm không tham gia phiên.',
-        'CONSENT_REQUIRED' => 'Bạn cần đồng ý điều khoản của nhóm trước khi vào phiên.',
-        'FORBIDDEN_GROUP' => 'Bạn không thuộc nhóm của phiên này.',
-        'SESSION_ALREADY_JOINED_ELSEWHERE' => 'Phiên này đang mở trên thiết bị khác.',
-        'ALREADY_IN_OTHER_SESSION' => 'Bạn đang ở một phiên khác.',
-        'SESSION_NOT_ACTIVE' => 'Phiên đã kết thúc hoặc bị hủy.',
-        _ => 'Chưa vào được phòng chờ.',
-      };
+    'LOBBY_NOT_OPEN' => 'Phòng chờ chưa mở.',
+    'LATE_JOIN_CLOSED' => 'Phiên đã bắt đầu. Bạn không vào được phiên này.',
+    'OWNER_CANNOT_JOIN_SESSION' => 'Chủ nhóm không tham gia phiên.',
+    'CONSENT_REQUIRED' =>
+      'Bạn cần đồng ý điều khoản của nhóm trước khi vào phiên.',
+    'FORBIDDEN_GROUP' => 'Bạn không thuộc nhóm của phiên này.',
+    'SESSION_ALREADY_JOINED_ELSEWHERE' =>
+      'Phiên này đang mở trên thiết bị khác.',
+    'ALREADY_IN_OTHER_SESSION' => 'Bạn đang ở một phiên khác.',
+    'SESSION_NOT_ACTIVE' => 'Phiên đã kết thúc hoặc bị hủy.',
+    _ => 'Chưa vào được phòng chờ.',
+  };
 
   bool get _entryFinished => const {
-    SessionPhase.cancelled, SessionPhase.ended, SessionPhase.exited,
-    SessionPhase.absent, SessionPhase.lost,
+    SessionPhase.cancelled,
+    SessionPhase.ended,
+    SessionPhase.exited,
+    SessionPhase.absent,
+    SessionPhase.lost,
   }.contains(state.phase);
 
+  void retryEntry() {
+    if (_entryFinished) return;
+    state = state.copyWith(phase: SessionPhase.connecting);
+    if (_socket?.connected == true) {
+      _joinOrResume();
+    } else {
+      _socket?.connect();
+    }
+  }
+
   void _fail(String code, String msg) {
-    state = state.copyWith(phase: SessionPhase.error, errorCode: code, errorMessage: msg);
+    state = state.copyWith(
+      phase: SessionPhase.error,
+      errorCode: code,
+      errorMessage: msg,
+    );
   }
 
   void _syncClock() async {
     final t0 = DateTime.now();
-    final r = await _socket?.request('clock:ping', {'t0': t0.millisecondsSinceEpoch});
+    final r = await _socket?.request('clock:ping', {
+      't0': t0.millisecondsSinceEpoch,
+    });
     if (r == null || r['server_ts'] == null) return;
     final t1 = DateTime.now();
     final server = _dt(r['server_ts']);
@@ -351,15 +431,22 @@ class SessionController extends Notifier<SessionView> {
       startedAt: _dt(d['started_at']),
       endsAt: _dt(d['ends_at']),
       participantCount: (d['participant_count'] as num?)?.toInt(),
-      lobbyMembers: d['lobby_members'] is List ? [for (final n in d['lobby_members'] as List) '$n'] : null,
+      lobbyMembers: d['lobby_members'] is List
+          ? [for (final n in d['lobby_members'] as List) '$n']
+          : null,
       forfeited: d['forfeited'] == true ? true : null,
       forfeitTriggerName: ft,
       graceDeadline: _dt(d['my_grace_deadline']),
-      offset: state.offset == Duration.zero ? _offsetFrom(d['server_ts']) : null,
+      offset: state.offset == Duration.zero
+          ? _offsetFrom(d['server_ts'])
+          : null,
     );
     final status = '${d['status'] ?? ''}';
     if (status == 'CANCELLED') {
-      state = state.copyWith(phase: SessionPhase.cancelled, cancelReason: '${d['cancel_reason'] ?? ''}');
+      state = state.copyWith(
+        phase: SessionPhase.cancelled,
+        cancelReason: '${d['cancel_reason'] ?? ''}',
+      );
       _stopRecording();
       return;
     }
@@ -373,7 +460,10 @@ class SessionController extends Notifier<SessionView> {
 
   void _applyMyState(String my, {String? sessionStatus}) {
     final p = switch (my) {
-      'WAITING' => sessionStatus == 'COUNTDOWN' ? SessionPhase.countdown : SessionPhase.waiting,
+      'WAITING' =>
+        sessionStatus == 'COUNTDOWN'
+            ? SessionPhase.countdown
+            : SessionPhase.waiting,
       'FOCUSING' || 'PAUSED' => SessionPhase.focusing,
       'GRACE' => SessionPhase.grace,
       'DISCONNECTED' => SessionPhase.disconnected,
@@ -386,7 +476,9 @@ class SessionController extends Notifier<SessionView> {
     };
     if (p == null) return;
     // Không lùi từ countdown về waiting khi server chưa đổi trạng thái người.
-    if (p == SessionPhase.waiting && state.phase == SessionPhase.countdown) return;
+    if (p == SessionPhase.waiting && state.phase == SessionPhase.countdown) {
+      return;
+    }
     state = state.copyWith(phase: p);
     if (state.recording) {
       _startRecording();
@@ -408,20 +500,28 @@ class SessionController extends Notifier<SessionView> {
     state = state.copyWith(
       banners: [...state.banners, b],
       forfeited: triggered || state.forfeited,
-      forfeitTriggerName: triggered ? (f is Map ? '${f['display_name'] ?? name}' : name) : null,
+      forfeitTriggerName: triggered
+          ? (f is Map ? '${f['display_name'] ?? name}' : name)
+          : null,
     );
   }
 
   /// Người dùng vuốt ẩn hoặc hết 6 giây (V-11, giả định).
   void dismissBanner(String eventId) {
-    state = state.copyWith(banners: state.banners.where((b) => b.eventId != eventId).toList());
+    state = state.copyWith(
+      banners: state.banners.where((b) => b.eventId != eventId).toList(),
+    );
   }
 
   void _onTick() {
     final s = state;
     // Đến started_at (giờ server) → vào phiên (V-07 → V-08). Server xác nhận sau.
-    if (s.phase == SessionPhase.countdown && s.startedAt != null && !s.serverNow().isBefore(s.startedAt!)) {
-      state = s.copyWith(phase: s.connected ? SessionPhase.focusing : SessionPhase.disconnected);
+    if (s.phase == SessionPhase.countdown &&
+        s.startedAt != null &&
+        !s.serverNow().isBefore(s.startedAt!)) {
+      state = s.copyWith(
+        phase: s.connected ? SessionPhase.focusing : SessionPhase.disconnected,
+      );
       _startRecording();
     }
   }
@@ -476,7 +576,9 @@ class SessionController extends Notifier<SessionView> {
       _pending.add((ev, payload));
       return;
     }
-    if (ack['ok'] != false && ack['state'] != null) _applyMyState('${ack['state']}');
+    if (ack['ok'] != false && ack['state'] != null) {
+      _applyMyState('${ack['state']}');
+    }
   }
 
   void _flushPending() {
@@ -484,13 +586,18 @@ class SessionController extends Notifier<SessionView> {
     _pending.clear();
     for (final (ev, p) in items) {
       _requestRetry(ev, p).then((ack) {
-        if (ack != null && ack['ok'] != false && ack['state'] != null) _applyMyState('${ack['state']}');
+        if (ack != null && ack['ok'] != false && ack['state'] != null) {
+          _applyMyState('${ack['state']}');
+        }
       });
     }
   }
 
   /// Chờ ack ≤ 5 s rồi gửi lại **cùng** `event_id` một lần (§3.1).
-  Future<Map<String, dynamic>?> _requestRetry(String ev, Map<String, dynamic> p) async {
+  Future<Map<String, dynamic>?> _requestRetry(
+    String ev,
+    Map<String, dynamic> p,
+  ) async {
     final s = _socket;
     if (s == null) return null;
     final a = await s.request(ev, p);
@@ -500,31 +607,36 @@ class SessionController extends Notifier<SessionView> {
 
   // ---------------- Lệnh người dùng ----------------
   /// "Rời phiên" đã xác nhận. Không có mạng → báo lỗi, không xếp hàng (BR-118, D-29).
-  Future<void> leave() async {
-    if (!state.canLeave || state.leaving) return;
+  Future<bool> leave() async {
+    if (!state.canLeave || state.leaving) return false;
     if (_socket?.connected != true) {
       state = state.copyWith(leaveError: 'Chưa rời phiên — không có kết nối.');
-      return;
+      return false;
     }
     state = state.copyWith(leaving: true, clearLeaveError: true);
     final ack = await _requestRetry('session:leave', _env());
     if (ack == null || ack['ok'] == false) {
       state = state.copyWith(
-          leaving: false, leaveError: '${ack?['detail'] ?? 'Chưa rời phiên — không có kết nối.'}');
-      return;
+        leaving: false,
+        leaveError: '${ack?['detail'] ?? 'Chưa rời phiên — không có kết nối.'}',
+      );
+      return false;
     }
     state = state.copyWith(leaving: false);
+    if (ack['left_lobby'] == true) return true;
     final st = '${ack['state'] ?? ''}';
     if (st == 'ABSENT') {
       _applyMyState('ABSENT');
     } else {
       _applyMyState(st.isEmpty ? 'EXITED' : st);
     }
+    return false;
   }
 
   void clearLeaveError() => state = state.copyWith(clearLeaveError: true);
 
-  static DateTime? _dt(Object? v) => v is String ? DateTime.tryParse(v)?.toUtc() : null;
+  static DateTime? _dt(Object? v) =>
+      v is String ? DateTime.tryParse(v)?.toUtc() : null;
 
   Duration? _offsetFrom(Object? serverTs) {
     final s = _dt(serverTs);
@@ -532,5 +644,5 @@ class SessionController extends Notifier<SessionView> {
   }
 }
 
-final sessionControllerProvider =
-    NotifierProvider.autoDispose.family<SessionController, SessionView, String>(SessionController.new);
+final sessionControllerProvider = NotifierProvider.autoDispose
+    .family<SessionController, SessionView, String>(SessionController.new);

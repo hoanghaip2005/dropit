@@ -13,6 +13,7 @@ END $$;
 ALTER TABLE sessions ADD CONSTRAINT sessions_duration_min_range CHECK (duration_min BETWEEN 1 AND 240);
 ALTER TABLE schedules ADD CONSTRAINT schedules_duration_min_range CHECK (duration_min BETWEEN 1 AND 240);
 UPDATE system_params SET value = '{"min":1,"max":240}'::jsonb WHERE key = 'duration_min';
+UPDATE system_params SET value = '1'::jsonb WHERE key = 'late_join_max_min';
 
 -- Serialize new schedules/memberships against group dissolution.
 CREATE OR REPLACE FUNCTION trg_require_active_group() RETURNS trigger LANGUAGE plpgsql AS $$

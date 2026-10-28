@@ -188,4 +188,18 @@ void main() {
     expect(api.calls, isEmpty);
     expect(find.text('Mật khẩu nhập lại chưa khớp.'), findsOneWidget);
   });
+
+  testWidgets('Six character password does not require complexity', (tester) async {
+    final api = RegistrationApi();
+    await tester.pumpWidget(app(api));
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), 'Demo');
+    await tester.enterText(fields.at(1), 'demo@example.org');
+    await tester.enterText(fields.at(2), '123456');
+    await tester.enterText(fields.at(3), '123456');
+    await tester.ensureVisible(find.text('Tạo tài khoản'));
+    await tester.tap(find.text('Tạo tài khoản'));
+    await tester.pumpAndSettle();
+    expect(api.calls.length, 1);
+  });
 }

@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../app/theme.dart';
+import '../../app/env.dart';
 import '../../core/api.dart';
 import '../../core/models.dart';
 import '../../core/models_ext.dart';
@@ -25,14 +29,27 @@ class GroupsScreen extends ConsumerWidget {
       header: context.ownerStyle
           ? Padding(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-              child: Align(alignment: Alignment.centerLeft, child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('DropIt! · Chủ nhóm', style: context.text.bodySmall!.copyWith(color: OwnerStyle.muted)),
-                  const SizedBox(height: 4),
-                  Text('Nhóm của tôi', style: context.text.headlineLarge!.copyWith(height: 36 / 28)),
-                ],
-              )),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'DropIt! · Chủ nhóm',
+                      style: context.text.bodySmall!.copyWith(
+                        color: OwnerStyle.muted,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Nhóm của tôi',
+                      style: context.text.headlineLarge!.copyWith(
+                        height: 36 / 28,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             )
           : const AppHeader.large(caption: 'DropIt!', title: 'Nhóm của tôi'),
       body: AsyncBody<List<MyGroup>>(
@@ -53,24 +70,37 @@ class GroupsScreen extends ConsumerWidget {
           return PageList(
             onRefresh: refresh,
             children: [
-              Row(children: [
-                Expanded(child: PrimaryButton(
-                  compact: true,
-                  icon: Icons.add,
-                  label: 'Tạo nhóm',
-                  onPressed: () => context.push('/groups/new'),
-                )),
-                const SizedBox(width: DT.spaceSm),
-                Expanded(child: SecondaryButton(
-                  icon: Icons.vpn_key_outlined,
-                  label: 'Nhập mã nhóm',
-                  onPressed: () => context.push('/join'),
-                )),
-              ]),
+              Row(
+                children: [
+                  Expanded(
+                    child: PrimaryButton(
+                      compact: true,
+                      icon: Icons.add,
+                      label: 'Tạo nhóm',
+                      onPressed: () => context.push('/groups/new'),
+                    ),
+                  ),
+                  const SizedBox(width: DT.spaceSm),
+                  Expanded(
+                    child: SecondaryButton(
+                      icon: Icons.vpn_key_outlined,
+                      label: 'Nhập mã nhóm',
+                      onPressed: () => context.push('/join'),
+                    ),
+                  ),
+                ],
+              ),
               Padding(
                 padding: const EdgeInsets.only(top: DT.spaceSm),
-                child: SectionHeader(ref.watch(ownerOnlyProvider) == true ? 'Nhóm bạn quản lý' : 'Nhóm đang tham gia',
-                  trailing: Text('${list.length} nhóm', style: context.text.bodySmall)),
+                child: SectionHeader(
+                  ref.watch(ownerOnlyProvider) == true
+                      ? 'Nhóm bạn quản lý'
+                      : 'Nhóm đang tham gia',
+                  trailing: Text(
+                    '${list.length} nhóm',
+                    style: context.text.bodySmall,
+                  ),
+                ),
               ),
               for (final g in list) _GroupCard(group: g),
             ],
@@ -99,85 +129,191 @@ class _GroupCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 48, height: 48,
-              decoration: BoxDecoration(color: DT.accentSoftBg, borderRadius: BorderRadius.circular(16)),
-              child: const Icon(Icons.groups_rounded, color: DT.accent, size: 26),
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: DT.accentSoftBg,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.groups_rounded,
+                color: DT.accent,
+                size: 26,
+              ),
             ),
             const SizedBox(width: DT.spaceSm),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(g.name, style: t.headlineSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  Text(
+                    g.name,
+                    style: t.headlineSmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: DT.spaceXs),
-                  Text('${g.memberCount} thành viên', style: t.bodySmall!.copyWith(color: context.ownerStyle ? OwnerStyle.muted : DT.textSecondary)),
+                  Text(
+                    '${g.memberCount} thành viên',
+                    style: t.bodySmall!.copyWith(
+                      color: context.ownerStyle
+                          ? OwnerStyle.muted
+                          : DT.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(width: DT.spaceXs),
-            StatusBadge(g.isOwner ? 'Chủ nhóm' : 'Thành viên', tone: g.isOwner ? BadgeTone.accent : BadgeTone.neutral),
+            StatusBadge(
+              g.isOwner ? 'Chủ nhóm' : 'Thành viên',
+              tone: g.isOwner ? BadgeTone.accent : BadgeTone.neutral,
+            ),
           ],
         ),
-        if (g.status != 'ACTIVE') StatusBadge(groupStatusText(g.status), tone: BadgeTone.danger),
+        if (g.status != 'ACTIVE')
+          StatusBadge(groupStatusText(g.status), tone: BadgeTone.danger),
         // BR-117: chỉ số RIÊNG nhóm này, tháng hiện tại tạm tính đến hôm qua — không cộng nhiều nhóm
         Container(
           key: Key('rate_${g.groupId}'),
           padding: const EdgeInsets.all(DT.spaceMd),
-          decoration: BoxDecoration(color: context.ownerStyle ? OwnerStyle.inset : DT.background, borderRadius: BorderRadius.circular(DT.radius)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Hoàn thành tháng này', style: t.titleMedium),
-                const SizedBox(height: DT.spaceXs),
-                Text(g.isOwner ? 'Cả nhóm · Đến hôm qua' : 'Của bạn · Đến hôm qua', style: t.bodySmall!.copyWith(color: context.ownerStyle ? OwnerStyle.muted : DT.textSecondary)),
-              ])),
-              const SizedBox(width: DT.spaceSm),
-              Text(g.monthCompletionRate == null ? '—' : '${g.monthCompletionRate!.toStringAsFixed(1)}%',
-                  style: t.headlineLarge!.copyWith(color: DT.accent, fontFeatures: DT.tabular)),
-            ]),
-            const SizedBox(height: DT.spaceMd),
-            if (g.monthCompletionRate == null)
-              Text('Chưa có dữ liệu tháng này', style: t.bodySmall!.copyWith(color: context.ownerStyle ? OwnerStyle.muted : DT.textSecondary))
-            else LinearProgressIndicator(value: (g.monthCompletionRate! / 100).clamp(0.0, 1.0),
-                minHeight: 6, borderRadius: BorderRadius.circular(DT.pill), backgroundColor: context.ownerStyle ? OwnerStyle.line : DT.surfaceDim),
-          ]),
-        ),
-        Row(children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(color: context.ownerStyle ? OwnerStyle.inset : DT.surfaceHigh, borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Icons.calendar_today_outlined, size: 19, color: DT.textSecondary),
+          decoration: BoxDecoration(
+            color: context.ownerStyle ? OwnerStyle.inset : DT.background,
+            borderRadius: BorderRadius.circular(DT.radius),
           ),
-          const SizedBox(width: DT.spaceSm),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Phiên kế tiếp', style: t.bodySmall),
-            const SizedBox(height: DT.spaceXs),
-            Text(next == null ? 'Chưa có lịch' : '${hhmm(next.startedAt)} · ${dayLabel(next.startedAt)}', style: t.titleMedium),
-            if (next != null) Text('${next.durationMin} phút tập trung', style: t.bodySmall),
-          ])),
-        ]),
-        Divider(height: 1, color: context.ownerStyle ? OwnerStyle.line : DT.divider),
-        Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (g.isOwner) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Hoàn thành tháng này', style: t.titleMedium),
+                        const SizedBox(height: DT.spaceXs),
+                        Text(
+                          g.isOwner
+                              ? 'Cả nhóm · Đến hôm qua'
+                              : 'Của bạn · Đến hôm qua',
+                          style: t.bodySmall!.copyWith(
+                            color: context.ownerStyle
+                                ? OwnerStyle.muted
+                                : DT.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: DT.spaceSm),
+                  Text(
+                    g.monthCompletionRate == null
+                        ? '—'
+                        : '${g.monthCompletionRate!.toStringAsFixed(1)}%',
+                    style: t.headlineLarge!.copyWith(
+                      color: DT.accent,
+                      fontFeatures: DT.tabular,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DT.spaceMd),
+              if (g.monthCompletionRate == null)
+                Text(
+                  'Chưa có dữ liệu tháng này',
+                  style: t.bodySmall!.copyWith(
+                    color: context.ownerStyle
+                        ? OwnerStyle.muted
+                        : DT.textSecondary,
+                  ),
+                )
+              else
+                LinearProgressIndicator(
+                  value: (g.monthCompletionRate! / 100).clamp(0.0, 1.0),
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(DT.pill),
+                  backgroundColor: context.ownerStyle
+                      ? OwnerStyle.line
+                      : DT.surfaceDim,
+                ),
+            ],
+          ),
+        ),
+        Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: context.ownerStyle ? OwnerStyle.inset : DT.surfaceHigh,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.calendar_today_outlined,
+                size: 19,
+                color: DT.textSecondary,
+              ),
+            ),
+            const SizedBox(width: DT.spaceSm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Phiên kế tiếp', style: t.bodySmall),
+                  const SizedBox(height: DT.spaceXs),
+                  Text(
+                    next == null
+                        ? 'Chưa có lịch'
+                        : '${hhmm(next.startedAt)} · ${dayLabel(next.startedAt)}',
+                    style: t.titleMedium,
+                  ),
+                  if (next != null)
+                    Text(
+                      '${next.durationMin} phút tập trung',
+                      style: t.bodySmall,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        Divider(
+          height: 1,
+          color: context.ownerStyle ? OwnerStyle.line : DT.divider,
+        ),
+        Row(
+          children: [
+            if (g.isOwner) ...[
               Expanded(
                 child: SecondaryButton(
                   label: 'Lên lịch',
-                  onPressed: () => context.push('/groups/${g.groupId}/schedule'),
+                  onPressed: () =>
+                      context.push('/groups/${g.groupId}/schedule'),
                 ),
               ),
               const SizedBox(width: DT.spaceSm),
-              ],
+            ],
+            Expanded(
+              child: PrimaryButton(
+                compact: true,
+                background: Colors.black,
+                foreground: Colors.white,
+                label: 'Xem nhóm',
+                onPressed: () => context.push('/groups/${g.groupId}'),
+              ),
+            ),
+            if (!g.isOwner && next != null) ...[
+              const SizedBox(width: DT.spaceSm),
               Expanded(
-                child: PrimaryButton(
-                  compact: true,
-                  label: 'Xem nhóm',
-                  trailingIcon: Icons.arrow_forward_rounded,
-                  onPressed: () => context.push('/groups/${g.groupId}'),
+                child: SecondaryButton(
+                  label: 'Vào phòng chờ',
+                  onPressed: () => context.push('/session/${next.sessionId}'),
                 ),
               ),
             ],
-          ),
+          ],
+        ),
       ],
     );
   }
@@ -198,7 +334,9 @@ class _JoinScreenState extends State<JoinScreen> {
   void _go() {
     final code = _c.text.trim().toUpperCase();
     if (!_re.hasMatch(code)) {
-      setState(() => _err = 'Mã gồm 8 ký tự (chữ in hoa và số, không có I, O, 0, 1).');
+      setState(
+        () => _err = 'Mã gồm 8 ký tự (chữ in hoa và số, không có I, O, 0, 1).',
+      );
       return;
     }
     context.push('/consent/$code');
@@ -212,18 +350,28 @@ class _JoinScreenState extends State<JoinScreen> {
       footer: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          PrimaryButton(label: 'Tiếp tục', trailingIcon: Icons.arrow_forward, onPressed: _go),
+          PrimaryButton(
+            label: 'Tiếp tục',
+            trailingIcon: Icons.arrow_forward,
+            onPressed: _go,
+          ),
           const SizedBox(height: DT.spaceSm),
           Text('Chưa có mã? Hỏi chủ nhóm của bạn.', style: t.bodySmall),
         ],
       ),
       children: [
-        Text('Bước 1/2', style: t.labelLarge!.copyWith(color: DT.textSecondary)),
+        Text(
+          'Bước 1/2',
+          style: t.labelLarge!.copyWith(color: DT.textSecondary),
+        ),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Nhập mã nhóm', style: t.headlineLarge),
-            Text('Nhập mã 8 ký tự do chủ nhóm gửi cho bạn.', style: t.bodyMedium!.copyWith(color: DT.textSecondary)),
+            Text(
+              'Nhập mã 8 ký tự do chủ nhóm gửi cho bạn.',
+              style: t.bodyMedium!.copyWith(color: DT.textSecondary),
+            ),
           ],
         ),
         TextField(
@@ -232,18 +380,28 @@ class _JoinScreenState extends State<JoinScreen> {
           textCapitalization: TextCapitalization.characters,
           textAlign: TextAlign.center,
           maxLength: 8,
-          inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]'))],
-          style: t.headlineMedium!.copyWith(letterSpacing: 8, fontFeatures: DT.tabular),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
+          ],
+          style: t.headlineMedium!.copyWith(
+            letterSpacing: 8,
+            fontFeatures: DT.tabular,
+          ),
           decoration: InputDecoration(
             hintText: 'AB3CD7EF',
-            hintStyle: t.headlineMedium!.copyWith(letterSpacing: 8, color: DT.outlineVariant),
+            hintStyle: t.headlineMedium!.copyWith(
+              letterSpacing: 8,
+              color: DT.outlineVariant,
+            ),
             errorText: _err,
             errorMaxLines: 2,
             counterText: '',
           ),
           onSubmitted: (_) => _go(),
         ),
-        const HintText('Bạn chỉ thuộc 1 nhóm tại một thời điểm. Bước sau là màn đồng ý quy tắc minh bạch.'),
+        const HintText(
+          'Bạn chỉ thuộc 1 nhóm tại một thời điểm. Bước sau là màn đồng ý quy tắc minh bạch.',
+        ),
       ],
     );
   }
@@ -310,12 +468,16 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
         () => _err = switch (a.code) {
           'GROUP_FULL' => 'Nhóm đã đủ 10 thành viên.',
           'ALREADY_IN_GROUP' => a.message,
-          'OWNER_OF_THIS_GROUP' => 'Bạn là chủ nhóm này nên không tham gia làm thành viên.',
-          'CONSENT_VERSION_STALE' => 'Nội dung đồng ý vừa thay đổi. Vui lòng đọc lại.',
+          'OWNER_OF_THIS_GROUP' =>
+            'Bạn là chủ nhóm này nên không tham gia làm thành viên.',
+          'CONSENT_VERSION_STALE' =>
+            'Nội dung đồng ý vừa thay đổi. Vui lòng đọc lại.',
           _ => a.offline ? 'Không có kết nối. Chưa vào nhóm.' : a.message,
         },
       );
-      if (a.code == 'CONSENT_VERSION_STALE') ref.invalidate(invitePreviewProvider(widget.code));
+      if (a.code == 'CONSENT_VERSION_STALE') {
+        ref.invalidate(invitePreviewProvider(widget.code));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -342,24 +504,39 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
             );
           }
           if (a.status == 429) {
-            return StateMessage(icon: Icons.lock_clock, title: 'Tạm khóa nhập mã', body: a.message);
+            return StateMessage(
+              icon: Icons.lock_clock,
+              title: 'Tạm khóa nhập mã',
+              body: a.message,
+            );
           }
-          return ErrorState(error: e, onRetry: () => ref.invalidate(invitePreviewProvider(widget.code)));
+          return ErrorState(
+            error: e,
+            onRetry: () => ref.invalidate(invitePreviewProvider(widget.code)),
+          );
         },
         data: (d) {
-          final requiredOk = d.items.where((i) => i.required).every((i) => _on[i.code] == true);
+          final requiredOk = d.items
+              .where((i) => i.required)
+              .every((i) => _on[i.code] == true);
           // nội dung ngắn hơn màn hình → coi như đã đọc hết
           WidgetsBinding.instance.addPostFrameCallback((_) => _checkEnd());
           return PageList(
             controller: _scroll,
             children: [
-              Text('Bước 2/2 · ${d.groupName}', style: t.labelLarge!.copyWith(color: DT.textSecondary)),
+              Text(
+                'Bước 2/2 · ${d.groupName}',
+                style: t.labelLarge!.copyWith(color: DT.textSecondary),
+              ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(d.groupName, style: t.headlineMedium),
                   if (d.ownerDisplayName != null)
-                    Text('Chủ nhóm: ${d.ownerDisplayName} · ${d.memberCount}/10 thành viên', style: t.bodySmall),
+                    Text(
+                      'Chủ nhóm: ${d.ownerDisplayName} · ${d.memberCount}/10 thành viên',
+                      style: t.bodySmall,
+                    ),
                 ],
               ),
               if (d.reportPurpose != null && d.reportPurpose!.isNotEmpty)
@@ -391,13 +568,15 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                     icon: Icons.logout,
                     iconColor: DT.warning,
                     title: 'Rời app quá 3 giây = rời phiên',
-                    subtitle: 'Khoan hồng 3 giây. Quá 3 giây, tên bạn được báo ngay cho cả nhóm.',
+                    subtitle:
+                        'Khoan hồng 3 giây. Quá 3 giây, tên bạn được báo ngay cho cả nhóm.',
                   ),
                   InfoRow(
                     icon: Icons.group_off_outlined,
                     iconColor: DT.warning,
                     title: 'Cả phiên mất thưởng',
-                    subtitle: 'Phiên vẫn chạy đến hết giờ, nhưng mọi người trong phiên mất Coins của phiên.',
+                    subtitle:
+                        'Phiên vẫn chạy đến hết giờ, nhưng mọi người trong phiên mất Coins của phiên.',
                   ),
                   InfoRow(
                     icon: Icons.screen_lock_portrait_outlined,
@@ -407,7 +586,11 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                   ),
                 ],
               ),
-              if (d.isFull) const AppBanner(tone: BannerTone.danger, text: 'Nhóm đã đủ 10 thành viên.'),
+              if (d.isFull)
+                const AppBanner(
+                  tone: BannerTone.danger,
+                  text: 'Nhóm đã đủ 10 thành viên.',
+                ),
               AppCard(
                 padding: const EdgeInsets.symmetric(vertical: DT.spaceSm),
                 gap: 0,
@@ -415,31 +598,47 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                   for (final it in d.items)
                     SwitchListTile(
                       key: Key('consent_${it.code}'),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: DT.spaceMd),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: DT.spaceMd,
+                      ),
                       value: _on[it.code] ?? false,
                       onChanged: (v) => setState(() => _on[it.code] = v),
                       title: Text(it.text, style: t.bodyMedium),
                       subtitle: it.required
-                          ? Text('Bắt buộc', style: t.labelMedium!.copyWith(color: DT.accent))
+                          ? Text(
+                              'Bắt buộc',
+                              style: t.labelMedium!.copyWith(color: DT.accent),
+                            )
                           : Text('Không bắt buộc', style: t.bodySmall),
                     ),
                 ],
               ),
               if (_err != null) AppBanner(tone: BannerTone.danger, text: _err!),
               if (!_readToEnd)
-                const HintText('Cuộn đến cuối để đọc hết nội dung trước khi đồng ý.', key: Key('consentScrollHint')),
+                const HintText(
+                  'Cuộn đến cuối để đọc hết nội dung trước khi đồng ý.',
+                  key: Key('consentScrollHint'),
+                ),
               FilledButton(
                 key: const Key('acceptConsent'),
-                onPressed: requiredOk && _readToEnd && !_busy && !d.isFull ? () => _accept(d) : null,
+                onPressed: requiredOk && _readToEnd && !_busy && !d.isFull
+                    ? () => _accept(d)
+                    : null,
                 child: _busy
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Text('Đồng ý và vào nhóm'),
               ),
-              SecondaryButton(label: 'Không đồng ý', onPressed: () => context.go('/groups')),
+              SecondaryButton(
+                label: 'Không đồng ý',
+                onPressed: () => context.go('/groups'),
+              ),
             ],
           );
         },
@@ -469,12 +668,18 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
       _err = null;
     });
     try {
-      final g = await ref.read(apiProvider).createGroup(_name.text.trim(), _purpose.text.trim());
+      final g = await ref
+          .read(apiProvider)
+          .createGroup(_name.text.trim(), _purpose.text.trim());
       ref.invalidate(myGroupsProvider);
-      if (mounted) context.pushReplacement('/groups/${g['group_id']}/invite');
+      if (mounted) context.pushReplacement('/groups/${g['group_id']}');
     } catch (e) {
       final a = ApiError.from(e);
-      setState(() => _err = a.code == 'MAX_GROUPS_OWNED' ? 'Bạn đã đạt số nhóm tối đa được làm chủ.' : a.message);
+      setState(
+        () => _err = a.code == 'MAX_GROUPS_OWNED'
+            ? 'Bạn đã đạt số nhóm tối đa được làm chủ.'
+            : a.message,
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -482,13 +687,23 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
   @override
   Widget build(BuildContext context) => AppScaffold(
-    header: const AppHeader.back(title: 'Tạo nhóm', leading: HeaderLeading.close),
-    footer: PrimaryButton(label: 'Tạo nhóm', loading: _busy, onPressed: _submit),
+    header: const AppHeader.back(
+      title: 'Tạo nhóm',
+      leading: HeaderLeading.close,
+    ),
+    footer: PrimaryButton(
+      label: 'Tạo nhóm',
+      loading: _busy,
+      onPressed: _submit,
+    ),
     body: Form(
       key: _form,
       child: PageList(
         children: [
-          const HintText('Bạn là chủ nhóm, không tham gia phiên. Nhóm có tối đa 10 thành viên.', icon: null),
+          const HintText(
+            'Bạn là chủ nhóm, không tham gia phiên. Nhóm có tối đa 10 thành viên.',
+            icon: null,
+          ),
           AppCard(
             gap: DT.spaceSm,
             children: [
@@ -497,7 +712,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                 controller: _name,
                 maxLength: 60,
                 decoration: inCardInput(hint: 'VD: Nhóm Thiết kế'),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Nhập tên nhóm' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Nhập tên nhóm' : null,
               ),
             ],
           ),
@@ -509,8 +725,12 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                 controller: _purpose,
                 maxLength: 500,
                 maxLines: 4,
-                decoration: inCardInput(helper: 'Thành viên đọc mục này ở màn đồng ý.'),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Nhập mục đích sử dụng báo cáo' : null,
+                decoration: inCardInput(
+                  helper: 'Thành viên đọc mục này ở màn đồng ý.',
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Nhập mục đích sử dụng báo cáo'
+                    : null,
               ),
             ],
           ),
@@ -533,13 +753,19 @@ class GroupDetailScreen extends ConsumerWidget {
     final g = groups.value?.where((x) => x.groupId == groupId).firstOrNull;
     final isOwner = g?.isOwner ?? false;
     final members = ref.watch(membersProvider(groupId));
-    final frames = {for (final s in ref.watch(shopItemsProvider).value ?? const <ShopItem>[]) s.itemId: s.previewKey};
+    final frames = {
+      for (final s in ref.watch(shopItemsProvider).value ?? const <ShopItem>[])
+        s.itemId: s.previewKey,
+    };
     final t = context.text;
     Future<void> refresh() async {
       ref.invalidate(membersProvider(groupId));
       ref.invalidate(schedulesProvider(groupId));
+      ref.invalidate(groupSchedulePageProvider);
       ref.invalidate(myGroupsProvider);
-      await ref.read(membersProvider(groupId).future).catchError((_) => GroupMembers.fromJson(const {}));
+      await ref
+          .read(membersProvider(groupId).future)
+          .catchError((_) => GroupMembers.fromJson(const {}));
     }
 
     if (members.hasError && isGroupAccessLost(members.error!)) {
@@ -549,24 +775,28 @@ class GroupDetailScreen extends ConsumerWidget {
           key: const Key('groupAccessLost'),
           icon: Icons.group_off_outlined,
           title: 'Bạn không còn trong nhóm này',
-          body: 'Quyền truy cập nhóm đã kết thúc. Lịch sử học cá nhân của bạn vẫn được giữ lại.',
+          body:
+              'Quyền truy cập nhóm đã kết thúc. Lịch sử học cá nhân của bạn vẫn được giữ lại.',
           action: 'Về danh sách nhóm',
           onAction: () {
             ref.invalidate(myGroupsProvider);
             ref.invalidate(upcomingProvider);
             ref.invalidate(membersProvider(groupId));
             ref.invalidate(schedulesProvider(groupId));
+            ref.invalidate(groupSchedulePageProvider);
             context.go('/groups');
           },
         ),
       );
     }
     return AppScaffold(
-      header: isOwner ? const AppHeader.back(title: 'Chi tiết nhóm') : AppHeader.brand(
-        caption: isOwner ? 'Chủ nhóm' : 'Thành viên',
-        title: g?.name ?? 'Nhóm',
-        leading: HeaderLeading.back,
-      ),
+      header: isOwner
+          ? const AppHeader.back(title: 'Chi tiết nhóm')
+          : AppHeader.brand(
+              caption: isOwner ? 'Chủ nhóm' : 'Thành viên',
+              title: g?.name ?? 'Nhóm',
+              leading: HeaderLeading.back,
+            ),
       body: AsyncBody<GroupMembers>(
         value: members,
         onRetry: refresh,
@@ -579,22 +809,53 @@ class GroupDetailScreen extends ConsumerWidget {
                 radius: DT.radiusLg,
                 gap: DT.spaceMd,
                 children: [
-                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Container(width: 48, height: 48,
-                      decoration: BoxDecoration(color: DT.accentSoftBg, borderRadius: BorderRadius.circular(16)),
-                      child: const Icon(Icons.groups_outlined, color: DT.accent, size: 26)),
-                    const SizedBox(width: DT.spaceSm),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(g?.name ?? 'Nhóm', style: t.headlineMedium),
-                      const SizedBox(height: DT.spaceXs),
-                      Text('${m.memberCount}/10 thành viên', style: t.bodySmall!.copyWith(color: OwnerStyle.muted)),
-                    ])),
-                  ]),
-                  Wrap(spacing: 8, runSpacing: 8, children: [
-                    const StatusBadge('Chủ nhóm', tone: BadgeTone.accent),
-                    StatusBadge(groupStatusText(g?.status ?? 'ACTIVE'),
-                      tone: g?.status == null || g?.status == 'ACTIVE' ? BadgeTone.success : BadgeTone.danger),
-                  ]),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: DT.accentSoftBg,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(
+                          Icons.groups_outlined,
+                          color: DT.accent,
+                          size: 26,
+                        ),
+                      ),
+                      const SizedBox(width: DT.spaceSm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(g?.name ?? 'Nhóm', style: t.headlineMedium),
+                            const SizedBox(height: DT.spaceXs),
+                            Text(
+                              '${m.memberCount}/10 thành viên',
+                              style: t.bodySmall!.copyWith(
+                                color: OwnerStyle.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      const StatusBadge('Chủ nhóm', tone: BadgeTone.accent),
+                      StatusBadge(
+                        groupStatusText(g?.status ?? 'ACTIVE'),
+                        tone: g?.status == null || g?.status == 'ACTIVE'
+                            ? BadgeTone.success
+                            : BadgeTone.danger,
+                      ),
+                    ],
+                  ),
                 ],
               ),
               Row(
@@ -612,7 +873,8 @@ class GroupDetailScreen extends ConsumerWidget {
                       compact: true,
                       icon: Icons.event,
                       label: 'Đặt lịch',
-                      onPressed: () => context.push('/groups/$groupId/schedule'),
+                      onPressed: () =>
+                          context.push('/groups/$groupId/schedule'),
                     ),
                   ),
                 ],
@@ -626,12 +888,18 @@ class GroupDetailScreen extends ConsumerWidget {
                     icon: Icons.analytics_outlined,
                     title: 'Báo cáo nhóm',
                     subtitle: 'Xem kết quả theo tháng của nhóm này.',
-                    trailing: Icon(Icons.chevron_right, color: DT.textSecondary),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: DT.textSecondary,
+                    ),
                   ),
                 ],
               ),
               if (m.belowMinimum)
-                const AppBanner(tone: BannerTone.accent, text: 'Nhóm dưới 4 thành viên — nên mời thêm.'),
+                const AppBanner(
+                  tone: BannerTone.accent,
+                  text: 'Nhóm dưới 4 thành viên — nên mời thêm.',
+                ),
             ],
             AppCard(
               radius: isOwner ? DT.radiusLg : DT.radiusCard,
@@ -639,21 +907,29 @@ class GroupDetailScreen extends ConsumerWidget {
               children: [
                 SectionHeader(
                   'Thành viên (${m.memberCount}/10)',
-                  subtitle: isOwner ? 'Danh sách theo tên A–Z' : 'Sắp theo tên A→Z. Không hiện chuỗi, Coins hay trạng thái trực tuyến.',
+                  subtitle: isOwner
+                      ? 'Danh sách theo tên A–Z'
+                      : 'Sắp theo tên A→Z. Không hiện chuỗi, Coins hay trạng thái trực tuyến.',
                 ),
                 if (m.owner != null)
                   MemberTile(
                     name: m.owner!.displayName,
                     leading: memberAvatar(m.owner!, frames),
                     subtitle: 'Chủ nhóm',
-                    trailing: StatusBadge('Chủ nhóm', tone: isOwner ? BadgeTone.accent : BadgeTone.dark),
+                    trailing: StatusBadge(
+                      'Chủ nhóm',
+                      tone: isOwner ? BadgeTone.accent : BadgeTone.dark,
+                    ),
                     onTap: () => context.push('/users/${m.owner!.userId}'),
                     divider: m.members.isNotEmpty,
                   ),
                 if (m.members.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: DT.spaceSm),
-                    child: Text('Chưa có thành viên nào.', style: t.bodyMedium!.copyWith(color: DT.textSecondary)),
+                    child: Text(
+                      'Chưa có thành viên nào.',
+                      style: t.bodyMedium!.copyWith(color: DT.textSecondary),
+                    ),
                   ),
                 for (var i = 0; i < m.members.length; i++)
                   MemberTile(
@@ -667,13 +943,29 @@ class GroupDetailScreen extends ConsumerWidget {
                         ? IconButton(
                             key: Key('remove_${m.members[i].userId}'),
                             tooltip: 'Xóa khỏi nhóm',
-                            icon: const Icon(Icons.person_remove_outlined, color: DT.textSecondary),
-                            onPressed: () => removeMemberFlow(context, ref, groupId, m.members[i], g?.name ?? 'nhóm'),
+                            icon: const Icon(
+                              Icons.person_remove_outlined,
+                              color: DT.textSecondary,
+                            ),
+                            onPressed: () => removeMemberFlow(
+                              context,
+                              ref,
+                              groupId,
+                              m.members[i],
+                              g?.name ?? 'nhóm',
+                            ),
                           )
                         : null,
                   ),
               ],
             ),
+            if (!isOwner && g?.status == 'ACTIVE')
+              SecondaryButton(
+                key: const Key('memberInvite'),
+                icon: Icons.qr_code_2,
+                label: 'Mời thành viên',
+                onPressed: () => context.push('/groups/$groupId/invite'),
+              ),
             if (!isOwner)
               AppCard(
                 onTap: () => context.push('/reports/$groupId'),
@@ -682,10 +974,15 @@ class GroupDetailScreen extends ConsumerWidget {
                     icon: Icons.analytics_outlined,
                     title: 'Báo cáo của tôi',
                     subtitle: 'Dòng báo cáo tháng chủ nhóm thấy về bạn.',
-                    trailing: Icon(Icons.chevron_right, color: DT.textSecondary),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: DT.textSecondary,
+                    ),
                   ),
                 ],
               ),
+            if (isOwner)
+              DeleteGroupButton(groupId: groupId, groupName: g?.name ?? 'nhóm'),
             if (!isOwner)
               SecondaryButton(
                 label: 'Rút đồng ý và rời nhóm',
@@ -700,13 +997,19 @@ class GroupDetailScreen extends ConsumerWidget {
 }
 
 /// Avatar có khung đang trang bị (AC-07.04.1) — màu khung theo món Shop; không có/khung mặc định → viền đen.
-Widget memberAvatar(PublicUser u, Map<String, String> frames, {double size = 40}) {
+Widget memberAvatar(
+  PublicUser u,
+  Map<String, String> frames, {
+  double size = 40,
+}) {
   final key = u.frameItemId == null ? null : frames[u.frameItemId];
   return FramedAvatar(
     name: u.displayName,
     imageUrl: u.avatarUrl == null ? null : fixHost(u.avatarUrl!),
     frameKey: key,
-    frameColor: key == null || key.startsWith('default') ? null : previewColor(key),
+    frameColor: key == null || key.startsWith('default')
+        ? null
+        : previewColor(key),
     size: size,
   );
 }
@@ -757,64 +1060,256 @@ Future<void> removeMemberFlow(
       ref.invalidate(myGroupsProvider);
     }
     if (context.mounted) {
-      showSnack(context, a.code == 'CANNOT_REMOVE_SELF'
-          ? 'Không thể tự xóa mình. Dùng “Giải tán nhóm”.'
-          : accessChanged ? 'Quyền quản lý nhóm đã thay đổi. Vui lòng tải lại nhóm.' : a.message);
+      showSnack(
+        context,
+        a.code == 'CANNOT_REMOVE_SELF'
+            ? 'Không thể tự xóa mình. Dùng “Giải tán nhóm”.'
+            : accessChanged
+            ? 'Quyền quản lý nhóm đã thay đổi. Vui lòng tải lại nhóm.'
+            : a.message,
+      );
     }
   }
 }
 
-class _OwnerSessions extends ConsumerWidget {
+typedef GroupSchedulePageKey = ({String groupId, String? cursor});
+final groupSchedulePageProvider = FutureProvider.autoDispose
+    .family<
+      ({List<SessionSummary> items, String? nextCursor}),
+      GroupSchedulePageKey
+    >(
+      (ref, key) => ref
+          .watch(apiProvider)
+          .schedulesPage(key.groupId, cursor: key.cursor, limit: 5),
+    );
+
+class _OwnerSessions extends ConsumerStatefulWidget {
   const _OwnerSessions({required this.groupId});
   final String groupId;
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final s = ref.watch(schedulesProvider(groupId));
+  ConsumerState<_OwnerSessions> createState() => _OwnerSessionsState();
+}
+
+class _OwnerSessionsState extends ConsumerState<_OwnerSessions> {
+  final List<String?> _cursors = [null];
+  int _page = 0;
+  Timer? _refresh;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh = Timer.periodic(const Duration(seconds: 15), (_) {
+      ref.invalidate(
+        groupSchedulePageProvider((
+          groupId: widget.groupId,
+          cursor: _cursors[_page],
+        )),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _refresh?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final key = (groupId: widget.groupId, cursor: _cursors[_page]);
+    final s = ref.watch(groupSchedulePageProvider(key));
     final t = context.text;
     return AppCard(
       radius: DT.radiusLg,
       gap: DT.spaceMd,
       children: [
-        Row(children: [
-          const Icon(Icons.calendar_today_outlined, size: 20, color: DT.accent),
-          const SizedBox(width: DT.spaceSm),
-          Text('Lịch phiên', style: t.headlineSmall),
-        ]),
+        Row(
+          children: [
+            const Icon(
+              Icons.calendar_today_outlined,
+              size: 20,
+              color: DT.accent,
+            ),
+            const SizedBox(width: DT.spaceSm),
+            Expanded(child: Text('Lịch phiên', style: t.headlineSmall)),
+            const SizedBox(width: DT.spaceSm),
+            Flexible(
+              child: Text(
+                '5 phiên / trang',
+                style: t.bodySmall,
+                textAlign: TextAlign.end,
+              ),
+            ),
+          ],
+        ),
         s.when(
-          loading: () => const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: LinearProgressIndicator()),
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: LinearProgressIndicator(),
+          ),
           error: (e, _) => Row(
             children: [
               Expanded(
                 child: Text(
-                  ApiError.from(e).offline ? 'Không có kết nối mạng.' : 'Chưa tải được lịch.',
+                  ApiError.from(e).offline
+                      ? 'Không có kết nối mạng.'
+                      : 'Chưa tải được lịch.',
                   style: t.bodyMedium!.copyWith(color: DT.textSecondary),
                 ),
               ),
-              LinkButton(label: 'Thử lại', onPressed: () => ref.invalidate(schedulesProvider(groupId))),
+              LinkButton(
+                label: 'Thử lại',
+                onPressed: () => ref.invalidate(groupSchedulePageProvider(key)),
+              ),
             ],
           ),
-          data: (list) => list.isEmpty
-              ? Text(
-                  'Chưa có lịch. Bấm "Đặt lịch" để tạo phiên.',
+          data: (page) => Column(
+            children: [
+              if (page.items.isEmpty)
+                Text(
+                  _page == 0
+                      ? 'Chưa có lịch. Bấm "Đặt lịch" để tạo phiên.'
+                      : 'Không còn phiên ở trang này.',
                   style: t.bodyMedium!.copyWith(color: DT.textSecondary),
-                )
-              : Column(
+                ),
+              for (var i = 0; i < page.items.length; i++)
+                ListRow(
+                  key: Key('groupSession-${page.items[i].sessionId}'),
+                  title:
+                      '${dayLabel(page.items[i].startedAt)} ${hhmm(page.items[i].startedAt)} · ${page.items[i].durationMin} phút',
+                  subtitle:
+                      page.items[i].status == 'CANCELLED' &&
+                          page.items[i].cancelReason == 'NO_ATTENDEE'
+                      ? 'Không có thành viên vào phòng chờ'
+                      : page.items[i].forfeited
+                      ? 'Có người thoát · cả phiên mất thưởng'
+                      : null,
+                  divider: i < page.items.length - 1,
+                  trailing: StatusBadge(
+                    sessionStatusText(page.items[i].status),
+                    tone: sessionStatusTone(page.items[i]),
+                  ),
+                  onTap: () => context.push(
+                    '/owner/sessions/${page.items[i].sessionId}',
+                  ),
+                ),
+              if (_page > 0 || page.nextCursor != null) ...[
+                const SizedBox(height: DT.spaceSm),
+                Row(
                   children: [
-                    for (var i = 0; i < list.length; i++)
-                      ListRow(
-                        title:
-                            '${dayLabel(list[i].startedAt)} ${hhmm(list[i].startedAt)} · ${list[i].durationMin} phút',
-                        subtitle: list[i].forfeited ? 'Có người thoát · cả phiên mất thưởng' : null,
-                        divider: i < list.length - 1,
-                        trailing: StatusBadge(sessionStatusText(list[i].status), tone: sessionStatusTone(list[i])),
-                        onTap: () => context.push('/owner/sessions/${list[i].sessionId}'),
+                    Expanded(
+                      child: SecondaryButton(
+                        key: const Key('sessionsPrevious'),
+                        label: 'Trước',
+                        icon: Icons.chevron_left,
+                        onPressed: _page == 0
+                            ? null
+                            : () => setState(() => _page--),
                       ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DT.spaceSm,
+                      ),
+                      child: Text('Trang ${_page + 1}', style: t.labelMedium),
+                    ),
+                    Expanded(
+                      child: SecondaryButton(
+                        key: const Key('sessionsNext'),
+                        label: 'Sau',
+                        trailingIcon: Icons.chevron_right,
+                        onPressed: page.nextCursor == null
+                            ? null
+                            : () => setState(() {
+                                _cursors.removeRange(
+                                  _page + 1,
+                                  _cursors.length,
+                                );
+                                _cursors.add(page.nextCursor);
+                                _page++;
+                              }),
+                      ),
+                    ),
                   ],
                 ),
+              ],
+            ],
+          ),
         ),
       ],
     );
   }
+}
+
+class DeleteGroupButton extends ConsumerStatefulWidget {
+  const DeleteGroupButton({
+    super.key,
+    required this.groupId,
+    required this.groupName,
+  });
+  final String groupId;
+  final String groupName;
+  @override
+  ConsumerState<DeleteGroupButton> createState() => _DeleteGroupButtonState();
+}
+
+class _DeleteGroupButtonState extends ConsumerState<DeleteGroupButton> {
+  bool _busy = false;
+  bool _confirming = false;
+  Future<void> _delete() async {
+    if (_busy || _confirming) return;
+    _confirming = true;
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Xóa nhóm ${widget.groupName}?',
+      bullets: const [
+        'Nhóm được lưu trữ; thành viên không còn truy cập nhóm.',
+        'Các phiên chưa diễn ra sẽ bị hủy. Không thể xóa khi có phiên đang diễn ra.',
+        'Lịch sử học và kết quả đã ghi nhận vẫn được giữ lại.',
+      ],
+      confirmLabel: 'Xóa nhóm',
+      cancelLabel: 'Giữ nhóm',
+      destructive: true,
+      confirmKey: const Key('confirmDeleteGroup'),
+    );
+    _confirming = false;
+    if (!mounted || !confirmed) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(apiProvider).deleteGroup(widget.groupId);
+      ref.invalidate(myGroupsProvider);
+      ref.invalidate(upcomingProvider);
+      ref.invalidate(membersProvider(widget.groupId));
+      ref.invalidate(schedulesProvider(widget.groupId));
+      ref.invalidate(groupSchedulePageProvider);
+      if (mounted) {
+        showSnack(context, 'Đã xóa nhóm. Lịch sử học được giữ lại.');
+        context.go('/groups');
+      }
+    } catch (e) {
+      if (mounted) {
+        final a = ApiError.from(e);
+        showSnack(
+          context,
+          a.code == 'SESSION_IN_PROGRESS'
+              ? 'Nhóm đang có phiên diễn ra. Hãy thử lại sau khi phiên kết thúc.'
+              : a.message,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => SecondaryButton(
+    key: const Key('deleteGroup'),
+    label: 'Xóa nhóm',
+    icon: Icons.delete_outline,
+    destructive: true,
+    loading: _busy,
+    onPressed: _busy ? null : _delete,
+  );
 }
 
 String groupStatusText(String s) => switch (s) {
@@ -840,6 +1335,10 @@ BadgeTone sessionStatusTone(SessionSummary s) => switch (s.status) {
   _ => BadgeTone.neutral,
 };
 
+String groupInviteUrl(String code) => Uri.parse(
+  Env.baseUrl,
+).replace(fragment: '/consent/${Uri.encodeComponent(code)}').toString();
+
 /// V-43 Mời thành viên (mã mời).
 class InviteScreen extends ConsumerWidget {
   const InviteScreen({super.key, required this.groupId});
@@ -847,6 +1346,12 @@ class InviteScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final code = ref.watch(inviteCodeProvider(groupId));
+    final isOwner =
+        ref
+            .watch(myGroupsProvider)
+            .value
+            ?.any((g) => g.groupId == groupId && g.isOwner) ??
+        false;
     final t = context.text;
     return AppScaffold(
       header: const AppHeader.back(title: 'Mời thành viên'),
@@ -863,11 +1368,41 @@ class InviteScreen extends ConsumerWidget {
                   textAlign: TextAlign.center,
                   style: t.labelLarge!.copyWith(color: DT.textSecondary),
                 ),
+                Center(
+                  child: Semantics(
+                    label: 'Mã QR mời tham gia nhóm',
+                    image: true,
+                    child: QrImageView(
+                      key: const Key('inviteQr'),
+                      semanticsLabel: 'Mời tham gia nhóm: ${groupInviteUrl(c)}',
+                      data: groupInviteUrl(c),
+                      size: 220,
+                      backgroundColor: Colors.white,
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: Colors.black,
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+                Text(
+                  'Quét mã QR hoặc nhập mã bên dưới để tham gia.',
+                  textAlign: TextAlign.center,
+                  style: t.bodySmall,
+                ),
                 SelectableText(
                   c,
                   key: const Key('inviteCode'),
                   textAlign: TextAlign.center,
-                  style: t.headlineLarge!.copyWith(fontSize: 34, letterSpacing: 6, fontFeatures: DT.tabular),
+                  style: t.headlineLarge!.copyWith(
+                    fontSize: 34,
+                    letterSpacing: 6,
+                    fontFeatures: DT.tabular,
+                  ),
                 ),
                 Text(
                   'Mã gồm 8 ký tự. Gửi cho thành viên qua kênh nội bộ.',
@@ -880,30 +1415,47 @@ class InviteScreen extends ConsumerWidget {
               icon: Icons.copy,
               label: 'Chép mã',
               onPressed: () {
-                Clipboard.setData(ClipboardData(text: 'Tham gia nhóm trên DropIt! bằng mã: $c'));
+                Clipboard.setData(
+                  ClipboardData(text: 'Tham gia nhóm trên DropIt! bằng mã: $c'),
+                );
                 showSnack(context, 'Đã chép mã mời.');
               },
             ),
             SecondaryButton(
-              icon: Icons.refresh,
-              label: 'Đổi mã',
-              onPressed: () async {
-                final ok = await showConfirmDialog(
-                  context,
-                  title: 'Đổi mã mời?',
-                  message: 'Mã cũ hết hiệu lực ngay.',
-                  confirmLabel: 'Đổi mã',
-                );
-                if (!ok) return;
-                try {
-                  await ref.read(apiProvider).rotateInviteCode(groupId);
-                  ref.invalidate(inviteCodeProvider(groupId));
-                } catch (e) {
-                  if (context.mounted) showSnack(context, ApiError.from(e).message);
-                }
+              key: const Key('copyInviteLink'),
+              icon: Icons.link,
+              label: 'Chép link nhóm',
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: groupInviteUrl(c)));
+                showSnack(context, 'Đã chép link nhóm.');
               },
             ),
-            const HintText('Người nhận mã đọc và đồng ý quy tắc trước khi vào nhóm. Nhóm tối đa 10 thành viên.'),
+            if (isOwner)
+              SecondaryButton(
+                key: const Key('rotateInviteCode'),
+                icon: Icons.refresh,
+                label: 'Đổi mã',
+                onPressed: () async {
+                  final ok = await showConfirmDialog(
+                    context,
+                    title: 'Đổi mã mời?',
+                    message: 'Mã cũ hết hiệu lực ngay.',
+                    confirmLabel: 'Đổi mã',
+                  );
+                  if (!ok) return;
+                  try {
+                    await ref.read(apiProvider).rotateInviteCode(groupId);
+                    ref.invalidate(inviteCodeProvider(groupId));
+                  } catch (e) {
+                    if (context.mounted) {
+                      showSnack(context, ApiError.from(e).message);
+                    }
+                  }
+                },
+              ),
+            const HintText(
+              'Người nhận mã đọc và đồng ý quy tắc trước khi vào nhóm. Nhóm tối đa 10 thành viên.',
+            ),
           ],
         ),
       ),
@@ -911,7 +1463,87 @@ class InviteScreen extends ConsumerWidget {
   }
 }
 
-/// V-44 Đặt lịch một lần (25/50 phút). Mockup: `schedule_focus`.
+/// Integer minute input shared by create and edit. Presets are shortcuts, not restrictions.
+class SessionDurationInput extends StatefulWidget {
+  const SessionDurationInput({
+    super.key,
+    required this.initialValue,
+    required this.onChanged,
+    this.enabled = true,
+  });
+  final int initialValue;
+  final ValueChanged<int?> onChanged;
+  final bool enabled;
+  @override
+  State<SessionDurationInput> createState() => _SessionDurationInputState();
+}
+
+class _SessionDurationInputState extends State<SessionDurationInput> {
+  late final TextEditingController _controller;
+  String? _error;
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: '${widget.initialValue}');
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _change(String text) {
+    final value = int.tryParse(text);
+    final valid = value != null && value >= 1 && value <= 240;
+    setState(() => _error = valid ? null : 'Nhập số phút từ 1 đến 240.');
+    widget.onChanged(valid ? value : null);
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final minutes in [25, 50])
+            FilterChipPill(
+              label: '$minutes phút',
+              selected: _controller.text == '$minutes',
+              onTap: !widget.enabled
+                  ? null
+                  : () {
+                      _controller.text = '$minutes';
+                      _change('$minutes');
+                    },
+            ),
+        ],
+      ),
+      const SizedBox(height: DT.spaceSm),
+      TextField(
+        key: const Key('sessionDurationMinutes'),
+        controller: _controller,
+        enabled: widget.enabled,
+        keyboardType: TextInputType.number,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(3),
+        ],
+        decoration: InputDecoration(
+          labelText: 'Số phút',
+          suffixText: 'phút',
+          helperText: 'Tùy chọn từ 1 đến 240 phút',
+          errorText: _error,
+        ),
+        onChanged: _change,
+      ),
+    ],
+  );
+}
+
+/// V-44 Đặt lịch một lần (1–240 phút). Mockup: `schedule_focus`.
 class ScheduleScreen extends ConsumerStatefulWidget {
   const ScheduleScreen({super.key, required this.groupId});
   final String groupId;
@@ -920,7 +1552,7 @@ class ScheduleScreen extends ConsumerStatefulWidget {
 }
 
 class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
-  int _dur = 25;
+  int? _dur = 25;
   late DateTime _date;
   late TimeOfDay _time;
   bool _busy = false;
@@ -945,10 +1577,19 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   String _ymd(DateTime d) => '${d.year}-${two(d.month)}-${two(d.day)}';
 
   /// Giờ đã chọn hiểu là giờ Việt Nam → UTC.
-  DateTime get _startUtc =>
-      DateTime.utc(_date.year, _date.month, _date.day, _time.hour, _time.minute).subtract(const Duration(hours: 7));
+  DateTime get _startUtc => DateTime.utc(
+    _date.year,
+    _date.month,
+    _date.day,
+    _time.hour,
+    _time.minute,
+  ).subtract(const Duration(hours: 7));
 
   Future<void> _submit() async {
+    if (_dur == null) {
+      setState(() => _err = 'Nhập thời lượng từ 1 đến 240 phút.');
+      return;
+    }
     if (_startUtc.isBefore(DateTime.now().toUtc())) {
       setState(() => _err = 'Giờ bắt đầu phải ở tương lai.');
       return;
@@ -975,11 +1616,20 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
       if (_repeat) {
         await ref
             .read(apiProvider)
-            .createRecurringSchedule(widget.groupId, _startUtc, _dur, (_weekdays.toList()..sort()), _ymd(_endDate));
+            .createRecurringSchedule(
+              widget.groupId,
+              _startUtc,
+              _dur!,
+              (_weekdays.toList()..sort()),
+              _ymd(_endDate),
+            );
       } else {
-        await ref.read(apiProvider).createSchedule(widget.groupId, _startUtc, _dur);
+        await ref
+            .read(apiProvider)
+            .createSchedule(widget.groupId, _startUtc, _dur!);
       }
       ref.invalidate(schedulesProvider(widget.groupId));
+      ref.invalidate(groupSchedulePageProvider);
       ref.invalidate(myGroupsProvider);
       if (mounted) {
         showSnack(context, 'Đã đặt lịch.');
@@ -991,9 +1641,13 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
         () => _err = switch (a.code) {
           'SCHEDULE_OVERLAP' => 'Trùng giờ với một phiên khác của nhóm.',
           'START_IN_PAST' => 'Giờ bắt đầu phải ở tương lai.',
-          'DURATION_OUT_OF_RANGE' => 'Chỉ chọn 25 hoặc 50 phút.',
-          'VALIDATION_FAILED' when _repeat => 'Lịch lặp tối đa 12 tuần. ${a.message}',
-          _ => a.offline ? 'Không có kết nối. Chưa đặt lịch — thử lại.' : a.message,
+          'DURATION_OUT_OF_RANGE' => 'Nhập thời lượng từ 1 đến 240 phút.',
+          'VALIDATION_FAILED' when _repeat =>
+            'Lịch lặp tối đa 12 tuần. ${a.message}',
+          _ =>
+            a.offline
+                ? 'Không có kết nối. Chưa đặt lịch — thử lại.'
+                : a.message,
         },
       );
     } finally {
@@ -1004,21 +1658,45 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     final t = context.text;
-    final g = ref.watch(myGroupsProvider).value?.where((x) => x.groupId == widget.groupId).firstOrNull;
+    final g = ref
+        .watch(myGroupsProvider)
+        .value
+        ?.where((x) => x.groupId == widget.groupId)
+        .firstOrNull;
     return AppScaffold(
-      header: const AppHeader.back(title: 'Đặt lịch phiên', leading: HeaderLeading.close),
-      footer: PrimaryButton(label: 'Lưu lịch', loading: _busy, onPressed: _submit),
+      header: const AppHeader.back(
+        title: 'Đặt lịch phiên',
+        leading: HeaderLeading.close,
+      ),
+      footer: PrimaryButton(
+        label: 'Lưu lịch',
+        loading: _busy,
+        onPressed: _submit,
+      ),
       children: [
-        Text('Dành cho chủ nhóm. Chủ nhóm không tham gia phiên.', style: t.bodySmall),
+        Text(
+          'Dành cho chủ nhóm. Chủ nhóm không tham gia phiên.',
+          style: t.bodySmall,
+        ),
         AppCard(
           gap: DT.spaceMd,
           children: [
-            if (g != null) InfoRow(icon: Icons.groups_outlined, title: g.name, subtitle: '${g.memberCount} thành viên'),
+            if (g != null)
+              InfoRow(
+                icon: Icons.groups_outlined,
+                title: g.name,
+                subtitle: '${g.memberCount} thành viên',
+              ),
             InfoRow(
               icon: Icons.calendar_today_outlined,
-              title: 'Ngày: ${two(_date.day)}/${two(_date.month)}/${_date.year}',
+              title:
+                  'Ngày: ${two(_date.day)}/${two(_date.month)}/${_date.year}',
               subtitle: 'Chạm để đổi ngày',
-              trailing: const Icon(Icons.edit_outlined, size: 18, color: DT.textSecondary),
+              trailing: const Icon(
+                Icons.edit_outlined,
+                size: 18,
+                color: DT.textSecondary,
+              ),
               onTap: () async {
                 final d = await showDatePicker(
                   context: context,
@@ -1032,10 +1710,18 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
             InfoRow(
               icon: Icons.schedule,
               title: 'Giờ bắt đầu: ${two(_time.hour)}:${two(_time.minute)}',
-              subtitle: 'Giờ Việt Nam. Thành viên nhận thông báo nhắc trước giờ phiên.',
-              trailing: const Icon(Icons.edit_outlined, size: 18, color: DT.textSecondary),
+              subtitle:
+                  'Giờ Việt Nam. Thành viên nhận thông báo nhắc trước giờ phiên.',
+              trailing: const Icon(
+                Icons.edit_outlined,
+                size: 18,
+                color: DT.textSecondary,
+              ),
               onTap: () async {
-                final tm = await showTimePicker(context: context, initialTime: _time);
+                final tm = await showTimePicker(
+                  context: context,
+                  initialTime: _time,
+                );
                 if (tm != null) setState(() => _time = tm);
               },
             ),
@@ -1044,16 +1730,15 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
         AppCard(
           children: [
             Text('Thời lượng', style: t.titleMedium),
-            PillToggle<int>(
-              big: true,
-              value: _dur,
-              onChanged: (v) => setState(() => _dur = v),
-              options: const [
-                PillOption(25, '25 phút', caption: '+10 Coins'),
-                PillOption(50, '50 phút', caption: '+25 Coins'),
-              ],
+            SessionDurationInput(
+              initialValue: _dur ?? 25,
+              enabled: !_busy,
+              onChanged: (v) => _dur = v,
             ),
-            Text('Coins cho mỗi thành viên khi cả phiên hoàn thành (không ai rời app).', style: t.bodySmall),
+            Text(
+              'Coins được tính theo thời lượng và kết quả thực tế; tối đa 100 Coins mỗi ngày.',
+              style: t.bodySmall,
+            ),
           ],
         ),
         AppCard(
@@ -1065,11 +1750,18 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Lặp lại hằng tuần', style: t.titleMedium),
-                      Text('Cùng giờ vào các ngày đã chọn, đến ngày kết thúc (tối đa 12 tuần).', style: t.bodySmall),
+                      Text(
+                        'Cùng giờ vào các ngày đã chọn, đến ngày kết thúc (tối đa 12 tuần).',
+                        style: t.bodySmall,
+                      ),
                     ],
                   ),
                 ),
-                Switch(key: const Key('repeatSwitch'), value: _repeat, onChanged: (v) => setState(() => _repeat = v)),
+                Switch(
+                  key: const Key('repeatSwitch'),
+                  value: _repeat,
+                  onChanged: (v) => setState(() => _repeat = v),
+                ),
               ],
             ),
             if (_repeat) ...[
@@ -1083,15 +1775,24 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                       key: Key('wd$i'),
                       label: _wdLabels[i - 1],
                       selected: _weekdays.contains(i),
-                      onTap: () => setState(() => _weekdays.contains(i) ? _weekdays.remove(i) : _weekdays.add(i)),
+                      onTap: () => setState(
+                        () => _weekdays.contains(i)
+                            ? _weekdays.remove(i)
+                            : _weekdays.add(i),
+                      ),
                     ),
                 ],
               ),
               InfoRow(
                 icon: Icons.event_available_outlined,
-                title: 'Kết thúc: ${two(_endDate.day)}/${two(_endDate.month)}/${_endDate.year}',
+                title:
+                    'Kết thúc: ${two(_endDate.day)}/${two(_endDate.month)}/${_endDate.year}',
                 subtitle: 'Chạm để đổi ngày kết thúc',
-                trailing: const Icon(Icons.edit_outlined, size: 18, color: DT.textSecondary),
+                trailing: const Icon(
+                  Icons.edit_outlined,
+                  size: 18,
+                  color: DT.textSecondary,
+                ),
                 onTap: () async {
                   final d = await showDatePicker(
                     context: context,
@@ -1102,7 +1803,10 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                   if (d != null) setState(() => _endDate = d);
                 },
               ),
-              Text('Nếu một buổi trùng phiên khác, cả chuỗi không được tạo.', style: t.bodySmall),
+              Text(
+                'Nếu một buổi trùng phiên khác, cả chuỗi không được tạo.',
+                style: t.bodySmall,
+              ),
             ],
           ],
         ),
@@ -1140,16 +1844,24 @@ class OwnerSessionDetailScreen extends ConsumerWidget {
     final t = context.text;
     Future<void> refresh() async {
       ref.invalidate(ownerDetailProvider(sessionId));
-      await ref.read(ownerDetailProvider(sessionId).future).catchError((_) => SessionOwnerView.fromJson(const {}));
+      await ref
+          .read(ownerDetailProvider(sessionId).future)
+          .catchError((_) => SessionOwnerView.fromJson(const {}));
     }
 
     return AppScaffold(
-      header: const AppHeader.brand(caption: 'Chủ nhóm', title: 'Chi tiết phiên', leading: HeaderLeading.back),
+      header: const AppHeader.brand(
+        caption: 'Chủ nhóm',
+        title: 'Chi tiết phiên',
+        leading: HeaderLeading.back,
+      ),
       body: AsyncBody<SessionOwnerView>(
         value: v,
         onRetry: refresh,
         builder: (d) {
-          final done = d.members.where((m) => m['final_state'] == 'COMPLETED').length;
+          final done = d.members
+              .where((m) => m['final_state'] == 'COMPLETED')
+              .length;
           return PageList(
             onRefresh: refresh,
             children: [
@@ -1162,7 +1874,10 @@ class OwnerSessionDetailScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('${hhmm(d.startedAt)}–${hhmm(d.endsAt)}', style: t.headlineSmall),
+                            Text(
+                              '${hhmm(d.startedAt)}–${hhmm(d.endsAt)}',
+                              style: t.headlineSmall,
+                            ),
                             Text(
                               '${ddmm(d.startedAt)} · ${sessionStatusText(d.status).toLowerCase()}',
                               style: t.bodySmall,
@@ -1171,9 +1886,15 @@ class OwnerSessionDetailScreen extends ConsumerWidget {
                         ),
                       ),
                       if (d.forfeited)
-                        const StatusBadge('Có người thoát', tone: BadgeTone.danger)
+                        const StatusBadge(
+                          'Có người thoát',
+                          tone: BadgeTone.danger,
+                        )
                       else if (d.status == 'COMPLETED')
-                        const StatusBadge('Hoàn thành', tone: BadgeTone.success),
+                        const StatusBadge(
+                          'Hoàn thành',
+                          tone: BadgeTone.success,
+                        ),
                     ],
                   ),
                   if (d.forfeited)
@@ -1183,13 +1904,17 @@ class OwnerSessionDetailScreen extends ConsumerWidget {
                           : 'Phiên đã mất thưởng tập thể do ${d.forfeitTrigger} rời phiên.',
                       style: t.bodyMedium,
                     ),
-                  Text('Cập nhật lúc ${hhmmss(d.fetchedAt)} · kéo xuống để làm mới', style: t.bodySmall),
+                  Text(
+                    'Cập nhật lúc ${hhmmss(d.fetchedAt)} · kéo xuống để làm mới',
+                    style: t.bodySmall,
+                  ),
                   if (d.status == 'SCHEDULED')
                     SecondaryButton(
                       key: const Key('editSession'),
                       icon: Icons.edit_calendar_outlined,
                       label: 'Sửa / hủy lịch',
-                      onPressed: () => context.push('/owner/sessions/$sessionId/edit'),
+                      onPressed: () =>
+                          context.push('/owner/sessions/$sessionId/edit'),
                     ),
                 ],
               ),
@@ -1197,17 +1922,28 @@ class OwnerSessionDetailScreen extends ConsumerWidget {
               if (d.status == 'CANCELLED')
                 AppBanner(
                   key: const Key('cancelledAt'),
-                  text: d.cancelledAt == null ? 'Phiên đã hủy.' : 'Phiên đã hủy lúc ${hhmm(d.cancelledAt)}.',
+                  text: d.cancelledAt == null
+                      ? 'Phiên đã hủy.'
+                      : 'Phiên đã hủy lúc ${hhmm(d.cancelledAt)}.',
                 )
               else ...[
                 // AC-08.10.4: đang diễn ra → chỉ sự kiện rời đã xác nhận, không thời gian thực
                 if (d.status == 'ACTIVE' || d.status == 'COUNTDOWN')
-                  const AppBanner(key: Key('activeNote'), text: 'Phiên đang diễn ra — kết quả có sau khi kết thúc.'),
+                  const AppBanner(
+                    key: Key('activeNote'),
+                    text: 'Phiên đang diễn ra — kết quả có sau khi kết thúc.',
+                  ),
                 if (d.members.isNotEmpty)
                   StatRow(
                     children: [
-                      StatTile(label: 'Hoàn thành', value: '$done/${d.members.length}'),
-                      StatTile(label: 'Số người rời', value: '${d.exitEvents.length}'),
+                      StatTile(
+                        label: 'Hoàn thành',
+                        value: '$done/${d.members.length}',
+                      ),
+                      StatTile(
+                        label: 'Số người rời',
+                        value: '${d.exitEvents.length}',
+                      ),
                     ],
                   ),
                 AppCard(
@@ -1219,12 +1955,16 @@ class OwnerSessionDetailScreen extends ConsumerWidget {
                           : LinkButton(
                               key: const Key('viewExplanations'),
                               label: 'Xem giải trình',
-                              onPressed: () => context.push('/owner/sessions/$sessionId/explanations'),
+                              onPressed: () => context.push(
+                                '/owner/sessions/$sessionId/explanations',
+                              ),
                             ),
                     ),
                     if (d.exitEvents.isEmpty)
                       Text(
-                        d.status == 'COMPLETED' ? 'Không có ai rời app.' : 'Chưa có ai rời phiên.',
+                        d.status == 'COMPLETED'
+                            ? 'Không có ai rời app.'
+                            : 'Chưa có ai rời phiên.',
                         key: const Key('noExits'),
                         style: t.bodyMedium!.copyWith(color: DT.textSecondary),
                       )
@@ -1233,7 +1973,8 @@ class OwnerSessionDetailScreen extends ConsumerWidget {
                         ListRow(
                           leading: const Icon(Icons.logout, color: DT.warning),
                           title: '${d.exitEvents[i]['display_name']}',
-                          subtitle: 'Rời lúc ${hhmmss(DateTime.tryParse('${d.exitEvents[i]['server_ts']}'))}',
+                          subtitle:
+                              'Rời lúc ${hhmmss(DateTime.tryParse('${d.exitEvents[i]['server_ts']}'))}',
                           divider: i < d.exitEvents.length - 1,
                         ),
                   ],
@@ -1242,18 +1983,24 @@ class OwnerSessionDetailScreen extends ConsumerWidget {
                   children: [
                     const SectionHeader('Kết quả thành viên'),
                     if (d.members.isEmpty)
-                      Text('Kết quả có sau khi phiên kết thúc.', style: t.bodyMedium!.copyWith(color: DT.textSecondary))
+                      Text(
+                        'Kết quả có sau khi phiên kết thúc.',
+                        style: t.bodyMedium!.copyWith(color: DT.textSecondary),
+                      )
                     else
                       for (var i = 0; i < d.members.length; i++)
                         MemberTile(
                           name: '${d.members[i]['display_name']}',
                           subtitle: [
-                            if (d.members[i]['has_explanation'] == true) 'Có giải trình',
+                            if (d.members[i]['has_explanation'] == true)
+                              'Có giải trình',
                             if (d.members[i]['appeal_status'] != null)
                               'Khiếu nại: ${appealStatusText('${d.members[i]['appeal_status']}').toLowerCase()}',
                           ].join(' · ').ifEmptyNull,
                           onTap: d.members[i]['final_state'] == 'EXITED'
-                              ? () => context.push('/owner/sessions/$sessionId/explanations')
+                              ? () => context.push(
+                                  '/owner/sessions/$sessionId/explanations',
+                                )
                               : null,
                           divider: i < d.members.length - 1,
                           trailing: d.members[i]['exempted'] == true
@@ -1262,16 +2009,27 @@ class OwnerSessionDetailScreen extends ConsumerWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     StatusBadge(
-                                      finalStateText('${d.members[i]['final_state']}'),
-                                      tone: finalStateTone('${d.members[i]['final_state']}'),
+                                      finalStateText(
+                                        '${d.members[i]['final_state']}',
+                                      ),
+                                      tone: finalStateTone(
+                                        '${d.members[i]['final_state']}',
+                                      ),
                                     ),
                                     const SizedBox(width: 4),
-                                    const StatusBadge('Đã miễn trừ', tone: BadgeTone.success),
+                                    const StatusBadge(
+                                      'Đã miễn trừ',
+                                      tone: BadgeTone.success,
+                                    ),
                                   ],
                                 )
                               : StatusBadge(
-                                  finalStateText('${d.members[i]['final_state']}'),
-                                  tone: finalStateTone('${d.members[i]['final_state']}'),
+                                  finalStateText(
+                                    '${d.members[i]['final_state']}',
+                                  ),
+                                  tone: finalStateTone(
+                                    '${d.members[i]['final_state']}',
+                                  ),
                                 ),
                         ),
                   ],

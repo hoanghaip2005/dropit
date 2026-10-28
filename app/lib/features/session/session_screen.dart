@@ -88,7 +88,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
                 const SizedBox(height: 12),
                 Text(
                   inLobby
-                      ? 'Bạn sẽ bị ghi vắng ở phiên này. Không ai nhận thông báo.'
+                      ? 'Bạn có thể quay lại check-in trước giờ bắt đầu. Rời phòng chờ lúc này không bị ghi vắng.'
                       : 'Bạn kết thúc phần tham gia ngay. Cả phiên mất thưởng tập thể và tên bạn được báo cho nhóm.',
                   style: TextStyle(
                     color: inLobby ? OwnerStyle.muted : Colors.white,
@@ -150,9 +150,13 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
       );
       return;
     }
-    await ref
+    final leftLobby = await ref
         .read(sessionControllerProvider(widget.sessionId).notifier)
         .leave();
+    if (leftLobby && mounted) {
+      ref.invalidate(upcomingProvider);
+      context.go('/home');
+    }
   }
 
   @override
@@ -241,12 +245,18 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
           tone: StateTone.danger,
           title: 'Chưa vào được phòng chờ',
           body: sessionEntryError(v.errorCode),
-          action: v.errorCode == 'CONSENT_REQUIRED'
+          action: v.errorCode == 'LOBBY_NOT_OPEN' || v.errorCode == null
+              ? 'Thử kết nối lại'
+              : v.errorCode == 'CONSENT_REQUIRED'
               ? 'Xem nhóm'
               : 'Về trang chủ',
-          onAction: () => context.go(
-            v.errorCode == 'CONSENT_REQUIRED' ? '/groups' : '/home',
-          ),
+          onAction: () => v.errorCode == 'LOBBY_NOT_OPEN' || v.errorCode == null
+              ? ref
+                    .read(sessionControllerProvider(widget.sessionId).notifier)
+                    .retryEntry()
+              : context.go(
+                  v.errorCode == 'CONSENT_REQUIRED' ? '/groups' : '/home',
+                ),
         );
       case SessionPhase.cancelled:
         return StateMessage(
@@ -421,6 +431,13 @@ class LobbyView extends StatelessWidget {
                         'Trong phiên đang hoạt động, rời app quá thời gian khoan hồng sẽ ghi nhận bạn rời phiên.',
                   ),
                   const InfoRow(
+                    icon: Icons.phone_in_talk_outlined,
+                    iconColor: OwnerStyle.muted,
+                    title: 'Cuộc gọi và thông báo',
+                    subtitle:
+                        'Khi đang check-in, bạn có thể xem thông báo hoặc nghe máy rồi quay lại. Khi phiên đã bắt đầu, hãy quay lại trong thời gian khoan hồng.',
+                  ),
+                  const InfoRow(
                     icon: Icons.group_off_outlined,
                     iconColor: DT.warning,
                     title: 'Cả phiên mất thưởng',
@@ -451,7 +468,7 @@ class LobbyView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Phiên tự bắt đầu đúng giờ. Ở lại màn này để không bị ghi vắng.',
+                'Check-in trước giờ học. Bạn có thể rời rồi quay lại; cần có mặt khi phiên bắt đầu.',
                 textAlign: TextAlign.center,
                 style: t.bodySmall!.copyWith(color: OwnerStyle.muted),
               ),
@@ -467,7 +484,7 @@ class LobbyView extends StatelessWidget {
                 ),
                 child: const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text('Rời phiên'),
+                  child: Text('Rời phòng chờ'),
                 ),
               ),
             ],
@@ -954,7 +971,8 @@ String get sessionLockGuidance => kIsWeb
     : 'Ứng dụng hỗ trợ nhận biết khóa màn hình trên thiết bị tương thích. Giữ phiên mở khi quay lại.';
 
 String sessionCancellationText(String? reason) => switch (reason) {
-  'SERVER_OUTAGE' => 'Phiên đã hủy do sự cố hệ thống. Kết quả sẽ được chốt theo trạng thái tham gia của bạn.',
+  'SERVER_OUTAGE' =>
+    'Phiên đã hủy do sự cố hệ thống. Kết quả sẽ được chốt theo trạng thái tham gia của bạn.',
   'REMOVED' => 'Bạn không còn ở nhóm này.',
   'NO_ATTENDEE' => 'Phiên đã hủy vì không có thành viên vào phòng chờ.',
   'OWNER_CANCEL' => 'Chủ nhóm đã hủy phiên này.',
@@ -963,9 +981,11 @@ String sessionCancellationText(String? reason) => switch (reason) {
 
 String sessionEntryError(String? code) => switch (code) {
   'CONSENT_REQUIRED' => 'Bạn cần đồng ý tham gia nhóm trước khi vào phiên.',
-  'LOBBY_NOT_OPEN' => 'Phòng chờ chưa mở. Vui lòng quay lại gần giờ bắt đầu.',
+  'LOBBY_NOT_OPEN' =>
+    'Check-in mở ngay khi phiên được đặt lịch. Bạn có thể vào sớm, rời phòng chờ rồi quay lại trước giờ bắt đầu.',
   'LATE_JOIN_CLOSED' => 'Phiên đã bắt đầu. Thời gian vào phiên đã đóng.',
-  'SESSION_NOT_ACTIVE' => 'Phiên đã kết thúc hoặc bị hủy. Xem lịch sử để kiểm tra kết quả.',
+  'SESSION_NOT_ACTIVE' =>
+    'Phiên đã kết thúc hoặc bị hủy. Xem lịch sử để kiểm tra kết quả.',
   'FORBIDDEN_GROUP' => 'Bạn không còn là thành viên của nhóm này.',
   'UNAUTHENTICATED' => 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
   'SESSION_NOT_FOUND' => 'Không tìm thấy phiên này.',

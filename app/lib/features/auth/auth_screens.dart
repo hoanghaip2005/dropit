@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
 import '../../core/auth.dart';
+import '../../core/invite_navigation.dart';
 import '../../core/widgets.dart';
 
 /// V-01 Giới thiệu (splash + onboarding).
@@ -21,7 +22,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     (
       Icons.groups_outlined,
       'Tập trung cùng nhóm',
-      'Chủ nhóm đặt lịch phiên 25 hoặc 50 phút. Mọi người vào phòng chờ và bắt đầu cùng lúc.',
+      'Chủ nhóm đặt lịch và chọn thời lượng phiên. Mọi người vào phòng chờ và bắt đầu cùng lúc.',
     ),
     (
       Icons.phonelink_lock_outlined,
@@ -37,7 +38,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _finish() async {
     await ref.read(authProvider.notifier).finishOnboarding();
-    if (mounted) context.go('/login');
+    if (mounted) context.go(authRouteWithInvite('/login', inviteReturnOf(context)));
   }
 
   @override
@@ -209,6 +210,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final controller = ref.read(authProvider.notifier);
     final email = _email.text.trim();
     final password = _password.text;
+    final next = inviteReturnOf(context);
     FocusScope.of(context).unfocus();
     setState(() {
       _busy = true;
@@ -218,7 +220,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final session = await api.signIn(email, password);
       if (!mounted) return;
       await controller.acceptSession(session);
-      if (mounted) context.go('/home');
+      if (mounted) context.go(next ?? '/home');
     } on AuthFailure catch (error) {
       if (mounted) setState(() => _error = error.message);
     } catch (_) {
@@ -436,7 +438,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                                 const SizedBox(height: 12),
                                 TextButton(
-                                  onPressed: _busy ? null : () => context.go('/register'),
+                                  onPressed: _busy ? null : () => context.go(authRouteWithInvite('/register', inviteReturnOf(context))),
                                   child: const Text('Chưa có tài khoản? Đăng ký'),
                                 ),
                               ],
