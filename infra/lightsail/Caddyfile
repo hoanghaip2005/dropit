@@ -1,5 +1,7 @@
 dropit.tutty-lab-demo.com {
  encode zstd gzip
+ @webEntry path / /index.html /flutter_bootstrap.js /main.dart.js /bootstrap-*.js /main-*.js /flutter_service_worker.js
+ header @webEntry Cache-Control "no-store, max-age=0"
  @backend path /v1/* /socket.io/* /health
  handle @backend {
   reverse_proxy 127.0.0.1:3000

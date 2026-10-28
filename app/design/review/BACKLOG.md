@@ -1,5 +1,7 @@
 # Các đợt triển khai
 
+- 10 — [Đăng ký](10-REGISTRATION.md): đã triển khai web và bật Cognito self-registration; 38 tests đạt. Kiểm hình ảnh từng trạng thái, email end-to-end còn giới hạn ghi trong hồ sơ.
+
 ## Bước 0 — dựng cơ chế đánh giá (đã lập)
 
 - Thiết lập vai trò, prompt, hồ sơ view, decision log và audit ban đầu.

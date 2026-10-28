@@ -134,8 +134,16 @@ class ProductionAuthApi {
           'Tài khoản chưa xác minh email. Vui lòng kiểm tra email hoặc liên hệ quản trị viên.',
         'PasswordResetRequiredException' =>
           'Tài khoản cần đặt lại mật khẩu. Vui lòng liên hệ quản trị viên.',
-        'TooManyRequestsException' || 'LimitExceededException' =>
+        'UsernameExistsException' =>
+          'Email đã được đăng ký. Hãy đăng nhập hoặc xác minh email.',
+        'InvalidPasswordException' =>
+          'Mật khẩu cần ít nhất 12 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.',
+        'CodeMismatchException' => 'Mã xác minh chưa đúng.',
+        'ExpiredCodeException' => 'Mã xác minh đã hết hạn. Hãy gửi lại mã.',
+        'LimitExceededException' || 'TooManyRequestsException' =>
           'Bạn thử quá nhiều lần. Vui lòng chờ rồi thử lại.',
+        'CodeDeliveryFailureException' =>
+          'Chưa gửi được email xác minh. Vui lòng thử lại sau.',
         _ =>
           error.response == null
               ? 'Không kết nối được dịch vụ đăng nhập. Vui lòng thử lại.'
@@ -182,6 +190,33 @@ class ProductionAuthApi {
     }),
     email.trim(),
   );
+
+  Future<void> signUp(String email, String password, String name) async {
+    await _call('SignUp', {
+      'ClientId': clientId,
+      'Username': email.trim(),
+      'Password': password,
+      'UserAttributes': [
+        {'Name': 'email', 'Value': email.trim()},
+        {'Name': 'name', 'Value': name.trim()},
+      ],
+    });
+  }
+
+  Future<void> confirmSignUp(String email, String code) async {
+    await _call('ConfirmSignUp', {
+      'ClientId': clientId,
+      'Username': email.trim(),
+      'ConfirmationCode': code.trim(),
+    });
+  }
+
+  Future<void> resendSignUpCode(String email) async {
+    await _call('ResendConfirmationCode', {
+      'ClientId': clientId,
+      'Username': email.trim(),
+    });
+  }
 
   Future<AuthSession> refresh(AuthSession session) async {
     if (session.refreshToken == null) {

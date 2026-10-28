@@ -47,6 +47,38 @@ Map<String, dynamic> sessionBody({
 };
 void main() {
   test(
+    'Registration, confirmation and resend use Cognito JSON without role claims',
+    () async {
+      final requests = <RequestOptions>[];
+      final auth = api(
+        Adapter((r) {
+          requests.add(r);
+          return response({});
+        }),
+      );
+      await auth.signUp(' demo@example.com ', ' Exact password1! ', ' Demo ');
+      await auth.confirmSignUp(' demo@example.com ', ' 123456 ');
+      await auth.resendSignUpCode(' demo@example.com ');
+      final bodies = requests
+          .map((r) => jsonDecode(r.data as String) as Map)
+          .toList();
+      expect(requests.map((r) => r.headers['X-Amz-Target']), [
+        'AWSCognitoIdentityProviderService.SignUp',
+        'AWSCognitoIdentityProviderService.ConfirmSignUp',
+        'AWSCognitoIdentityProviderService.ResendConfirmationCode',
+      ]);
+      expect(bodies[0]['Username'], 'demo@example.com');
+      expect(bodies[0]['Password'], ' Exact password1! ');
+      expect(bodies[0]['UserAttributes'], [
+        {'Name': 'email', 'Value': 'demo@example.com'},
+        {'Name': 'name', 'Value': 'Demo'},
+      ]);
+      expect(bodies[0].containsKey('role'), false);
+      expect(bodies[1]['ConfirmationCode'], '123456');
+      expect(bodies[2]['Username'], 'demo@example.com');
+    },
+  );
+  test(
     'Cognito receives password directly via HTTPS, exact password and public client only',
     () async {
       final requests = <RequestOptions>[];
@@ -101,6 +133,11 @@ void main() {
     'UserNotFoundException',
     'TooManyRequestsException',
     'PasswordResetRequiredException',
+    'UsernameExistsException',
+    'InvalidPasswordException',
+    'CodeMismatchException',
+    'ExpiredCodeException',
+    'CodeDeliveryFailureException',
   ]) {
     test('Cognito $code maps safely without raw server detail', () async {
       final auth = api(

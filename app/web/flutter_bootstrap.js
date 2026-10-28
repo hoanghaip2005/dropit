@@ -1,9 +1,9 @@
 {{flutter_js}}
 {{flutter_build_config}}
 
-// Local previews must always reflect the latest build and cosmetic artwork.
+// This app uses live deployments without offline service-worker caching.
 (async () => {
-  if (['localhost', '127.0.0.1', '::1'].includes(location.hostname)) {
+  {
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
       for (const registration of registrations) {

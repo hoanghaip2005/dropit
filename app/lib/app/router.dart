@@ -8,6 +8,7 @@ import '../core/widgets.dart';
 import '../features/achievements/achievements_screen.dart';
 import '../features/appeals/appeal_screens.dart';
 import '../features/auth/auth_screens.dart';
+import '../features/auth/registration_screen.dart';
 import '../features/history/history_screen.dart';
 import '../features/journal/journal_screens.dart';
 import '../features/reports/report_screens.dart';
@@ -35,14 +36,15 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final a = ref.read(authProvider);
       final loc = state.matchedLocation;
-      if (!a.onboarded && loc != '/welcome') return '/welcome';
-      if (a.onboarded && !a.loggedIn && loc != '/login') return '/login';
+      if (!a.onboarded && loc != '/welcome' && loc != '/register') return '/welcome';
+      if (a.onboarded && !a.loggedIn && loc != '/login' && loc != '/register') return '/login';
       if (a.loggedIn && (loc == '/login' || loc == '/welcome')) return '/home';
       return null;
     },
     routes: [
       GoRoute(path: '/welcome', builder: (_, _) => const OnboardingScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/register', builder: (_, _) => const RegistrationScreen()),
       ShellRoute(
         builder: (context, state, child) => _NavShell(location: state.matchedLocation, child: child),
         routes: [

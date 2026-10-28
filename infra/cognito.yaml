@@ -13,7 +13,7 @@ Resources:
         CaseSensitive: false
       AutoVerifiedAttributes: [email]
       AdminCreateUserConfig:
-        AllowAdminCreateUserOnly: true
+        AllowAdminCreateUserOnly: false
       MfaConfiguration: 'OFF'
       Policies:
         PasswordPolicy:

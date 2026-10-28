@@ -434,6 +434,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     ],
                                   ),
                                 ),
+                                const SizedBox(height: 12),
+                                TextButton(
+                                  onPressed: _busy ? null : () => context.go('/register'),
+                                  child: const Text('Chưa có tài khoản? Đăng ký'),
+                                ),
                               ],
                             ),
                           ),

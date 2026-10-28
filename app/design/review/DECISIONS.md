@@ -1,5 +1,7 @@
 # Phân xử khác biệt thiết kế
 
+28/10/2026 — [Đăng ký](10-REGISTRATION.md): yêu cầu mới thay giới hạn chỉ tài khoản được cấp. Tái sử dụng login hiện tại vì mockup không có signup riêng. Chọn tạo/tham gia nhóm là ý định onboarding; quyền vẫn theo quan hệ backend. Cognito xác minh email, không bypass. Giữ shop artwork hiện có; bổ sung catalog production riêng, không chạy demo seed.
+
 Ngày: 22/10/2026. Trạng thái: **SOURCE_AUDIT — chưa nghiệm thu thị giác**.
 
 Tài liệu ghi yêu cầu, ngoại lệ và điểm cần đối chiếu. “Chấp nhận” bên dưới là chấp nhận yêu cầu hoặc quy tắc; không xác nhận màn hiện tại đã đạt. Build, analyze và test không thay thế ảnh đối chiếu.
