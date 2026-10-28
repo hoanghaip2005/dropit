@@ -26,7 +26,7 @@ ResponseBody response(Object body, [int status = 200]) =>
       jsonEncode(body),
       status,
       headers: {
-        'content-type': ['application/json'],
+        'content-type': ['application/x-amz-json-1.1'],
       },
     );
 ProductionAuthApi api(Adapter adapter) => ProductionAuthApi(
@@ -65,11 +65,16 @@ void main() {
         requests.single.headers['X-Amz-Target'],
         'AWSCognitoIdentityProviderService.InitiateAuth',
       );
-      expect((requests.single.data as Map)['AuthParameters'], {
-        'USERNAME': 'an@example.com',
-        'PASSWORD': ' exact password ',
-      });
-      expect((requests.single.data as Map).containsKey('SECRET_HASH'), false);
+      expect(
+        (jsonDecode(requests.single.data as String) as Map)['AuthParameters'],
+        {'USERNAME': 'an@example.com', 'PASSWORD': ' exact password '},
+      );
+      expect(
+        (jsonDecode(requests.single.data as String) as Map).containsKey(
+          'SECRET_HASH',
+        ),
+        false,
+      );
       expect(session.accessToken, 'real-access');
     },
   );
@@ -156,7 +161,7 @@ void main() {
           refreshToken: 'refresh',
         ),
       );
-      expect((sent.data as Map)['AuthParameters'], {
+      expect((jsonDecode(sent.data as String) as Map)['AuthParameters'], {
         'REFRESH_TOKEN': 'refresh',
       });
       expect(session.accessToken, 'new-access');

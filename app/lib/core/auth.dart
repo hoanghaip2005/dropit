@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -100,7 +101,8 @@ class ProductionAuthApi {
     try {
       final result = await _dio.post(
         'https://cognito-idp.$region.amazonaws.com/',
-        data: body,
+        // Cognito's x-amz-json MIME type is not recognized as JSON by Dio.
+        data: jsonEncode(body),
         options: Options(
           contentType: 'application/x-amz-json-1.1',
           headers: {
@@ -108,12 +110,22 @@ class ProductionAuthApi {
           },
         ),
       );
-      if (result.data is! Map) {
+      final data = result.data is String
+          ? jsonDecode(result.data as String)
+          : result.data;
+      if (data is! Map) {
         throw const AuthFailure('Chưa nhận được phản hồi đăng nhập hợp lệ.');
       }
-      return Map<String, dynamic>.from(result.data as Map);
+      return Map<String, dynamic>.from(data);
     } on DioException catch (error) {
-      final data = error.response?.data;
+      var data = error.response?.data;
+      if (data is String) {
+        try {
+          data = jsonDecode(data);
+        } catch (_) {
+          data = null;
+        }
+      }
       final code = data is Map ? '${data['__type'] ?? ''}'.split('#').last : '';
       throw AuthFailure(switch (code) {
         'NotAuthorizedException' ||

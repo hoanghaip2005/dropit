@@ -108,9 +108,11 @@ final dioProvider = Provider<Dio>((ref) {
   return dio;
 });
 
-final apiProvider = Provider<DropItApi>(
-  (ref) => DropItApi(ref.watch(dioProvider)),
-);
+final apiProvider = Provider<DropItApi>((ref) {
+  // Refetch dependent data after sign-in/out; discard pre-login 401 caches.
+  ref.watch(authProvider.select((state) => state.token));
+  return DropItApi(ref.watch(dioProvider));
+});
 
 const _uuid = Uuid();
 
