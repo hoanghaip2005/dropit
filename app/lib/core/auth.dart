@@ -61,8 +61,9 @@ class AuthSession {
 }
 
 class AuthFailure implements Exception {
-  const AuthFailure(this.message);
+  const AuthFailure(this.message, {this.retryable = false});
   final String message;
+  final bool retryable;
   @override
   String toString() => message;
 }
@@ -132,28 +133,36 @@ class ProductionAuthApi {
         }
       }
       final code = data is Map ? '${data['__type'] ?? ''}'.split('#').last : '';
-      throw AuthFailure(switch (code) {
-        'NotAuthorizedException' ||
-        'UserNotFoundException' => 'Email hoặc mật khẩu chưa đúng.',
-        'UserNotConfirmedException' =>
-          'Tài khoản chưa xác minh email. Vui lòng kiểm tra email hoặc liên hệ quản trị viên.',
-        'PasswordResetRequiredException' =>
-          'Tài khoản cần đặt lại mật khẩu. Vui lòng liên hệ quản trị viên.',
-        'UsernameExistsException' =>
-          'Email đã được đăng ký. Hãy đăng nhập hoặc xác minh email.',
-        'InvalidPasswordException' =>
-          'Mật khẩu cần ít nhất 12 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.',
-        'CodeMismatchException' => 'Mã xác minh chưa đúng.',
-        'ExpiredCodeException' => 'Mã xác minh đã hết hạn. Hãy gửi lại mã.',
-        'LimitExceededException' || 'TooManyRequestsException' =>
-          'Bạn thử quá nhiều lần. Vui lòng chờ rồi thử lại.',
-        'CodeDeliveryFailureException' =>
-          'Chưa gửi được email xác minh. Vui lòng thử lại sau.',
-        _ =>
-          error.response == null
-              ? 'Không kết nối được dịch vụ đăng nhập. Vui lòng thử lại.'
-              : 'Chưa đăng nhập được. Vui lòng thử lại hoặc liên hệ quản trị viên.',
-      });
+      throw AuthFailure(
+        switch (code) {
+          'NotAuthorizedException' ||
+          'UserNotFoundException' => 'Email hoặc mật khẩu chưa đúng.',
+          'UserNotConfirmedException' =>
+            'Tài khoản chưa xác minh email. Vui lòng kiểm tra email hoặc liên hệ quản trị viên.',
+          'PasswordResetRequiredException' =>
+            'Tài khoản cần đặt lại mật khẩu. Vui lòng liên hệ quản trị viên.',
+          'UsernameExistsException' =>
+            'Email đã được đăng ký. Hãy đăng nhập hoặc xác minh email.',
+          'InvalidPasswordException' =>
+            'Mật khẩu cần ít nhất 12 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.',
+          'CodeMismatchException' => 'Mã xác minh chưa đúng.',
+          'ExpiredCodeException' => 'Mã xác minh đã hết hạn. Hãy gửi lại mã.',
+          'LimitExceededException' || 'TooManyRequestsException' =>
+            'Bạn thử quá nhiều lần. Vui lòng chờ rồi thử lại.',
+          'CodeDeliveryFailureException' =>
+            'Chưa gửi được email xác minh. Vui lòng thử lại sau.',
+          _ =>
+            error.response == null
+                ? 'Không kết nối được dịch vụ đăng nhập. Vui lòng thử lại.'
+                : 'Chưa đăng nhập được. Vui lòng thử lại hoặc liên hệ quản trị viên.',
+        },
+        retryable:
+            error.response == null ||
+            (error.response?.statusCode ?? 0) >= 500 ||
+            error.response?.statusCode == 429 ||
+            code == 'TooManyRequestsException' ||
+            code == 'LimitExceededException',
+      );
     }
   }
 
@@ -348,6 +357,9 @@ class AuthController extends Notifier<AuthState> {
       );
       await _p.setBool('onboarded', true);
       if (ref.mounted && generation == _generation) _schedule(restored);
+    } on AuthFailure catch (error) {
+      if (error.retryable) rethrow;
+      if (ref.mounted && generation == _generation) storage.clear();
     } catch (_) {
       if (ref.mounted && generation == _generation) storage.clear();
     }
@@ -376,6 +388,16 @@ class AuthController extends Notifier<AuthState> {
       _saveRefresh(next);
       state = state.copyWith(token: next.accessToken, userLabel: next.label);
       _schedule(next);
+    } on AuthFailure catch (error) {
+      if (!ref.mounted || generation != _generation) return;
+      if (error.retryable) {
+        _refreshTimer = Timer(
+          const Duration(seconds: 15),
+          () => unawaited(_refresh()),
+        );
+      } else {
+        await logout();
+      }
     } catch (_) {
       if (ref.mounted && generation == _generation) await logout();
     }

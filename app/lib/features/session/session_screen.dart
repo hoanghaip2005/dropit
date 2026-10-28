@@ -251,11 +251,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
       case SessionPhase.cancelled:
         return StateMessage(
           icon: Icons.event_busy,
-          title: v.cancelReason == 'SERVER_OUTAGE'
-              ? 'Phiên đã hủy do sự cố hệ thống. Kết quả sẽ được chốt theo trạng thái tham gia của bạn.'
-              : v.cancelReason == 'REMOVED'
-              ? 'Bạn không còn ở nhóm này.'
-              : 'Chủ nhóm đã hủy phiên này.',
+          title: sessionCancellationText(v.cancelReason),
           action: 'Về trang chủ',
           onAction: () => context.go('/home'),
         );
@@ -957,9 +953,21 @@ String get sessionLockGuidance => kIsWeb
     ? 'Bản web có thể xem chuyển tab hoặc ẩn trang là rời app; không đảm bảo phân biệt khóa màn hình.'
     : 'Ứng dụng hỗ trợ nhận biết khóa màn hình trên thiết bị tương thích. Giữ phiên mở khi quay lại.';
 
+String sessionCancellationText(String? reason) => switch (reason) {
+  'SERVER_OUTAGE' => 'Phiên đã hủy do sự cố hệ thống. Kết quả sẽ được chốt theo trạng thái tham gia của bạn.',
+  'REMOVED' => 'Bạn không còn ở nhóm này.',
+  'NO_ATTENDEE' => 'Phiên đã hủy vì không có thành viên vào phòng chờ.',
+  'OWNER_CANCEL' => 'Chủ nhóm đã hủy phiên này.',
+  _ => 'Phiên đã hủy.',
+};
+
 String sessionEntryError(String? code) => switch (code) {
   'CONSENT_REQUIRED' => 'Bạn cần đồng ý tham gia nhóm trước khi vào phiên.',
   'LOBBY_NOT_OPEN' => 'Phòng chờ chưa mở. Vui lòng quay lại gần giờ bắt đầu.',
+  'LATE_JOIN_CLOSED' => 'Phiên đã bắt đầu. Thời gian vào phiên đã đóng.',
+  'SESSION_NOT_ACTIVE' => 'Phiên đã kết thúc hoặc bị hủy. Xem lịch sử để kiểm tra kết quả.',
+  'FORBIDDEN_GROUP' => 'Bạn không còn là thành viên của nhóm này.',
+  'UNAUTHENTICATED' => 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
   'SESSION_NOT_FOUND' => 'Không tìm thấy phiên này.',
   'NOT_MEMBER' || 'FORBIDDEN' => 'Bạn không có quyền tham gia phiên này.',
   'SESSION_ALREADY_ACTIVE' || 'ALREADY_JOINED' =>

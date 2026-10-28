@@ -265,6 +265,33 @@ void main() {
     expect(view().phase, SessionPhase.cancelled);
   });
 
+  test('join ack timeout retries without requiring a socket disconnect', () async {
+    var attempts = 0;
+    socket.reply = (event, payload) {
+      if (event == 'session:join') {
+        attempts++;
+        return attempts <= 2 ? null : {'ok': true, 'state': 'WAITING'};
+      }
+      return {'ok': true};
+    };
+    await boot();
+    expect(view().phase, SessionPhase.connecting);
+    expect(socket.connected, true);
+    await Future<void>.delayed(const Duration(milliseconds: 2100));
+    expect(view().phase, SessionPhase.waiting);
+    expect(attempts, 3);
+  });
+
+  test('cancelled session does not retry a timed-out join', () async {
+    socket.reply = (event, payload) => event == 'session:join' ? null : {'ok': true};
+    await boot();
+    socket.server('SESSION_CANCELLED', {'session_id': sid, 'reason': 'OWNER_CANCEL'});
+    final before = socket.names().length;
+    await Future<void>.delayed(const Duration(milliseconds: 2100));
+    expect(view().phase, SessionPhase.cancelled);
+    expect(socket.names().length, before);
+  });
+
   test('sự kiện của phiên khác bị bỏ qua', () async {
     await boot();
     socket.server('MEMBER_EXITED', {'event_id': 'o1', 'session_id': 'khac', 'exited_display_name': 'X'});

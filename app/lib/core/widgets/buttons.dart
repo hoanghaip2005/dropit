@@ -41,16 +41,25 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final fg = foreground ?? (background == null
-        ? theme.colorScheme.onPrimary
-        : background == DT.primary ? DT.onPrimary : Colors.white);
+    // Scoped pages can change ColorScheme without replacing FilledButtonTheme.
+    // Resolve the foreground from the same source as the painted background.
+    final themedStyle = theme.filledButtonTheme.style;
+    final bg = background ?? themedStyle?.backgroundColor?.resolve({}) ?? theme.colorScheme.primary;
+    final luminance = bg.computeLuminance();
+    final darkContrast = (luminance + .05) / (DT.onPrimary.computeLuminance() + .05);
+    final lightContrast = 1.05 / (luminance + .05);
+    final preferredFg = foreground ?? (background == null
+        ? themedStyle?.foregroundColor?.resolve({}) ?? theme.colorScheme.onPrimary
+        : (darkContrast >= lightContrast ? DT.onPrimary : Colors.white));
+    // Black controls always carry white labels, including stale theme overrides.
+    final fg = luminance < .05 ? Colors.white : preferredFg;
     return FilledButton(
       onPressed: loading ? null : onPressed,
       style: FilledButton.styleFrom(
         minimumSize: Size.fromHeight(compact ? DT.buttonHeightCompact : DT.buttonHeight),
-        backgroundColor: background,
+        backgroundColor: bg,
         foregroundColor: fg,
-        disabledBackgroundColor: loading ? (background ?? Theme.of(context).colorScheme.primary) : (context.ownerStyle ? OwnerStyle.line : DT.surfaceDim),
+        disabledBackgroundColor: loading ? bg : (context.ownerStyle ? OwnerStyle.line : DT.surfaceDim),
         disabledForegroundColor: loading ? fg : DT.textSecondary,
       ),
       child: _ButtonContent(label: label, icon: icon, trailingIcon: trailingIcon, loading: loading, color: fg),

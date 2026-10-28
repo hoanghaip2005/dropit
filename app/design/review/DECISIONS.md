@@ -88,3 +88,7 @@ Giữ artwork AI và ngoại lệ bỏ subtitle. Balance/kho đang tải, lỗi 
 ### Control theo vai trò và mất quyền nhóm — 28/10/2026
 
 Đợt [11](11-GROUP-CONTROLS-SESSION.md): giữ owner đen/chữ trắng, member cam/chữ đen; ghép foreground theo theme thay màu cố định. Mất quyền nhóm trả thông báo trung tính và lối về nhóm, giữ phân biệt lỗi mạng. Không mở rộng kết luận sang toàn bộ giao diện.
+
+### Vòng tái diễn phiên/control — 28/10/2026
+
+[Đợt 11](11-GROUP-CONTROLS-SESSION.md): user chốt nền đen/chữ trắng; shared button cưỡng chế cặp này. Hủy do NO_ATTENDEE phải hiển thị đúng lý do, không gán chủ nhóm. Lỗi refresh tạm thời giữ credential, gate retry trước router; credential bị từ chối vẫn đăng xuất.

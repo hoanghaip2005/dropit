@@ -78,6 +78,16 @@ Widget screen(ScreenController controller, {bool failMetadata = false}) =>
     );
 
 void main() {
+  test('Cancellation message preserves the server reason', () {
+    expect(sessionCancellationText('NO_ATTENDEE'), contains('không có thành viên'));
+    expect(sessionCancellationText('NO_ATTENDEE'), isNot(contains('Chủ nhóm')));
+    expect(sessionCancellationText('OWNER_CANCEL'), 'Chủ nhóm đã hủy phiên này.');
+    expect(sessionCancellationText('SERVER_OUTAGE'), contains('sự cố hệ thống'));
+    expect(sessionCancellationText('REMOVED'), 'Bạn không còn ở nhóm này.');
+    expect(sessionCancellationText(null), 'Phiên đã hủy.');
+    expect(sessionEntryError('LATE_JOIN_CLOSED'), contains('Thời gian vào phiên đã đóng'));
+    expect(sessionEntryError('SESSION_NOT_ACTIVE'), contains('kết thúc hoặc bị hủy'));
+  });
   testWidgets(
     'Lobby unknown metadata has no fabricated duration, reward or participant count',
     (tester) async {

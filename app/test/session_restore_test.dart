@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:dropit/core/auth.dart';
 import 'package:dropit/core/session_storage.dart';
+import 'package:dropit/core/session_gate.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,12 +24,14 @@ class RefreshApi extends ProductionAuthApi {
   int calls = 0;
   Completer<AuthSession>? pending;
   bool fail = false;
+  bool offline = false;
   @override
   Future<AuthSession> refresh(AuthSession session) async {
     calls++;
     expect(session.accessToken, isEmpty);
     expect(session.refreshToken, 'refresh-secret');
     if (pending != null) return pending!.future;
+    if (offline) throw const AuthFailure('Offline', retryable: true);
     if (fail) throw const AuthFailure('Expired');
     return AuthSession(
       accessToken: 'fresh-access',
@@ -66,6 +70,47 @@ String saved({bool expired = false, String client = 'testclient'}) =>
     });
 
 void main() {
+  test('Temporary refresh failure keeps saved credential for retry', () async {
+    final storage = MemoryTabStorage()..value = saved();
+    final api = RefreshApi()..offline = true;
+    final container = await createContainer(storage, api);
+    final original = storage.value;
+    await expectLater(
+      container.read(authProvider.notifier).restoreSession(),
+      throwsA(isA<AuthFailure>()),
+    );
+    expect(storage.value, original);
+    expect(container.read(authProvider).loggedIn, false);
+    api.offline = false;
+    await container.read(authProvider.notifier).restoreSession();
+    expect(container.read(authProvider).loggedIn, true);
+  });
+
+  testWidgets('Reload connection failure shows retry instead of login router', (
+    tester,
+  ) async {
+    final storage = MemoryTabStorage()..value = saved();
+    final api = RefreshApi()..offline = true;
+    final container = await createContainer(storage, api);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const SessionGate(
+          child: MaterialApp(home: Text('Authenticated app')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Authenticated app'), findsNothing);
+    expect(find.text('Thử lại'), findsOneWidget);
+    expect(storage.value, isNotNull);
+    api.offline = false;
+    await tester.tap(find.text('Thử lại'));
+    await tester.pumpAndSettle();
+    expect(find.text('Authenticated app'), findsOneWidget);
+    expect(container.read(authProvider).loggedIn, true);
+    await container.read(authProvider.notifier).logout();
+  });
   test('Reload authenticates with Cognito before exposing a session', () async {
     final storage = MemoryTabStorage()..value = saved();
     final api = RefreshApi()..pending = Completer<AuthSession>();

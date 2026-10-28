@@ -9,6 +9,7 @@ import 'app/theme.dart';
 import 'core/auth.dart';
 import 'core/providers.dart';
 import 'core/push.dart';
+import 'core/session_gate.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,9 +49,11 @@ Future<void> main() async {
       ),
     ],
   );
-  await container.read(authProvider.notifier).restoreSession();
   runApp(
-    UncontrolledProviderScope(container: container, child: const DropItApp()),
+    UncontrolledProviderScope(
+      container: container,
+      child: const SessionGate(child: DropItApp()),
+    ),
   );
 }
 

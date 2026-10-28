@@ -31,3 +31,21 @@
 - Verifier contrast_audit độc lập xem hai ảnh: không blocking contrast, owner trắng/đen và member đen/cam rõ. Canvas khác nhau theo vai trò còn giữ; không tuyên bố đồng nhất toàn app.
 - CHƯA XÁC MINH HÌNH ẢNH màn access-loss trực tiếp/dialog/loading/disabled/date-time; các nhánh này có test source, không suy diễn là nghiệm thu hình ảnh.
 - Bản mới cần đăng nhập lại một lần để khởi tạo sessionStorage; giữ cùng tab, tối đa một ngày.
+
+## Vòng sửa tái diễn 28/10
+
+- Người dùng yêu cầu mọi button nền đen có chữ trắng; PrimaryButton cưỡng chế cặp này cả icon/spinner, resolve màu theo FilledButtonTheme. Audit độc lập các control đen feature chưa thấy Text con override đen.
+- Tái hiện production: thành viên test vào phòng chờ thất bại một lần, lần sau vào được trước giờ. DB các phiên trước CANCELLED NO_ATTENDEE, joined_at null; phiên demo cc7f7d91-ee33-4e3d-a5c1-baf4523ba84a COMPLETED, thành viên từng vào LOST DISCONNECT_TIMEOUT sau browser interruption. Không coi đây là bằng chứng giải quyết toàn bộ lỗi mạng.
+- Sửa nhánh ack timeout: retry join/resume sau2s dù socket còn connected; hủy timer khi dispose. Test thật timeout2 lần rồi join thành công.
+- Auth phân biệt lỗi mạng/5xx/rate limit với credential bị từ chối; không xóa refresh credential khi lỗi tạm thời. SessionGate chặn router, hiển thị retry khi refresh không tới server. Không lưu access token. Lỗi credential thật vẫn về login.
+- Analyze sạch; 48 tests auth/session/contrast đạt trước thêm1 test retry; controller16 tests đạt sau bổ sung.
+- CHƯA XÁC MINH HÌNH ẢNH build mới tại thời điểm ghi; ảnh lobby-before chỉ chứng minh build cũ vào được phòng chờ.
+
+### Build cuối vòng tái diễn
+
+- Production `session-retry-final-20261028`, deploy index/bootstrap/main version riêng và assets/font đồng bộ. Analyze sạch; bộ auth/contrast/restore/controller trước bổ sung48 đạt; controller sau bổ sung17 đạt; session screen16 đạt.
+- Thêm guard terminal sau ack và trước retry, test hủy trong lúc chờ không gửi lại. Verifier độc lập đóng P2 source.
+- Phân xử/sửa copy CANCELLED: NO_ATTENDEE không đổ lỗi chủ nhóm, OWNER_CANCEL riêng, unknown trung tính; thông báo late join/không còn quyền/token rõ. Test mapping từng reason đạt.
+- Browser owner đăng nhập và reload hai lần giữ groups/data, gồm reload build cuối. Ảnh `artifacts/session-regression/owner-final.png` 1280x720: verifier contrast_audit thấy nút Tạo nhóm enabled trắng/đen rõ. Dữ liệu form mẫu không submit.
+- CHƯA XÁC MINH HÌNH ẢNH các control còn lại/cancelled/access-loss/gate/loading. Không tuyên bố nguyên nhân mạng production đã sửa hoàn toàn: HTTPS/SSH từng timeout không ổn định; demo vào được lobby và phiên COMPLETED, browser interruption làm member LOST.
+- SSH /32 mở phục vụ deploy đã đóng lại thành công. Không sửa phiên thật hoặc cấp thêm coin.

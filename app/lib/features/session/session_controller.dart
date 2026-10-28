@@ -168,6 +168,7 @@ class SessionController extends Notifier<SessionView> {
   StreamSubscription<FocusSignal>? _focusSub;
   Timer? _hb;
   Timer? _tick;
+  Timer? _entryRetry;
   bool _joined = false;
   String? _lastServerEventId;
   final _seen = <String>{};
@@ -200,6 +201,7 @@ class SessionController extends Notifier<SessionView> {
   }
 
   void _dispose() {
+    _entryRetry?.cancel();
     _tick?.cancel();
     _hb?.cancel();
     _focusSub?.cancel();
@@ -275,6 +277,7 @@ class SessionController extends Notifier<SessionView> {
   }
 
   Future<void> _joinOrResume() async {
+    _entryRetry?.cancel();
     _syncClock();
     final first = !_joined;
     var ack = await _requestRetry(
@@ -285,7 +288,15 @@ class SessionController extends Notifier<SessionView> {
     if (first && ack?['ok'] == false && ack?['code'] == 'SESSION_NOT_ACTIVE' && ack?['state'] != null) {
       ack = await _requestRetry('session:resume', _env());
     }
-    if (ack == null) return; // chưa ack; socket.io sẽ nối lại
+    if (!ref.mounted || _entryFinished) return;
+    if (ack == null) {
+      // An ack timeout does not imply a transport disconnect. Retry even when
+      // Socket.IO remains connected, otherwise the lobby can stall until start.
+      _entryRetry = Timer(const Duration(seconds: 2), () {
+        if (ref.mounted && !_entryFinished && _socket?.connected == true) _joinOrResume();
+      });
+      return;
+    }
     if (ack['ok'] == false) {
       final code = '${ack['code']}';
       if (code == 'SESSION_LOST') {
@@ -313,6 +324,11 @@ class SessionController extends Notifier<SessionView> {
         'SESSION_NOT_ACTIVE' => 'Phiên đã kết thúc hoặc bị hủy.',
         _ => 'Chưa vào được phòng chờ.',
       };
+
+  bool get _entryFinished => const {
+    SessionPhase.cancelled, SessionPhase.ended, SessionPhase.exited,
+    SessionPhase.absent, SessionPhase.lost,
+  }.contains(state.phase);
 
   void _fail(String code, String msg) {
     state = state.copyWith(phase: SessionPhase.error, errorCode: code, errorMessage: msg);
