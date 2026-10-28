@@ -10,7 +10,7 @@ import '../../core/providers.dart';
 import '../../core/widgets.dart';
 import '../achievements/achievements_screen.dart' show badgeName;
 import '../session/session_controller.dart';
-import 'group_screens.dart' show sessionStatusText;
+import 'group_screens.dart' show sessionStatusText, isGroupAccessLost;
 
 /// V-21 Rút đồng ý và rời nhóm (US-01.07) — 2 bước, nói rõ hệ quả trước khi xác nhận, kể cả khi đang trong phiên.
 /// Không hỏi lý do; chủ nhóm chỉ nhận "‹Tên› đã rời nhóm". Nút "Rời nhóm" đen (không đỏ).
@@ -40,6 +40,16 @@ class _LeaveGroupScreenState extends ConsumerState<LeaveGroupScreen> {
       context.go('/groups');
     } catch (e) {
       final a = ApiError.from(e);
+      if (!mounted) return;
+      if (isGroupAccessLost(a)) {
+        ref.invalidate(myGroupsProvider);
+        ref.invalidate(upcomingProvider);
+        ref.invalidate(membersProvider(widget.groupId));
+        ref.invalidate(schedulesProvider(widget.groupId));
+        showSnack(context, 'Bạn không còn trong nhóm này.');
+        context.go('/groups');
+        return;
+      }
       setState(() {
         _step = 1;
         _err = a.offline || a.status == null

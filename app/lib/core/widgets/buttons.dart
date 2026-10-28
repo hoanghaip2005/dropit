@@ -40,7 +40,10 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = foreground ?? (background == null || background == DT.primary ? DT.onPrimary : Colors.white);
+    final theme = Theme.of(context);
+    final fg = foreground ?? (background == null
+        ? theme.colorScheme.onPrimary
+        : background == DT.primary ? DT.onPrimary : Colors.white);
     return FilledButton(
       onPressed: loading ? null : onPressed,
       style: FilledButton.styleFrom(

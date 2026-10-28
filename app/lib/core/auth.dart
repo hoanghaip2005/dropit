@@ -8,6 +8,11 @@ import 'package:uuid/uuid.dart';
 
 import '../app/env.dart';
 import 'offline.dart';
+import 'session_storage.dart';
+
+final sessionStorageProvider = Provider<SessionStorage>(
+  (ref) => createSessionStorage(),
+);
 
 final prefsProvider = Provider<SharedPreferences>(
   (ref) => throw UnimplementedError(),
@@ -238,12 +243,13 @@ final productionAuthApiProvider = Provider<ProductionAuthApi>(
   (ref) => ProductionAuthApi(),
 );
 
-/// Tokens stay in memory, never SharedPreferences or browser local storage.
-/// Closing/reloading the app requires sign-in again; secure persistent sessions are a separate capability.
+/// Access tokens stay in memory. Web refresh credentials live only in sessionStorage.
+/// This survives a same-tab reload, without persisting passwords or using localStorage.
 class AuthController extends Notifier<AuthState> {
   Timer? _refreshTimer;
   AuthSession? _session;
   int _generation = 0;
+  DateTime? _refreshExpiresAt;
   SharedPreferences get _p => ref.read(prefsProvider);
   @override
   AuthState build() {
@@ -272,6 +278,8 @@ class AuthController extends Notifier<AuthState> {
     await OfflineCache.clearAll(_p);
     if (!ref.mounted || generation != _generation) return;
     _session = session;
+    _refreshExpiresAt = DateTime.now().toUtc().add(const Duration(days: 1));
+    _saveRefresh(session);
     state = state.copyWith(
       token: session.accessToken,
       userLabel: session.label,
@@ -280,6 +288,69 @@ class AuthController extends Notifier<AuthState> {
     await _p.setBool('onboarded', true);
     if (!ref.mounted || generation != _generation) return;
     _schedule(session);
+  }
+
+  void _saveRefresh(AuthSession session) {
+    final storage = ref.read(sessionStorageProvider);
+    final token = session.refreshToken;
+    if (token == null || token.isEmpty || _refreshExpiresAt == null) {
+      storage.clear();
+      return;
+    }
+    storage.write(
+      jsonEncode({
+        'refreshToken': token,
+        'label': session.label,
+        'expiresAt': _refreshExpiresAt!.toIso8601String(),
+        'clientId': ref.read(productionAuthApiProvider).clientId,
+      }),
+    );
+  }
+
+  /// Called before the router is mounted, so a reload never briefly redirects to login.
+  Future<void> restoreSession() async {
+    final storage = ref.read(sessionStorageProvider);
+    final raw = storage.read();
+    if (raw == null) return;
+    final generation = ++_generation;
+    try {
+      final data = jsonDecode(raw);
+      final api = ref.read(productionAuthApiProvider);
+      if (data is! Map ||
+          data['refreshToken'] is! String ||
+          (data['refreshToken'] as String).isEmpty ||
+          data['label'] is! String ||
+          data['clientId'] != api.clientId ||
+          data['expiresAt'] is! String) {
+        throw const FormatException('Invalid saved session');
+      }
+      final expiresAt = DateTime.parse(data['expiresAt'] as String).toUtc();
+      if (!expiresAt.isAfter(DateTime.now().toUtc())) {
+        throw const FormatException('Expired saved session');
+      }
+      final restored = await api.refresh(
+        AuthSession(
+          accessToken: '',
+          label: data['label'] as String,
+          refreshToken: data['refreshToken'] as String,
+        ),
+      );
+      if (!ref.mounted || generation != _generation) return;
+      await OfflineCache.clearAll(_p);
+      if (!ref.mounted || generation != _generation) return;
+      _session = restored;
+      _refreshExpiresAt = expiresAt;
+      _saveRefresh(restored);
+      state = state.copyWith(
+        token: restored.accessToken,
+        userLabel: restored.label,
+        onboarded: true,
+      );
+      await _p.setBool('onboarded', true);
+      if (ref.mounted && generation == _generation) _schedule(restored);
+    } catch (_) {
+      if (ref.mounted && generation == _generation) storage.clear();
+    }
   }
 
   void _schedule(AuthSession session) {
@@ -302,6 +373,7 @@ class AuthController extends Notifier<AuthState> {
       final next = await api.refresh(session);
       if (!ref.mounted || generation != _generation) return;
       _session = next;
+      _saveRefresh(next);
       state = state.copyWith(token: next.accessToken, userLabel: next.label);
       _schedule(next);
     } catch (_) {
@@ -316,6 +388,8 @@ class AuthController extends Notifier<AuthState> {
     final generation = ++_generation;
     _refreshTimer?.cancel();
     _session = null;
+    _refreshExpiresAt = null;
+    ref.read(sessionStorageProvider).clear();
     try {
       await ref
           .read(beforeLogoutProvider)()

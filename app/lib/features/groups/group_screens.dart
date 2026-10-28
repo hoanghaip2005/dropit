@@ -542,6 +542,25 @@ class GroupDetailScreen extends ConsumerWidget {
       await ref.read(membersProvider(groupId).future).catchError((_) => GroupMembers.fromJson(const {}));
     }
 
+    if (members.hasError && isGroupAccessLost(members.error!)) {
+      return AppScaffold(
+        header: const AppHeader.back(title: 'Nhóm'),
+        body: StateMessage(
+          key: const Key('groupAccessLost'),
+          icon: Icons.group_off_outlined,
+          title: 'Bạn không còn trong nhóm này',
+          body: 'Quyền truy cập nhóm đã kết thúc. Lịch sử học cá nhân của bạn vẫn được giữ lại.',
+          action: 'Về danh sách nhóm',
+          onAction: () {
+            ref.invalidate(myGroupsProvider);
+            ref.invalidate(upcomingProvider);
+            ref.invalidate(membersProvider(groupId));
+            ref.invalidate(schedulesProvider(groupId));
+            context.go('/groups');
+          },
+        ),
+      );
+    }
     return AppScaffold(
       header: isOwner ? const AppHeader.back(title: 'Chi tiết nhóm') : AppHeader.brand(
         caption: isOwner ? 'Chủ nhóm' : 'Thành viên',
@@ -693,6 +712,12 @@ Widget memberAvatar(PublicUser u, Map<String, String> frames, {double size = 40}
 }
 
 /// US-02.08 / BR-77: chủ nhóm xóa thành viên — ngoài phiên hiệu lực ngay; đang trong phiên → sau khi phiên kết thúc.
+/// Only explicit membership denial means access ended; connection errors remain retryable.
+bool isGroupAccessLost(Object error) {
+  final a = ApiError.from(error);
+  return !a.offline && a.code == 'FORBIDDEN_GROUP';
+}
+
 Future<void> removeMemberFlow(
   BuildContext context,
   WidgetRef ref,
@@ -726,8 +751,15 @@ Future<void> removeMemberFlow(
     }
   } catch (e) {
     final a = ApiError.from(e);
+    final accessChanged = isGroupAccessLost(a) || a.code == 'NOT_GROUP_OWNER';
+    if (accessChanged) {
+      ref.invalidate(membersProvider(groupId));
+      ref.invalidate(myGroupsProvider);
+    }
     if (context.mounted) {
-      showSnack(context, a.code == 'CANNOT_REMOVE_SELF' ? 'Không thể tự xóa mình. Dùng “Giải tán nhóm”.' : a.message);
+      showSnack(context, a.code == 'CANNOT_REMOVE_SELF'
+          ? 'Không thể tự xóa mình. Dùng “Giải tán nhóm”.'
+          : accessChanged ? 'Quyền quản lý nhóm đã thay đổi. Vui lòng tải lại nhóm.' : a.message);
     }
   }
 }

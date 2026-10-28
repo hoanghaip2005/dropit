@@ -91,7 +91,7 @@ class OwnerStyle extends ThemeExtension<OwnerStyle> {
 
 ThemeData buildOwnerTheme() {
   final base = buildLightTheme();
-  final scheme = base.colorScheme.copyWith(primary: OwnerStyle.primary,
+  final scheme = base.colorScheme.copyWith(primary: OwnerStyle.primary, onPrimary: Colors.white,
       onSurface: OwnerStyle.ink, onSurfaceVariant: OwnerStyle.muted,
       surfaceContainerHigh: OwnerStyle.inset, surfaceContainerHighest: OwnerStyle.line,
       outline: OwnerStyle.muted, outlineVariant: OwnerStyle.line);
@@ -102,11 +102,12 @@ ThemeData buildOwnerTheme() {
     canvasColor: OwnerStyle.canvas,
     textTheme: base.textTheme.apply(bodyColor: OwnerStyle.ink, displayColor: OwnerStyle.ink),
     filledButtonTheme: FilledButtonThemeData(style: base.filledButtonTheme.style!.copyWith(
+      foregroundColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.disabled) ? OwnerStyle.muted : Colors.white),
       backgroundColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.disabled) ? OwnerStyle.line : OwnerStyle.primary))),
     outlinedButtonTheme: OutlinedButtonThemeData(style: base.outlinedButtonTheme.style!.copyWith(
       foregroundColor: const WidgetStatePropertyAll(OwnerStyle.ink),
       side: const WidgetStatePropertyAll(BorderSide(color: OwnerStyle.line)))),
-    checkboxTheme: base.checkboxTheme.copyWith(fillColor: WidgetStateProperty.resolveWith(
+    checkboxTheme: base.checkboxTheme.copyWith(checkColor: const WidgetStatePropertyAll(Colors.white), fillColor: WidgetStateProperty.resolveWith(
       (s) => s.contains(WidgetState.selected) ? OwnerStyle.primary : Colors.transparent)),
     radioTheme: base.radioTheme.copyWith(fillColor: WidgetStateProperty.resolveWith(
       (s) => s.contains(WidgetState.selected) ? OwnerStyle.primary : OwnerStyle.muted)),
@@ -115,9 +116,14 @@ ThemeData buildOwnerTheme() {
     inputDecorationTheme: base.inputDecorationTheme.copyWith(
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: OwnerStyle.line))),
     dividerTheme: const DividerThemeData(color: OwnerStyle.line, thickness: 1),
-    datePickerTheme: base.datePickerTheme.copyWith(dayBackgroundColor: WidgetStateProperty.resolveWith(
+    datePickerTheme: base.datePickerTheme.copyWith(
+      dayForegroundColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? Colors.white : null),
+      todayForegroundColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? Colors.white : OwnerStyle.ink),
+      dayBackgroundColor: WidgetStateProperty.resolveWith(
       (s) => s.contains(WidgetState.selected) ? OwnerStyle.primary : null)),
     timePickerTheme: base.timePickerTheme.copyWith(dialBackgroundColor: OwnerStyle.inset,
+      dialTextColor: WidgetStateColor.resolveWith((s) => s.contains(WidgetState.selected) ? Colors.white : OwnerStyle.ink),
+      hourMinuteTextColor: WidgetStateColor.resolveWith((s) => s.contains(WidgetState.selected) ? Colors.white : OwnerStyle.ink),
       dialHandColor: OwnerStyle.primary, hourMinuteColor: WidgetStateColor.resolveWith(
         (s) => s.contains(WidgetState.selected) ? OwnerStyle.primary : OwnerStyle.inset)),
   );

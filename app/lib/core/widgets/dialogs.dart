@@ -93,7 +93,7 @@ class ConfirmDialog extends StatelessWidget {
             label: confirmLabel,
             compact: true,
             background: destructive ? DT.warning : (dark ? Colors.white : null),
-            foreground: dark && !destructive ? DT.textPrimary : Colors.white,
+            foreground: destructive ? Colors.white : dark ? DT.textPrimary : null,
             onPressed: () => Navigator.pop(context, true),
           ),
           const SizedBox(height: DT.spaceSm),

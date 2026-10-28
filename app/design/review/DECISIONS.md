@@ -84,3 +84,7 @@ Giữ artwork AI và ngoại lệ bỏ subtitle. Balance/kho đang tải, lỗi 
 ### Đăng nhập production — 24/10/2026
 
 Ưu tiên mới: bỏ đăng nhập mock, theo [phân xử LOGIN01–10](08-LOGIN-DECISIONS.md). Giữ canvas trung tính, nhận diện DropIt!, form thật và trạng thái lỗi/loading/accessibility. Không seed list, dev token fallback, control đăng ký/reset/ghi nhớ giả. Auth Cognito do root chốt theo architecture; nếu dùng Hosted UI, thích nghi thành CTA chuyển trang thay vì form mật khẩu giả. UI scope chỉ LoginScreen/helper riêng; verifier độc lập kiểm source auth/security sau triển khai, không coi test đạt là nghiệm thu hình ảnh.
+
+### Control theo vai trò và mất quyền nhóm — 28/10/2026
+
+Đợt [11](11-GROUP-CONTROLS-SESSION.md): giữ owner đen/chữ trắng, member cam/chữ đen; ghép foreground theo theme thay màu cố định. Mất quyền nhóm trả thông báo trung tính và lối về nhóm, giữ phân biệt lỗi mạng. Không mở rộng kết luận sang toàn bộ giao diện.

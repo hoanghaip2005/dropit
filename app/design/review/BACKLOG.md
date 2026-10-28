@@ -27,3 +27,7 @@ Mỗi đợt chốt đúng route/state, lập hồ sơ, sửa, kiểm độc l�
 ## Đợt 09 — Push mobile
 
 [Push iOS/Android](09-PUSH.md): triển khai card quyền tự nguyện + FCM/SNS backend; kiểm source độc lập, chưa cấu hình cloud, chưa xác minh hình ảnh/native delivery. Không coi web preview là bằng chứng push iOS/Android.
+
+## Đợt 11 — Control và khôi phục phiên
+
+[Hồ sơ 11](11-GROUP-CONTROLS-SESSION.md): production controls-session-20261028; 58 tests đạt; ảnh owner/member kiểm độc lập không blocking contrast. Còn xác minh hình ảnh access-loss trực tiếp, dialog và date/time. Reload cùng tab đã kiểm production.

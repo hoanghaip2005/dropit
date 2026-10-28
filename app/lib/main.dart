@@ -29,27 +29,28 @@ Future<void> main() async {
       // Missing native configuration must not prevent using the app.
     }
   }
+  final container = ProviderContainer(
+    // Tắt tự thử lại của Riverpod 3: màn hiện lỗi/mất mạng kèm nút "Thử lại".
+    retry: (_, _) => null,
+    overrides: [
+      prefsProvider.overrideWithValue(prefs),
+      pushClientProvider.overrideWithValue(FirebasePushClient(pushReady)),
+      beforeLogoutProvider.overrideWith(
+        (ref) => () async {
+          final auth = ref.read(authProvider);
+          await ref.read(pushControllerProvider.notifier).stop();
+          await disconnectPush(
+            auth,
+            ref.read(pushClientProvider),
+            stillCurrent: () => ref.read(authProvider).token == auth.token,
+          );
+        },
+      ),
+    ],
+  );
+  await container.read(authProvider.notifier).restoreSession();
   runApp(
-    ProviderScope(
-      // Tắt tự thử lại của Riverpod 3: màn hiện lỗi/mất mạng kèm nút "Thử lại".
-      retry: (_, _) => null,
-      overrides: [
-        prefsProvider.overrideWithValue(prefs),
-        pushClientProvider.overrideWithValue(FirebasePushClient(pushReady)),
-        beforeLogoutProvider.overrideWith(
-          (ref) => () async {
-            final auth = ref.read(authProvider);
-            await ref.read(pushControllerProvider.notifier).stop();
-            await disconnectPush(
-              auth,
-              ref.read(pushClientProvider),
-              stillCurrent: () => ref.read(authProvider).token == auth.token,
-            );
-          },
-        ),
-      ],
-      child: const DropItApp(),
-    ),
+    UncontrolledProviderScope(container: container, child: const DropItApp()),
   );
 }
 
