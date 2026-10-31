@@ -19,3 +19,7 @@ Initial upload with default Xcode16.4 was rejected for outdatedSDK; workflow now
 ## Apple processing and internal testing
 
 Build131 resource fe1ae94d-e3a2-45b2-b5c9-6277bade075d processed VALID. usesNonExemptEncryption=false set after inspecting mobile source (standard platform/network encryption; no custom crypto feature found). Created internal group DropIt Internal (cb8f963f-ba30-46f6-85bc-4fc89dd3db75), associated build, added Vietnamese what-to-test notes. Readback internalBuildState READY_FOR_BETA_TESTING; externalBuildState READY_FOR_BETA_SUBMISSION. No testers invited/added yet; need intended Apple ID and internal App Store Connect access. No public link or external/App Store review submitted.
+
+## Safety build — 31/10/2026
+
+Source9a73a53; workflow https://github.com/hoanghaip2005/dropit/actions/runs/41218921748 SUCCESS. Quality checks passed, signed archive/export succeeded; upload log states `UPLOAD SUCCEEDED with no errors`. Version0.1.0 build161. At initial readback Apple had not indexed the build yet; processing and tester availability pending. No App Store resubmission performed; physical-device recording still missing.
