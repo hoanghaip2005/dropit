@@ -42,3 +42,11 @@ Production index points to bootstrap-canonical-20261028.js, main-session-retry-f
 Every future web deployment MUST copy `infra/lightsail/flutter_service_worker.js` to web root after Flutter build; --pwa-strategy=none generates an empty file that does not retire a previously installed offline worker. Retirement worker skipWaiting/activate deletes flutter-* caches only, unregisters, navigates same-origin open windows to their existing URLs. It does not clear auth/sessionStorage. Keep worker URL available with no-store until legacy clients have migrated.
 
 Verified HTTP root/query same bootstrap, worker617bytes no-store; browser visiting ?v=auth-20261028#/login ends at /#/login. Legacy cached root may need one browser reload to trigger worker update; no claim all existing clients migrated immediately.
+
+## Safety release — 31/10/2026
+
+Source9a73a53. Backend `/opt/dropit/releases/safety-20261031`, previous `/opt/dropit/releases/management-20261028`; DB dump before migration under `/opt/dropit/shared/backups/pre-safety-20261031/database.dump` (server-private). Migrations001–005 applied. Corrected ownership of `trg_require_active_group()` to application schema owner before migration003; first attempt rolled back003 and left old runtime active. New runtime health200 production. No active/countdown sessions at deployment preflight.
+
+Web root uses bootstrap-safety-20261031.js/main-safety-20261031.js; root and retirement worker no-store verified. Prior web copy `/opt/dropit/web-before-safety-20261031`. Policy/support pages updated for actual new behavior. No auth storage cleared. Owner/member Cognito authentication and GET /v1/me + /v1/me/blocks200; invalid deletion confirmation400, no real account deleted. Access token scope includes aws.cognito.signin.user.admin; actual Cognito deletion still requires disposable-account physical/device QA. No claim native testing or Apple approval.
+
+Rollback code: restore previous current symlink then restart service; restore web backup. New migrations additive/compatible except new duration/active-group rules already intended by prior changes; do not restore database over live user data as routine rollback.
