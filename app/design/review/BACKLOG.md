@@ -33,3 +33,6 @@ Mỗi đợt chốt đúng route/state, lập hồ sơ, sửa, kiểm độc l�
 [Hồ sơ 11](11-GROUP-CONTROLS-SESSION.md): production controls-session-20261028; 58 tests đạt; ảnh owner/member kiểm độc lập không blocking contrast. Còn xác minh hình ảnh access-loss trực tiếp, dialog và date/time. Reload cùng tab đã kiểm production.
 
 Đợt11 vòng tái diễn: production session-retry-final-20261028; owner reload2 lần giữ đăng nhập, ảnh form đen/trắng kiểm độc lập. Session ack retry + terminal guard, auth transient gate đã sửa. Còn xác minh nguồn mất kết nối trên thiết bị user và hình ảnh các state khác; không coi NO_ATTENDEE là lỗi scheduler.
+
+## Đợt 12 — Account safety
+[Hồ sơ 12](12-ACCOUNT-SAFETY.md): xóa tài khoản, báo cáo/chặn/bỏ chặn theo API thật; 3 widget tests đạt, chờ verifier độc lập/hình ảnh và build thiết bị.

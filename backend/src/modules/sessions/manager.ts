@@ -1,3 +1,4 @@
+import { redactBlockedText } from '../moderation/redaction.js';
 // SessionManager: nạp phiên theo lịch, giữ SessionRuntime trong bộ nhớ (ADR-01), ghi chuyển
 // trạng thái quan trọng xuống RDS ngay (DQ-F04), phát sự kiện miền sang notifications/rewards.
 import type { Namespace, Socket } from 'socket.io';
@@ -110,7 +111,7 @@ export class SessionManager {
 
     rt.on('deliver', (userId, env) => {
       const m = rt.members.get(userId);
-      if (m?.socketId) this.nsp?.to(m.socketId).emit(env.type, env);
+      if (m?.socketId) void redactBlockedText(this.ctx.db, userId, env).then(safe => { if (m.socketId) this.nsp?.to(m.socketId).emit(env.type, safe); }).catch(err => this.log('redaction failed', err));
     });
 
     rt.on('member', (m, from, reason) => {
@@ -167,7 +168,7 @@ export class SessionManager {
             body: r.state === 'COMPLETED' ? (rt.forfeited ? 'Bạn đã hoàn thành phiên. Phiên mất thưởng tập thể: 0 Coins.' : `Bạn đã hoàn thành phiên: +${r.coins_awarded} Coins.`) : 'Kết quả phiên đã có.',
             data: { event_id: env.event_id, session_id: sid, group_id: e.groupId }, dedupeKey: env.event_id,
           });
-          if (m?.socketId) this.nsp?.to(m.socketId).emit(env.type, env);
+          if (m?.socketId) this.nsp?.to(m.socketId).emit(env.type, await redactBlockedText(this.ctx.db, r.user_id, env));
           else await this.ctx.notifications.deliverOutside(r.user_id, env, { title: e.groupName, body: 'Kết quả phiên đã có', data: { type: 'SESSION_RESULT', event_id: env.event_id, session_id: sid } });
         }
       }).finally(() => {
@@ -208,6 +209,11 @@ export class SessionManager {
     return out;
   }
 
+  /** Revoke every connected socket after account erasure. */
+  disconnectUser(userId: string) {
+    this.nsp?.in('user:' + userId).disconnectSockets(true);
+  }
+
   /** Trạng thái runtime (nếu đã nạp) — để kiểm sửa/hủy trước COUNTDOWN (BR-04, AC-02.11.4). */
   runtimeStatus(sessionId: string) {
     return this.runtimes.get(sessionId)?.rt.status ?? null;
@@ -236,7 +242,7 @@ export class SessionManager {
   }
 
   private pushStateToAll(e: Entry) {
-    for (const m of e.rt.members.values()) if (m.socketId) this.nsp?.to(m.socketId).emit('session:state', e.rt.stateFor(m.userId));
+    for (const m of e.rt.members.values()) if (m.socketId) void redactBlockedText(this.ctx.db, m.userId, e.rt.stateFor(m.userId)).then(env => { if (m.socketId) this.nsp?.to(m.socketId).emit('session:state', env); }).catch(err => this.log('redaction failed', err));
   }
 
   /** Tại started_at: thành viên (đã đồng ý) chưa vào → ABSENT (DQ-F01 đề xuất + BR-08 với late_join_max_min = 0). */
@@ -381,7 +387,7 @@ export class SessionManager {
   private attach(socket: Socket, e: Entry) {
     socket.join(`session:${e.rt.info.id}`);
     (socket.data.sessions as Set<string>).add(e.rt.info.id);
-    socket.emit('session:state', e.rt.stateFor(socket.data.userId));
+    void redactBlockedText(this.ctx.db, socket.data.userId, e.rt.stateFor(socket.data.userId)).then(env => socket.emit('session:state', env)).catch(err => this.log('redaction failed', err));
   }
 
   handle(socket: Socket, sessionId: string, type: Parameters<SessionRuntime['handle']>[1], eventId?: string): Ack {

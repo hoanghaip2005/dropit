@@ -1,9 +1,10 @@
 // Tiện ích HTTP dùng chung: xác thực người gọi, parse zod, idempotency (P6), lỗi problem+json (P10).
 import { createHash } from 'node:crypto';
+import { sql } from 'kysely';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z, ZodError, type ZodTypeAny } from 'zod';
 import type { DB } from './db.js';
-import type { TokenVerifier, Identity } from './auth.js';
+import { deletedSubject, type TokenVerifier, type Identity } from './auth.js';
 import { AppError, E } from './errors.js';
 
 export type CurrentUser = { id: string; display_name: string; status: string; identity: Identity };
@@ -17,7 +18,14 @@ export async function currentUser(req: FastifyRequest, db: DB, verifier: TokenVe
 }
 
 export async function ensureUser(db: DB, identity: Identity): Promise<CurrentUser> {
-  let u = await db.selectFrom('users').select(['id', 'display_name', 'status']).where('cognito_sub', '=', identity.sub).executeTakeFirst();
+  return db.transaction().execute(async tx => {
+    await sql`select pg_advisory_xact_lock(hashtext(${identity.sub}))`.execute(tx);
+    return ensureUserLocked(tx, identity);
+  });
+}
+
+async function ensureUserLocked(db: DB, identity: Identity): Promise<CurrentUser> {
+  let u = await db.selectFrom('users').select(['id', 'display_name', 'status']).where('cognito_sub', 'in', [identity.sub, deletedSubject(identity.sub)]).executeTakeFirst();
   if (!u) {
     const base = (identity.name || identity.email?.split('@')[0] || 'Người dùng').trim();
     const name = (base.length < 2 ? `${base}__` : base).slice(0, 30);

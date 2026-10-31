@@ -1,0 +1,11 @@
+# 12 — Account safety controls — 2026-10-31
+
+Scope: profile safety actions and public-profile report/block, both roles. Source: user request to resolve Apple Guideline 2.1, existing profile components. No matching Stitch safety flow; root reference audit/arbitration selects THÍCH NGHI, no global theme changes. Destructive account action must explain irreversible loss and owner-group impact; real API errors preserve sign-in and dialog. Report uses reason/details; block hides public identity through backend, unblock reachable from own profile. Root independent verifier required.
+
+Before: source audit only; account deletion and moderation controls absent. CHƯA XÁC MINH HÌNH ẢNH. Implementation owned by safety_ui: core/api.dart, features/profile/safety_controls.dart, profile_screens.dart, groups/membership_screens.dart. Backend contracts owned by separate agents. Tests and build results to follow.
+
+Implemented: profile account delete + blocked list; public profile report/block. API contracts integrated. 3 widget tests passed: success clears real auth session, confirmation gating, API failure stays retryable and preserves report text. Root source review prompted narrower block copy and list identity fallback; adjusted. CHỜ VERIFIER; CHƯA XÁC MINH HÌNH ẢNH. No production deployment or device QA performed by implementer.
+
+Independent root review — 2026-10-31: source reviewed destructive acknowledgement, cancel, retry/no false success, own/public profile integration, block/unblock cache invalidation, report error preserving input. Root requested distinguishable unblock labels and narrowed blocking copy; implementation adjusted. Widget tests passed3; web release build passed (existing optional Wasm/Cupertino font warnings). No current runtime image obtained: CHƯA XÁC MINH HÌNH ẢNH; not visual PASS. Native/device behavior not validated. Production unchanged.
+
+Final verification: backend typecheck passed; serialized full backend suite18 files/146 tests passed. Flutter safety/auth/profile selection26 tests passed. Earlier concurrent backend runs failed because separate servers recover shared DB sessions; final run had no overlap and passed. git diff --check clean. Web release build passed; production and native physical-device verification still pending.

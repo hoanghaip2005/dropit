@@ -1,3 +1,4 @@
+import type { UserBlocksTable, ModerationReportsTable } from '../modules/moderation/types.js';
 // Truy cập PostgreSQL bằng Kysely + pg (DQ-09). Lược đồ do design/schema.sql quản lý;
 // interface dưới đây chỉ khai báo các bảng/cột backend lõi đang dùng.
 import { Kysely, PostgresDialect, type Generated, type ColumnType } from 'kysely';
@@ -323,6 +324,8 @@ export interface JobRunsTable {
 }
 
 export interface Database {
+  user_blocks: UserBlocksTable;
+  moderation_reports: ModerationReportsTable;
   users: UsersTable;
   groups: GroupsTable;
   group_members: GroupMembersTable;

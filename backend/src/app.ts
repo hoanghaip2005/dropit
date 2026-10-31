@@ -1,3 +1,5 @@
+import { accountDeletionRoutes } from './modules/privacy/account-deletion.js';
+import { moderationRoutes } from './modules/moderation/routes.js';
 // Khởi tạo HTTP (Fastify) + Socket.io + cron trong một tiến trình (ADR-01).
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
@@ -82,6 +84,8 @@ export async function buildApp(opts: BuildOpts = {}) {
   journalRoutes(app, ctx);
   reportRoutes(app, ctx);
   privacyRoutes(app, ctx);
+  accountDeletionRoutes(app, ctx);
+  moderationRoutes(app, ctx);
 
   const io = new Server(app.server, { cors: { origin: '*' }, transports: ['websocket'] }); // DQ-A06: tắt long-polling
   attachSessionSocket(io, ctx);

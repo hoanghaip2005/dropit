@@ -1,3 +1,4 @@
+import { blockedIds, isBlocked } from '../moderation/service.js';
 import { sessionReward } from '../../shared/session-policy.js';
 // Giải trình (BR-85) & khiếu nại (BR-86…BR-88, máy trạng thái T-BA-37).
 import { sql, type Transaction } from 'kysely';
@@ -125,7 +126,8 @@ export async function listExplanationsForOwner(ctx: Ctx, userId: string, session
     await ctx.db.insertInto('access_logs').values(rows.map((r) => ({
       viewer_id: userId, viewer_role: 'OWNER' as const, subject_user_id: r.user_id, object_type: 'EXPLANATION', object_id: sessionId, group_id: s.group_id, purpose: null,
     }))).execute();
-  return { items: rows.map((r) => toExplanation(r, r.display_name, r.exited_at!)) };
+  const blocked = await blockedIds(ctx, userId);
+  return { items: rows.filter((r) => !blocked.has(r.user_id)).map((r) => toExplanation(r, r.display_name, r.exited_at!)) };
 }
 
 // ---------------- khiếu nại ----------------
@@ -193,6 +195,7 @@ export async function getAppeal(ctx: Ctx, userId: string, appealId: string) {
   const sm = await ctx.db.selectFrom('session_members').innerJoin('users', 'users.id', 'session_members.user_id')
     .select(['users.display_name', 'session_members.exited_at', 'session_members.end_reason'])
     .where('session_id', '=', a.session_id).where('user_id', '=', a.user_id).executeTakeFirstOrThrow();
+  if (await isBlocked(ctx, userId, a.user_id)) return { ...toAppeal(a), body: 'Nội dung đã ẩn do chặn', decision_reason: null, display_name: 'Người dùng đã chặn', exited_at: iso(sm.exited_at), end_reason: sm.end_reason };
   return { ...toAppeal(a), display_name: sm.display_name, exited_at: iso(sm.exited_at), end_reason: sm.end_reason };
 }
 

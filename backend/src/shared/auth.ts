@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 // Xác thực: interface TokenVerifier để thay HS256 dev bằng Cognito JWKS sau (P2, NFR-10).
 import { SignJWT, jwtVerify, errors, createRemoteJWKSet, type JWTVerifyGetKey } from 'jose';
 import type { AppConfig } from '../config.js';
@@ -86,3 +87,5 @@ export function createTokenVerifier(cfg: AppConfig): TokenVerifier {
   }
   return new CognitoJwksVerifier(cfg.cognitoRegion, cfg.cognitoPoolId, cfg.cognitoClientId);
 }
+
+export const deletedSubject = (sub: string) => 'deleted:' + createHash('sha256').update(sub).digest('hex');

@@ -144,6 +144,23 @@ class DropItApi {
     }
   }
 
+  Future<void> deleteAccount() => _wrap(() async {
+    await _dio.delete('/me/account', data: {'confirmation': 'DELETE'}, options: _idem());
+  });
+  Future<void> reportUser(String userId, String reason, String details) => _wrap(() async {
+    await _dio.post('/moderation/reports', data: {'user_id': userId, 'reason': reason, 'details': details}, options: _idem());
+  });
+  Future<void> blockUser(String userId) => _wrap(() async {
+    await _dio.put('/me/blocks/$userId', data: <String, dynamic>{});
+  });
+  Future<void> unblockUser(String userId) => _wrap(() async {
+    await _dio.delete('/me/blocks/$userId', options: _idem());
+  });
+  Future<List<Map<String, dynamic>>> blockedUsers() => _wrap(() async {
+    final data = (await _dio.get('/me/blocks')).data as Map;
+    return [for (final row in data['items'] as List) Map<String, dynamic>.from(row as Map)];
+  });
+
   Future<MeProfile> me() =>
       _wrap(() async => MeProfile.fromJson((await _dio.get('/me')).data));
 

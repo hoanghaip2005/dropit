@@ -1,3 +1,4 @@
+import { isBlocked } from '../moderation/service.js';
 // Quyền riêng tư (EP-01/EP-07): "Dữ liệu của tôi" (US-01.08, V-25) và hồ sơ công khai người cùng nhóm (V-32).
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
@@ -157,6 +158,7 @@ export function privacyRoutes(app: FastifyInstance, ctx: Ctx) {
   app.get('/v1/users/:user_id/public-profile', async (req) => {
     const me = await currentUser(req, ctx.db, ctx.verifier);
     const { user_id } = parse(z.object({ user_id: z.string().uuid() }), req.params);
+    if (await isBlocked(ctx, me.id, user_id)) throw E.notFound('Không tìm thấy người dùng');
     const target = await ctx.db.selectFrom('users').select(['id', 'show_streak', 'current_streak', 'status']).where('id', '=', user_id).executeTakeFirst();
     if (!target || target.status === 'DELETED') throw E.notFound('Không tìm thấy người dùng');
     let viewerIsOwner = false;

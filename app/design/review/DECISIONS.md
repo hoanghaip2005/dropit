@@ -92,3 +92,6 @@ Giữ artwork AI và ngoại lệ bỏ subtitle. Balance/kho đang tải, lỗi 
 ### Vòng tái diễn phiên/control — 28/10/2026
 
 [Đợt 11](11-GROUP-CONTROLS-SESSION.md): user chốt nền đen/chữ trắng; shared button cưỡng chế cặp này. Hủy do NO_ATTENDEE phải hiển thị đúng lý do, không gán chủ nhóm. Lỗi refresh tạm thời giữ credential, gate retry trước router; credential bị từ chối vẫn đăng xuất.
+
+### Account safety — 31/10/2026
+Root phân xử THÍCH NGHI theo yêu cầu Apple/người dùng: [đợt 12](12-ACCOUNT-SAFETY.md), control an toàn dùng component hiện hữu, không có Stitch tương ứng. Xóa cần xác nhận rõ, lỗi không giả thành công; báo cáo/chặn từ hồ sơ công khai, bỏ chặn từ hồ sơ cá nhân. CHƯA XÁC MINH HÌNH ẢNH.

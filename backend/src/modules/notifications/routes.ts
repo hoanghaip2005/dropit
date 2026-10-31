@@ -1,3 +1,4 @@
+import { redactBlockedText } from '../moderation/redaction.js';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'kysely';
@@ -35,7 +36,7 @@ export function notificationRoutes(app: FastifyInstance, ctx: Ctx) {
     const page = rows.slice(0, q.limit);
     const unread = await ctx.db.selectFrom('notifications').select((eb) => eb.fn.countAll<string>().as('n'))
       .where('user_id', '=', me.id).where('read_at', 'is', null).executeTakeFirstOrThrow();
-    return {
+    return redactBlockedText(ctx.db, me.id, {
       next_cursor: rows.length > q.limit ? encodeCursor(page[page.length - 1].created_at, page[page.length - 1].id) : null,
       unread_count: Number(unread.n),
       items: page.map((n) => ({
@@ -50,7 +51,7 @@ export function notificationRoutes(app: FastifyInstance, ctx: Ctx) {
         server_ts: n.created_at.toISOString(),
         read: n.read_at !== null,
       })),
-    };
+    });
   });
 
   app.post('/v1/me/notifications/read', async (req, reply) => {

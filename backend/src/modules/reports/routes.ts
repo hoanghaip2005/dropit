@@ -1,3 +1,4 @@
+import { blockedIds, isBlocked } from '../moderation/service.js';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { Ctx } from '../../context.js';
@@ -84,6 +85,8 @@ export function reportRoutes(app: FastifyInstance, ctx: Ctx) {
     })();
     if (role === 'OWNER') {
       const ex = await explanationsOf(ctx, group_id, month, rows.map((r) => r.user_id).filter((x): x is string => !!x));
+      const blocked = await blockedIds(ctx, me.id);
+      for (const r of rows) if (r.user_id && blocked.has(r.user_id)) { r.display_name_snapshot = 'Người dùng đã chặn'; ex.delete(r.user_id); }
       // P12/BR-73: chủ nhóm mở báo cáo → access_logs cho từng thành viên có dòng
       const subjects = rows.filter((r) => r.user_id);
       if (subjects.length)
@@ -113,6 +116,7 @@ export function reportRoutes(app: FastifyInstance, ctx: Ctx) {
     if (!row) throw E.notFound('Không có dòng của người này');
     await ctx.db.insertInto('access_logs').values({ viewer_id: me.id, viewer_role: 'OWNER', subject_user_id: user_id, object_type: 'REPORT', object_id: rep.id, group_id, purpose: null }).execute();
     const ex = await explanationsOf(ctx, group_id, month, [user_id]);
+    if (await isBlocked(ctx, me.id, user_id)) { row.display_name_snapshot = 'Người dùng đã chặn'; return rowView(row, []); }
     return rowView(row, ex.get(user_id) ?? []);
   });
 

@@ -40,7 +40,7 @@ describe('Nhóm, mã mời, đồng ý (EP-02, BR-74/75/76, D-21, D-25)', () => 
     expect(r.body.code).toBe('VALIDATION_FAILED');
   });
 
-  it('xem mã → đồng ý → thành viên; thành viên không xem được mã mời (NOT_GROUP_OWNER)', async () => {
+  it('xem mã → đồng ý → thành viên; thành viên xem được mã để chia sẻ', async () => {
     const { owner, groupId, inviteCode } = await t.groupWith(0);
     const m = await t.user('Minh');
     const pv = await t.api('GET', `/v1/invites/${inviteCode}`, m.token);
@@ -50,7 +50,7 @@ describe('Nhóm, mã mời, đồng ý (EP-02, BR-74/75/76, D-21, D-25)', () => 
     const c = await t.api('POST', `/v1/groups/${groupId}/consent`, m.token, { consent_version: 1, invite_code: inviteCode, accepted_items: pv.body.items.map((i: { code: string }) => i.code) });
     expect(c.status).toBe(201);
     expect(c.body.role).toBe('MEMBER');
-    expect((await t.api('GET', `/v1/groups/${groupId}/invite-code`, m.token)).body.code).toBe('NOT_GROUP_OWNER');
+    expect((await t.api('GET', `/v1/groups/${groupId}/invite-code`, m.token)).body.code).toBe(inviteCode);
     expect((await t.api('GET', `/v1/groups/${groupId}/invite-code`, owner.token)).body.code).toBe(inviteCode);
   });
 

@@ -1,3 +1,4 @@
+import { redactBlockedText } from '../moderation/redaction.js';
 // Module notifications (ADR-06): hộp thông báo DB (BR-81) + chọn kênh socket/push.
 // SNS sender + durable inbox outbox; console sender chỉ phục vụ dev/test.
 import type { Namespace } from 'socket.io';
@@ -72,6 +73,8 @@ export class NotificationService {
 
   /** Giao ngoài phiên: socket nếu mở app, không thì push (BR-27, NFR-02). */
   async deliverOutside(userId: string, env: Envelope, push: PushMessage) {
+    env = await redactBlockedText(this.db, userId, env);
+    push = await redactBlockedText(this.db, userId, push);
     let defer = true;
     try { defer = Boolean(await this.activeRecipient(userId)); } catch { /* queue instead of interrupting focus */ }
     if (this.online(userId) && !defer) this.emitToUser(userId, env);

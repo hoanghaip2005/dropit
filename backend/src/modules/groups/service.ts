@@ -1,3 +1,4 @@
+import { isBlocked } from '../moderation/service.js';
 // Module groups (EP-02): tạo nhóm, mã mời (BR-76), đồng ý → thành viên (BR-06, BR-74, BR-75, D-21, D-25).
 import { createHash, randomInt } from 'node:crypto';
 import type { Ctx } from '../../context.js';
@@ -96,7 +97,8 @@ export async function ownerView(ctx: Ctx, groupId: string) {
 }
 
 /** PublicUser (openapi): tên, avatar, đồ đang trang bị — không Coins/chuỗi (BR-53). */
-export async function publicUser(ctx: Ctx, userId: string, joinedAt: Date | null = null) {
+export async function publicUser(ctx: Ctx, userId: string, joinedAt: Date | null = null, viewerId?: string) {
+  if (viewerId && await isBlocked(ctx, viewerId, userId)) return { ...pub(userId, 'Người dùng đã chặn', joinedAt), blocked: true };
   const u = await ctx.db.selectFrom('users').select(['id', 'display_name', 'avatar_key']).where('id', '=', userId).executeTakeFirstOrThrow();
   const eq = await equipped(ctx, userId);
   return { ...pub(u.id, u.display_name, joinedAt), avatar_url: avatarUrl(ctx, u.avatar_key), frame_item_id: eq.AVATAR_FRAME, background_item_id: eq.BACKGROUND, title_item_id: eq.TITLE };
@@ -139,11 +141,11 @@ export async function getGroup(ctx: Ctx, userId: string, groupId: string) {
   if (role !== 'MEMBER') throw E.forbiddenGroup();
   return {
     group_id: g.id,
-    name: g.name,
+    name: await isBlocked(ctx, userId, g.owner_id) ? 'Nhóm học' : g.name,
     report_purpose: g.report_purpose,
     status: g.status,
     member_count: await memberCount(ctx, groupId),
-    owner: await publicUser(ctx, g.owner_id),
+    owner: await publicUser(ctx, g.owner_id, null, userId),
   };
 }
 
@@ -235,11 +237,11 @@ export async function previewInvite(ctx: Ctx, userId: string, code: string) {
   const g = await findByCode(ctx, code);
   await ctx.db.insertInto('invite_attempts').values({ user_id: userId, success: !!g }).execute();
   if (!g) throw new AppError(404, 'INVITE_CODE_INVALID', 'Mã nhóm không đúng hoặc đã hết hiệu lực', 'BR-76');
-  const owner = await publicUser(ctx, g.owner_id);
+  const owner = await publicUser(ctx, g.owner_id, null, userId);
   const n = await memberCount(ctx, g.id);
   return {
     group_id: g.id,
-    group_name: g.name,
+    group_name: await isBlocked(ctx, userId, g.owner_id) ? 'Nhóm học' : g.name,
     owner_display_name: owner.display_name,
     report_purpose: g.report_purpose,
     consent_version: g.consent_version,
@@ -307,7 +309,7 @@ export async function myGroup(ctx: Ctx, userId: string, groupId: string, role: '
   const n = await memberCount(ctx, groupId);
   return {
     group_id: g.id,
-    name: g.name,
+    name: await isBlocked(ctx, userId, g.owner_id) ? 'Nhóm học' : g.name,
     role,
     status: g.status, // AC-02.06.1
     member_count: n,
@@ -468,10 +470,10 @@ export async function listMembers(ctx: Ctx, userId: string, groupId: string) {
     .select(['users.id', 'users.display_name', 'group_members.joined_at'])
     .where('group_members.group_id', '=', groupId).where('group_members.left_at', 'is', null).execute();
   const people = [];
-  for (const r of rows) people.push(await publicUser(ctx, r.id, r.joined_at)); // AC-07.04.1: khung/hình nền đang trang bị
+  for (const r of rows) people.push(await publicUser(ctx, r.id, r.joined_at, userId)); // AC-07.04.1: khung/hình nền đang trang bị
   const members = sortPeople(people);
   return {
-    owner: await publicUser(ctx, g.owner_id),
+    owner: await publicUser(ctx, g.owner_id, null, userId),
     members,
     member_count: members.length,
     below_minimum: role === 'OWNER' ? members.length < GROUP_MIN : null,

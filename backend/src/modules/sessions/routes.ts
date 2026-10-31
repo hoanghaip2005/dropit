@@ -1,3 +1,4 @@
+import { blockedIds } from '../moderation/service.js';
 import { sessionReward } from '../../shared/session-policy.js';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
@@ -31,6 +32,8 @@ export async function myResult(ctx: Ctx, userId: string, sessionId: string) {
   const people = await ctx.db.selectFrom('session_members').innerJoin('users', 'users.id', 'session_members.user_id')
     .select(['users.id as user_id', 'users.display_name', 'session_members.state', 'session_members.joined_at'])
     .where('session_members.session_id', '=', sessionId).execute();
+  const blocked = await blockedIds(ctx, userId);
+  for (const p of people) if (blocked.has(p.user_id)) p.display_name = 'Người dùng đã chặn';
   const trig = s.forfeit_trigger_user_id ? people.find((p) => p.user_id === s.forfeit_trigger_user_id) : null;
   const logs = await ctx.db.selectFrom('achievement_log').select(['kind', 'ref_badge_id'])
     .where('user_id', '=', userId).where('ref_session_id', '=', sessionId).execute();
@@ -156,12 +159,16 @@ export function sessionRoutes(app: FastifyInstance, ctx: Ctx) {
     const expl = await ctx.db.selectFrom('explanations').select('user_id').where('session_id', '=', session_id).execute();
     const appeals = await ctx.db.selectFrom('appeals').select(['user_id', 'status']).where('session_id', '=', session_id).execute();
     const exits = await ctx.db.selectFrom('session_members').innerJoin('users', 'users.id', 'session_members.user_id')
-      .select(['users.display_name', 'session_members.exited_at'])
+      .select(['users.id as user_id', 'users.display_name', 'session_members.exited_at'])
       .where('session_members.session_id', '=', session_id).where('session_members.state', '=', 'EXITED')
       .orderBy('session_members.exited_at', 'asc').execute();
     const trig = s.forfeit_trigger_user_id
       ? await ctx.db.selectFrom('users').select('display_name').where('id', '=', s.forfeit_trigger_user_id).executeTakeFirst()
       : null;
+    const blocked = await blockedIds(ctx, me.id);
+    for (const r of rows) if (blocked.has(r.user_id)) r.display_name = 'Người dùng đã chặn';
+    for (const r of exits) if (blocked.has(r.user_id)) r.display_name = 'Người dùng đã chặn';
+    if (trig && s.forfeit_trigger_user_id && blocked.has(s.forfeit_trigger_user_id)) trig.display_name = 'Người dùng đã chặn';
     // P12: chủ nhóm xem dữ liệu thành viên → access_logs (BR-73)
     if (rows.length)
       await ctx.db.insertInto('access_logs').values(rows.map((r) => ({

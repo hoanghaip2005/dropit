@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
+import '../profile/safety_controls.dart';
 import '../../core/api.dart';
 import '../../core/models.dart';
 import '../../core/models_ext.dart';
@@ -273,6 +274,8 @@ class PublicProfileScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              if (ref.watch(meProvider).value?.userId != userId)
+                PublicSafetyActions(userId: userId),
               // Không có gì bật → không hiện khối thành tích (không ghi "đã ẩn").
               if (d.shownStreak != null || d.shownBadges.isNotEmpty)
                 AppCard(

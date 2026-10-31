@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../app/theme.dart';
+import 'safety_controls.dart';
 import '../../core/api.dart';
 import '../../core/auth.dart';
 import '../../core/models.dart';
@@ -200,6 +201,7 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
             ],
+            const AccountSafetyActions(),
             if (inSession)
               const AppBanner(
                 key: Key('logoutLocked'),
