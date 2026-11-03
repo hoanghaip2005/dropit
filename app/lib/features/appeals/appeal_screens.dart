@@ -390,6 +390,7 @@ class _ExplanationScreenState extends ConsumerState<ExplanationScreen> {
                       'Lịch sử chỉnh sửa (${full.history.length})',
                       style: t.titleMedium,
                     ),
+                    Text('Các bản trước được giữ để bạn đối chiếu. Chủ nhóm chỉ xem bản mới nhất và thời điểm chỉnh sửa.', style: t.bodySmall),
                     for (final revision in full.history) ...[
                       Text('${revision['body']}'),
                       Text(
