@@ -89,7 +89,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
                 Text(
                   inLobby
                       ? 'Bạn có thể quay lại check-in trước giờ bắt đầu. Rời phòng chờ lúc này không bị ghi vắng.'
-                      : 'Bạn kết thúc phần tham gia ngay. Cả phiên mất thưởng tập thể và tên bạn được báo cho nhóm.',
+                      : 'Bạn kết thúc phần tham gia ngay. Cả phiên mất thưởng tập thể và tên bạn được báo cho nhóm. Xác nhận rời phiên không có thời gian khoan hồng; chọn Hủy để tiếp tục.',
                   style: TextStyle(
                     color: inLobby ? OwnerStyle.muted : Colors.white,
                     fontSize: 14,
