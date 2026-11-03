@@ -79,6 +79,14 @@ Widget screen(ScreenController controller, {bool failMetadata = false}) =>
     );
 
 void main() {
+  testWidgets('Lobby explains server-configured grace without assuming three seconds', (tester) async {
+    await tester.pumpWidget(direct(LobbyView(
+      view: const SessionView(phase: SessionPhase.waiting, graceMs: 8000, graceMax: 2),
+      info: metadata(), onLeave: () {},
+    )));
+    await tester.scrollUntilVisible(find.textContaining('Khoan hồng 8.0 giây'), 300);
+    expect(find.textContaining('tối đa 2 lần'), findsOneWidget);
+  });
   test('Cancellation message preserves the server reason', () {
     expect(sessionCancellationText('NO_ATTENDEE'), contains('không có thành viên'));
     expect(sessionCancellationText('NO_ATTENDEE'), isNot(contains('Chủ nhóm')));

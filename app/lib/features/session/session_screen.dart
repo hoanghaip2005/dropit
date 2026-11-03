@@ -423,19 +423,21 @@ class LobbyView extends StatelessWidget {
                 gap: 16,
                 children: [
                   Text('Quy tắc phiên', style: t.titleMedium),
-                  const InfoRow(
+                  InfoRow(
                     icon: Icons.logout,
                     iconColor: DT.warning,
                     title: 'Rời app quá thời gian khoan hồng',
                     subtitle:
-                        'Trong phiên đang hoạt động, rời app quá thời gian khoan hồng sẽ ghi nhận bạn rời phiên.',
+                        view.graceMs != null && view.graceMax != null
+                            ? 'Khoan hồng ${view.graceMs! / 1000} giây, tối đa ${view.graceMax} lần mỗi phiên. Hết thời hạn hoặc hết lượt, rời app sẽ kết thúc phần tham gia và cả phiên mất thưởng.'
+                            : 'Trong phiên đang hoạt động, rời app quá thời gian khoan hồng sẽ ghi nhận bạn rời phiên.',
                   ),
                   const InfoRow(
                     icon: Icons.phone_in_talk_outlined,
                     iconColor: OwnerStyle.muted,
                     title: 'Cuộc gọi và thông báo',
                     subtitle:
-                        'Khi đang check-in, bạn có thể xem thông báo hoặc nghe máy rồi quay lại. Khi phiên đã bắt đầu, hãy quay lại trong thời gian khoan hồng.',
+                        'Khi đang check-in, bạn có thể xem thông báo hoặc nghe máy rồi quay lại. Khi phiên đã bắt đầu, hãy quay lại trong thời gian khoan hồng. Đồng hồ chỉ hiển thị trong DropIt!, không hiển thị đè lên ứng dụng khác.',
                   ),
                   const InfoRow(
                     icon: Icons.group_off_outlined,

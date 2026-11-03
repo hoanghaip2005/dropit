@@ -368,6 +368,8 @@ export class SessionRuntime extends EventEmitter<EngineEvents> {
       participant_count: [...this.members.values()].filter((x) => x.state !== 'ABSENT' && (x.state !== 'WAITING' || x.socketId !== null)).length,
       my_state: m?.state ?? null,
       my_grace_deadline: m?.graceDeadline ? new Date(m.graceDeadline).toISOString() : null,
+      grace_ms: this.cfg.graceMs,
+      grace_max: this.cfg.graceMax,
       pause_left: 0,
       forfeited: this.forfeited,
       forfeit_trigger_display_name: trig?.displayName ?? null,
