@@ -279,9 +279,15 @@ describe('Báo cáo: nhóm đã giải tán, nhãn "thêm sau khi tạo báo cá
     expect(v.status).toBe(200);
     expect(v.body.view).toBe('OWNER');
     expect((await t.api('GET', `/v1/groups/${groupId}/reports`, owner.token)).body.items[0].month).toBe(month);
+    const archived = await t.api('GET', '/v1/me/data', owner.token);
+    expect(archived.body.owned_reports).toContainEqual({
+      group_id: groupId, group_name: expect.any(String), group_status: 'DISSOLVED', month,
+    });
+    const stranger = await t.user('Lạ');
+    const outsiderArchive = await t.api('GET', '/v1/me/data', stranger.token);
+    expect(outsiderArchive.body.owned_reports.some((r: { group_id: string }) => r.group_id === groupId)).toBe(false);
     const m = await t.api('GET', `/v1/groups/${groupId}/reports/${month}`, members[0].token);
     expect(m.body).toMatchObject({ view: 'MEMBER', my_row: { user_id: members[0].id } });
-    const stranger = await t.user('Lạ');
     expect((await t.api('GET', `/v1/groups/${groupId}/reports/${month}`, stranger.token)).status).toBe(403);
   });
 

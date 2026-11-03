@@ -107,6 +107,16 @@ export async function myData(ctx: Ctx, userId: string, groupId?: string) {
     .select(['m.group_id', 'g.name', 'm.period']).where('r.user_id', '=', userId).where('m.status', '=', 'GENERATED').where('m.expires_at', '>', new Date());
   if (groupId) rq = rq.where('m.group_id', '=', groupId);
   const reports = (await rq.orderBy('m.period', 'desc').execute()).map((r) => ({ group_id: r.group_id, group_name: r.name, month: r.period.slice(0, 7) }));
+  // Archived groups must remain discoverable without becoming active memberships.
+  let ownedReportsQuery = db.selectFrom('monthly_reports as m')
+    .innerJoin('groups as g', 'g.id', 'm.group_id')
+    .select(['m.group_id', 'g.name', 'g.status', 'm.period'])
+    .where('g.owner_id', '=', userId).where('m.status', '=', 'GENERATED')
+    .where('m.expires_at', '>', new Date());
+  if (groupId) ownedReportsQuery = ownedReportsQuery.where('m.group_id', '=', groupId);
+  const ownedReports = (await ownedReportsQuery.orderBy('m.period', 'desc').execute()).map(r => ({
+    group_id: r.group_id, group_name: r.name, group_status: r.status, month: r.period.slice(0, 7),
+  }));
 
   let cq = db.selectFrom('consents').innerJoin('groups', 'groups.id', 'consents.group_id')
     .select(['consents.group_id', 'groups.name', 'consents.action', 'consents.consent_version', 'consents.created_at']).where('consents.user_id', '=', userId);
@@ -133,6 +143,7 @@ export async function myData(ctx: Ctx, userId: string, groupId?: string) {
     exit_events: exitEvents,
     attendance,
     reports,
+    owned_reports: ownedReports,
     consents,
     // Mục cá nhân (AC-01.08.5): luôn có, không phụ thuộc nhóm
     profile: { display_name: u.display_name, email: u.email, avatar_url: avatarUrl(ctx, u.avatar_key) },

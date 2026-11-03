@@ -66,6 +66,7 @@ class _MyDataScreenState extends ConsumerState<MyDataScreen> {
           final exits = _l(d['exit_events']);
           final attendance = _l(d['attendance']);
           final reports = _l(d['reports']);
+          final ownedReports = _l(d['owned_reports']);
           final consents = _l(d['consents']);
           final streak = _m(d['streak']);
           final coins = _m(d['coins']);
@@ -184,7 +185,17 @@ class _MyDataScreenState extends ConsumerState<MyDataScreen> {
                               onTap: () => context.push('/reports/${r['group_id']}')),
                       ],
               ),
-              _Section(title: 'Chuỗi ngày', children: [
+                if (ownedReports.isNotEmpty)
+                  _Section(title: 'Báo cáo nhóm tôi quản lý', children: [
+                    const Text('Báo cáo chỉ đọc, kể cả nhóm đã giải tán; chỉ hiển thị các kỳ còn thời hạn lưu trữ.'),
+                    for (final r in {for (final r in ownedReports) '${r['group_id']}': r}.values)
+                      ListRow(
+                        title: '${r['group_name']}',
+                        subtitle: r['group_status'] == 'DISSOLVED' ? 'Nhóm đã giải tán · Xem các kỳ báo cáo' : 'Xem các kỳ báo cáo',
+                        onTap: () => context.push('/reports/${r['group_id']}'),
+                      ),
+                  ]),
+                _Section(title: 'Chuỗi ngày', children: [
                 Text('Hiện tại ${streak['current'] ?? 0} ngày · dài nhất ${streak['longest'] ?? 0} ngày'
                     '${streak['shown_on_profile'] == true ? ' · đang hiện trên hồ sơ' : ''}'),
               ]),
