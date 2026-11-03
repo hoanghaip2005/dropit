@@ -1,5 +1,7 @@
 # Phân xử khác biệt thiết kế
 
+03/11/2026 — [Rủi ro I-01…I-10](14-RISK-REMEDIATION.md): sửa tuần tự theo mức rủi ro từ ảnh người dùng. Giữ quyền owner/member, mặc định khoan hồng và lịch sử riêng tư; làm rõ copy, reset consent version, khóa runtime loading khi mutation, audit hiệu ứng miễn trừ, discovery báo cáo nhóm giải tán và fallback inbox. Source review độc lập; CHƯA XÁC MINH HÌNH ẢNH/native push.
+
 03/11/2026 — [Đăng ký vào Home](13-REGISTRATION-HOME.md): theo yêu cầu mới, xác minh tài khoản thành công rồi vào trang chủ; không bắt chọn/tạo/tham gia nhóm. Home chưa có nhóm hiển thị “Tham gia nhóm”; nhập mã và consent chỉ mở theo thao tác chủ động. Thay quyết định ý định onboarding đợt 10; giữ auth guards và quyền backend. CHƯA XÁC MINH HÌNH ẢNH.
 
 28/10/2026 — [Đăng ký](10-REGISTRATION.md): yêu cầu mới thay giới hạn chỉ tài khoản được cấp. Tái sử dụng login hiện tại vì mockup không có signup riêng. Chọn tạo/tham gia nhóm là ý định onboarding; quyền vẫn theo quan hệ backend. Cognito xác minh email, không bypass. Giữ shop artwork hiện có; bổ sung catalog production riêng, không chạy demo seed.
