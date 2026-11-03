@@ -24,7 +24,7 @@ String journalDateLabel(String key) {
   return '${_weekdays[d.weekday - 1]}, ${two(d.day)}/${two(d.month)}/${d.year}';
 }
 
-const privacyLine = 'Chủ nhóm và quản trị không xem được trong app.';
+const privacyLine = 'Nhật ký riêng tư: chỉ bạn xem được trong app. Nội dung không gửi cho chủ nhóm và không thay thế giải trình rời phiên.';
 
 /// V-33 Nhật ký: xem lại các mục (chỉ chủ sở hữu — US-07.08, US-07.10).
 class JournalScreen extends ConsumerWidget {

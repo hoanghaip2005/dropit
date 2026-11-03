@@ -288,7 +288,7 @@ class _ExplanationScreenState extends ConsumerState<ExplanationScreen> {
               const AppCard(
                 color: Colors.white,
                 children: [
-                  Text('Chỉ bạn và chủ nhóm xem được nội dung.'),
+                  Text('Giải trình được gửi cho chủ nhóm; chỉ bạn và chủ nhóm xem được nội dung. Nhật ký cá nhân là mục riêng tư, không được gửi kèm.'),
                   Text('Giải trình không đổi kết quả, Coins hoặc chuỗi.'),
                 ],
               ),
