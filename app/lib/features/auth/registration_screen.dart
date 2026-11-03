@@ -9,7 +9,7 @@ import '../../core/api.dart';
 import '../../core/auth.dart';
 import '../../core/invite_navigation.dart';
 
-/// Registration intent selects the next screen, never grants a server role.
+/// Verify the account before entering home; joining a group is optional.
 class RegistrationScreen extends ConsumerStatefulWidget {
   const RegistrationScreen({super.key});
 
@@ -24,7 +24,6 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _password = TextEditingController();
   final _repeat = TextEditingController();
   final _code = TextEditingController();
-  bool _owner = false;
   bool _verify = false;
   bool _confirmed = false;
   bool _busy = false;
@@ -110,7 +109,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       await ref.read(authProvider.notifier).acceptSession(session);
       if (!mounted) return;
       await ref.read(apiProvider).updateMe(_name.text.trim());
-      if (mounted) context.go(inviteReturnOf(context) ?? (_owner ? '/groups/new' : '/join'));
+      if (mounted) context.go('/home');
     });
   }
 
@@ -146,59 +145,6 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
   );
 
-  Widget _intent(bool owner, String title, String subtitle, IconData icon) {
-    final selected = _owner == owner;
-    return Semantics(
-      selected: selected,
-      button: true,
-      child: Material(
-        color: selected ? DT.accentSoftBg : OwnerStyle.inset,
-        borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: _busy ? null : () => setState(() => _owner = owner),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  color: selected ? OwnerStyle.primary : OwnerStyle.muted,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: context.text.titleSmall!.copyWith(
-                          color: OwnerStyle.ink,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        subtitle,
-                        style: context.text.bodySmall!.copyWith(
-                          color: OwnerStyle.muted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  selected ? Icons.check_circle : Icons.circle_outlined,
-                  color: selected ? OwnerStyle.primary : OwnerStyle.muted,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final configured = ref.watch(productionAuthApiProvider).configured;
@@ -219,7 +165,14 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextButton.icon(
-                    onPressed: _busy ? null : () => context.go(authRouteWithInvite('/login', inviteReturnOf(context))),
+                    onPressed: _busy
+                        ? null
+                        : () => context.go(
+                            authRouteWithInvite(
+                              '/login',
+                              inviteReturnOf(context),
+                            ),
+                          ),
                     icon: const Icon(Icons.arrow_back),
                     label: const Text('Đăng nhập'),
                   ),
@@ -365,25 +318,6 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                                     : null,
                               ),
                               const SizedBox(height: 24),
-                              Text(
-                                'Bạn muốn bắt đầu thế nào?',
-                                style: t.titleMedium,
-                              ),
-                              const SizedBox(height: 10),
-                              _intent(
-                                true,
-                                'Tạo nhóm học',
-                                'Tạo nhóm và quản lý lịch học của nhóm.',
-                                Icons.groups_outlined,
-                              ),
-                              const SizedBox(height: 10),
-                              _intent(
-                                false,
-                                'Tham gia nhóm học',
-                                'Nhập mã mời từ chủ nhóm.',
-                                Icons.group_add_outlined,
-                              ),
-                              const SizedBox(height: 10),
                               Text(
                                 'Bạn có thể tạo hoặc tham gia nhóm sau. Quyền chủ nhóm chỉ áp dụng cho nhóm bạn tạo.',
                                 style: t.bodySmall!.copyWith(

@@ -1,5 +1,7 @@
 # Phân xử khác biệt thiết kế
 
+03/11/2026 — [Đăng ký vào Home](13-REGISTRATION-HOME.md): theo yêu cầu mới, xác minh tài khoản thành công rồi vào trang chủ; không bắt chọn/tạo/tham gia nhóm. Home chưa có nhóm hiển thị “Tham gia nhóm”; nhập mã và consent chỉ mở theo thao tác chủ động. Thay quyết định ý định onboarding đợt 10; giữ auth guards và quyền backend. CHƯA XÁC MINH HÌNH ẢNH.
+
 28/10/2026 — [Đăng ký](10-REGISTRATION.md): yêu cầu mới thay giới hạn chỉ tài khoản được cấp. Tái sử dụng login hiện tại vì mockup không có signup riêng. Chọn tạo/tham gia nhóm là ý định onboarding; quyền vẫn theo quan hệ backend. Cognito xác minh email, không bypass. Giữ shop artwork hiện có; bổ sung catalog production riêng, không chạy demo seed.
 
 Ngày: 22/10/2026. Trạng thái: **SOURCE_AUDIT — chưa nghiệm thu thị giác**.

@@ -1,5 +1,7 @@
 # Các đợt triển khai
 
+- 13 — [Đăng ký vào Home](13-REGISTRATION-HOME.md): bỏ bước nhóm bắt buộc sau đăng ký; tham gia nhóm tùy chọn từ trang chủ. Kiểm thử hành vi và hồi quy auth; CHƯA XÁC MINH HÌNH ẢNH.
+
 - 10 — [Đăng ký](10-REGISTRATION.md): đã triển khai web và bật Cognito self-registration; 38 tests đạt. Kiểm hình ảnh từng trạng thái, email end-to-end còn giới hạn ghi trong hồ sơ.
 
 ## Bước 0 — dựng cơ chế đánh giá (đã lập)
