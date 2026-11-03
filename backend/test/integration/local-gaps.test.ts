@@ -81,6 +81,12 @@ describe('US-02.11 Sửa / hủy lịch (+ AC-03.01.4)', () => {
     const s = await sess(sid);
     expect(s).toMatchObject({ status: 'CANCELLED', cancel_reason: 'OWNER_CANCEL', forfeited: false });
     expect(t.srv.ctx.sessions.runtimes.has(sid)).toBe(false);
+    const reconnect = await t.sock(members[0].token);
+    expect(await emit(reconnect, 'session:resume', { session_id: sid })).toMatchObject({ ok: false, code: 'SESSION_NOT_ACTIVE' });
+    expect(await emit(reconnect, 'session:join', { session_id: sid })).toMatchObject({ ok: false, code: 'SESSION_NOT_ACTIVE' });
+    await t.srv.ctx.sessions.loadDue();
+    expect(t.srv.ctx.sessions.runtimes.has(sid)).toBe(false);
+    reconnect.close();
     await waitFor(async () => (await smRow(sid, members[0].id))?.state === 'VOID');
     expect((await smRow(sid, members[1].id))?.state).toBe('VOID');
     expect(await t.db.selectFrom('coin_ledger').select('entry_id').where('ref_id', '=', sid).execute()).toHaveLength(0);

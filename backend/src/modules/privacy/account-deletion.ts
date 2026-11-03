@@ -36,8 +36,11 @@ export function accountDeletionRoutes(app: FastifyInstance, ctx: Ctx) {
     const memberships = await ctx.db.selectFrom('group_members').select('group_id').where('user_id', '=', user.id).where('left_at', 'is', null).execute();
     for (const m of memberships) ctx.sessions.withdrawFromGroup(m.group_id, user.id);
     const ownerIds = owned.map(g => g.id);
+    let releaseLoading = () => {};
+    try {
     if (ownerIds.length) {
       const running = await ctx.db.selectFrom('sessions').select('id').where('group_id', 'in', ownerIds).where('status', 'in', ['SCHEDULED', 'COUNTDOWN', 'ACTIVE']).execute();
+      releaseLoading = ctx.sessions.suspendLoading(running.map(s => s.id));
       for (const s of running) ctx.sessions.cancelLoaded(s.id);
     }
     if (user.avatar_key) {
@@ -96,6 +99,9 @@ export function accountDeletionRoutes(app: FastifyInstance, ctx: Ctx) {
       await tx.updateTable('session_members').set({ state: 'WITHDRAWN', end_reason: 'CONSENT_WITHDRAWN', ended_at: now }).where('user_id', '=', user.id).where('is_final', '=', false as never).execute();
       await sql`update users set status = 'DELETED', cognito_sub = ${tombstone}, email = null, display_name = 'Người dùng đã xóa', avatar_key = null, current_streak = 0, longest_streak = 0, streak_last_inc_day = null, show_streak = false, locked_at = null, lock_reason = null, deleted_at = now() where id = ${user.id}`.execute(tx);
     });
+    } finally {
+      releaseLoading();
+    }
     ctx.sessions.disconnectUser(user.id);
     if (ctx.cfg.cognitoRegion && !ctx.cfg.devAuth) {
       try { await deleteCognitoUser(ctx.cfg.cognitoRegion, token); } catch {

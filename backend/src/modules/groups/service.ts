@@ -151,6 +151,7 @@ export async function getGroup(ctx: Ctx, userId: string, groupId: string) {
 
 /** Owner-only soft dissolution. History/report rows remain readable, access is closed. */
 export async function dissolveGroup(ctx: Ctx, userId: string, groupId: string) {
+  let releaseLoading = () => {};
   const outcome = await ctx.db.transaction().execute(async (tx) => {
     const g = await tx.selectFrom('groups').selectAll().where('id', '=', groupId).forUpdate().executeTakeFirst();
     if (!g) throw E.notFound('Không tìm thấy nhóm');
@@ -166,6 +167,7 @@ export async function dissolveGroup(ctx: Ctx, userId: string, groupId: string) {
     }
     const members = await tx.selectFrom('group_members').select('user_id').where('group_id', '=', groupId).where('left_at', 'is', null).execute();
     // Stop loaded lobby timers synchronously before their activation can race the writes.
+    releaseLoading = ctx.sessions.suspendLoading(sessions.map(s => s.id));
     for (const session of sessions) ctx.sessions.cancelLoaded(session.id);
     const sessionIds = sessions.map((s) => s.id);
     if (sessionIds.length) {
@@ -179,7 +181,7 @@ export async function dissolveGroup(ctx: Ctx, userId: string, groupId: string) {
       .where('group_id', '=', groupId).where('left_at', 'is', null).execute();
     await tx.updateTable('groups').set({ status: 'DISSOLVED', dissolved_at: now }).where('id', '=', groupId).execute();
     return { members: members.map((m) => m.user_id), name: g.name };
-  });
+  }).finally(() => releaseLoading());
   if (outcome.members.length) await ctx.notifications.notify(outcome.members, {
     type: 'GROUP_DISSOLVED', title: outcome.name, body: 'Chủ nhóm đã xóa nhóm. Các phiên chưa bắt đầu đã hủy; kết quả cá nhân được giữ lại.',
     data: { group_id: groupId }, dedupeKey: `GROUP_DISSOLVED:${groupId}`,
