@@ -81,6 +81,14 @@ Widget screen(
 );
 
 void main() {
+  testWidgets('Desktop explicitly describes inbox-only notifications', (tester) async {
+    final client = PermissionClient(available: false);
+    await tester.pumpWidget(screen(client));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('chỉ có hộp thông báo trong ứng dụng'), findsOneWidget);
+    expect(find.text('Bật thông báo'), findsNothing);
+    expect(client.requests, isEmpty);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
   testWidgets(
     'Unavailable push never requests permission; empty inbox remains usable',
     (tester) async {
@@ -90,6 +98,7 @@ void main() {
       expect(find.byType(PushPermissionCard), findsOneWidget);
       expect(find.text('Chưa có thông báo'), findsOneWidget);
       expect(find.text('Bật thông báo'), findsNothing);
+      expect(find.textContaining('Hãy mở hộp thông báo trong DropIt!'), findsOneWidget);
       expect(client.requests, isEmpty);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),

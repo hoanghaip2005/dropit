@@ -59,8 +59,9 @@ class HomeScreen extends ConsumerWidget {
           icon: Icons.group_add_outlined,
           tone: StateTone.accent,
           title: 'Bạn chưa ở nhóm nào',
-          body: 'Nhập mã mời từ chủ nhóm, hoặc tạo nhóm của bạn.',
-          action: 'Nhập mã nhóm',
+          body:
+              'Bạn có thể khám phá ứng dụng và tham gia nhóm sau khi có mã mời từ chủ nhóm.',
+          action: 'Tham gia nhóm',
           onAction: () => context.push('/join'),
           secondaryAction: 'Tạo nhóm',
           onSecondaryAction: () => context.push('/groups/new'),
@@ -87,7 +88,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: DT.spaceXs),
                     SecondaryButton(
-                      label: 'Nhập mã nhóm',
+                      label: 'Tham gia nhóm',
                       icon: Icons.vpn_key_outlined,
                       onPressed: () => context.push('/join'),
                     ),

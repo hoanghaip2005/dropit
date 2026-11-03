@@ -288,7 +288,7 @@ class _ExplanationScreenState extends ConsumerState<ExplanationScreen> {
               const AppCard(
                 color: Colors.white,
                 children: [
-                  Text('Chỉ bạn và chủ nhóm xem được nội dung.'),
+                  Text('Giải trình được gửi cho chủ nhóm; chỉ bạn và chủ nhóm xem được nội dung. Nhật ký cá nhân là mục riêng tư, không được gửi kèm.'),
                   Text('Giải trình không đổi kết quả, Coins hoặc chuỗi.'),
                 ],
               ),
@@ -390,6 +390,7 @@ class _ExplanationScreenState extends ConsumerState<ExplanationScreen> {
                       'Lịch sử chỉnh sửa (${full.history.length})',
                       style: t.titleMedium,
                     ),
+                    Text('Các bản trước được giữ để bạn đối chiếu. Chủ nhóm chỉ xem bản mới nhất và thời điểm chỉnh sửa.', style: t.bodySmall),
                     for (final revision in full.history) ...[
                       Text('${revision['body']}'),
                       Text(
@@ -779,6 +780,11 @@ class _OwnerAppealScreenState extends ConsumerState<OwnerAppealScreen> {
               Text('Quyết định', style: t.titleMedium),
               if (a.decisionReason != null) Text('Lý do: ${a.decisionReason}', style: t.bodyMedium),
               if (a.decidedAt != null) Text('Lúc ${hhmm(a.decidedAt)} ${ddmm(a.decidedAt)}', style: t.bodySmall),
+              if (a.decisionEffect != null) ...[
+                const FieldLabel('Thay đổi tại thời điểm quyết định'),
+                Text('Miễn trừ: ${a.decisionEffect!['before']['exempted'] == true ? 'Có' : 'Không'} → ${a.decisionEffect!['after']['exempted'] == true ? 'Có' : 'Không'}'),
+                Text('Mất thưởng tập thể: ${a.decisionEffect!['before']['forfeited'] == true ? 'Có' : 'Không'} → ${a.decisionEffect!['after']['forfeited'] == true ? 'Có' : 'Không'}'),
+              ],
               if (a.status == 'ESCALATED') Text('Ca đã chuyển quản trị xem xét.', style: t.bodySmall),
             ]),
         ]),

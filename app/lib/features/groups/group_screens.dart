@@ -423,6 +423,20 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
   // AC-01.05.5: nút "Đồng ý" chỉ bật sau khi cuộn đến cuối nội dung (giả định).
   final _scroll = ScrollController();
   bool _readToEnd = false;
+  int? _documentVersion;
+
+  void _resetConsent() {
+    _on.clear();
+    _readToEnd = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scroll.hasClients) _scroll.jumpTo(0);
+    });
+  }
+
+  void _reloadConsent() {
+    setState(_resetConsent);
+    ref.invalidate(invitePreviewProvider(widget.code));
+  }
 
   @override
   void initState() {
@@ -471,11 +485,12 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
           'OWNER_OF_THIS_GROUP' =>
             'Bạn là chủ nhóm này nên không tham gia làm thành viên.',
           'CONSENT_VERSION_STALE' =>
-            'Nội dung đồng ý vừa thay đổi. Vui lòng đọc lại.',
+            'Quy tắc vừa thay đổi. Hãy đọc bản mới và chọn lại các mục đồng ý.',
           _ => a.offline ? 'Không có kết nối. Chưa vào nhóm.' : a.message,
         },
       );
       if (a.code == 'CONSENT_VERSION_STALE') {
+        _resetConsent();
         ref.invalidate(invitePreviewProvider(widget.code));
       }
     } finally {
@@ -516,6 +531,10 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
           );
         },
         data: (d) {
+          if (_documentVersion != d.consentVersion) {
+            _documentVersion = d.consentVersion;
+            _resetConsent();
+          }
           final requiredOk = d.items
               .where((i) => i.required)
               .every((i) => _on[i.code] == true);
@@ -613,7 +632,12 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                     ),
                 ],
               ),
-              if (_err != null) AppBanner(tone: BannerTone.danger, text: _err!),
+              if (_err != null) AppBanner(
+                tone: BannerTone.danger,
+                text: _err!,
+                action: 'Tải lại quy tắc',
+                onAction: _busy ? null : _reloadConsent,
+              ),
               if (!_readToEnd)
                 const HintText(
                   'Cuộn đến cuối để đọc hết nội dung trước khi đồng ý.',
@@ -855,6 +879,10 @@ class GroupDetailScreen extends ConsumerWidget {
                             : BadgeTone.danger,
                       ),
                     ],
+                  ),
+                  const HintText(
+                    'Bạn quản lý lịch và báo cáo, không tham gia phiên của nhóm này. Bạn có thể tham gia nhóm khác với vai trò thành viên.',
+                    key: Key('ownerParticipationNotice'),
                   ),
                 ],
               ),
@@ -1675,7 +1703,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
       ),
       children: [
         Text(
-          'Dành cho chủ nhóm. Chủ nhóm không tham gia phiên.',
+          'Bạn đặt lịch cho các thành viên. Với vai trò chủ nhóm, bạn theo dõi kết quả và không tham gia phiên của nhóm này.',
           style: t.bodySmall,
         ),
         AppCard(

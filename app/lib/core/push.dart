@@ -356,7 +356,12 @@ class PushPermissionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final client = ref.watch(pushClientProvider);
-    if (!mobilePushSupported) return const SizedBox.shrink();
+    if (!mobilePushSupported) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text('Bản này chỉ có hộp thông báo trong ứng dụng. Hãy mở DropIt! để xem cập nhật; không có thông báo đẩy khi đóng ứng dụng.'),
+      );
+    }
     final state = ref.watch(pushControllerProvider);
     final denied =
         state.status == AuthorizationStatus.denied && !state.canRequest;
@@ -372,7 +377,7 @@ class PushPermissionCard extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             !client.available
-                ? 'Push chưa được cấu hình cho bản cài đặt này.'
+                ? 'Bản cài đặt này chưa hỗ trợ thông báo đẩy. Hãy mở hộp thông báo trong DropIt! để xem cập nhật.'
                 : state.error ??
                       (state.registered
                           ? 'Đã đăng ký nhận thông báo. Bạn có thể tắt trong cài đặt hệ thống.'

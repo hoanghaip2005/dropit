@@ -219,6 +219,7 @@ export interface AppealsTable {
   status: AppealStatus;
   handler_id: string | null;
   decision_reason: string | null;
+  decision_effect: ColumnType<Record<string, unknown> | null, string | null | undefined, string | null>;
   opened_at: TsNull;
   escalated_at: TsNull;
   decided_at: TsNull;

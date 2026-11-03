@@ -100,7 +100,7 @@ class ReportScreen extends ConsumerWidget {
               icon: Icons.analytics_outlined,
               leading: inShell ? HeaderLeading.none : HeaderLeading.back,
             )
-          : AppHeader.back(title: 'Báo cáo của tôi'),
+          : AppHeader.back(title: g == null ? 'Báo cáo tháng' : 'Báo cáo của tôi'),
       body: ReportBody(groupId: groupId),
     );
   }

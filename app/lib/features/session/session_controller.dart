@@ -49,6 +49,8 @@ class SessionView {
     this.forfeited = false,
     this.forfeitTriggerName,
     this.graceDeadline,
+    this.graceMs,
+    this.graceMax,
     this.offset = Duration.zero,
     this.banners = const [],
     this.errorCode,
@@ -68,6 +70,8 @@ class SessionView {
   final bool forfeited;
   final String? forfeitTriggerName;
   final DateTime? graceDeadline;
+  final int? graceMs;
+  final int? graceMax;
 
   /// giờ server − giờ máy (BR-03: chỉ dùng hiển thị).
   final Duration offset;
@@ -113,6 +117,8 @@ class SessionView {
     bool? forfeited,
     String? forfeitTriggerName,
     DateTime? graceDeadline,
+    int? graceMs,
+    int? graceMax,
     Duration? offset,
     List<ExitBanner>? banners,
     String? errorCode,
@@ -132,6 +138,8 @@ class SessionView {
     forfeited: forfeited ?? this.forfeited,
     forfeitTriggerName: forfeitTriggerName ?? this.forfeitTriggerName,
     graceDeadline: graceDeadline ?? this.graceDeadline,
+    graceMs: graceMs ?? this.graceMs,
+    graceMax: graceMax ?? this.graceMax,
     offset: offset ?? this.offset,
     banners: banners ?? this.banners,
     errorCode: errorCode ?? this.errorCode,
@@ -437,6 +445,8 @@ class SessionController extends Notifier<SessionView> {
       forfeited: d['forfeited'] == true ? true : null,
       forfeitTriggerName: ft,
       graceDeadline: _dt(d['my_grace_deadline']),
+      graceMs: (d['grace_ms'] as num?)?.toInt(),
+      graceMax: (d['grace_max'] as num?)?.toInt(),
       offset: state.offset == Duration.zero
           ? _offsetFrom(d['server_ts'])
           : null,

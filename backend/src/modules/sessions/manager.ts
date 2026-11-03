@@ -25,6 +25,24 @@ export class SessionManager {
   readonly runtimes = new Map<string, Entry>();
   nsp: Namespace | null = null;
   private loading = new Set<string>();
+  private invalidatedLoads = new Set<string>();
+  private cancelling = new Set<string>();
+  private mutations = new Map<string, number>();
+
+  /** Prevent cron/socket loads until an external DB mutation commits or rolls back. */
+  suspendLoading(sessionIds: string[]): () => void {
+    for (const id of sessionIds) {
+      this.mutations.set(id, (this.mutations.get(id) ?? 0) + 1);
+      if (this.loading.has(id)) this.invalidatedLoads.add(id);
+    }
+    return () => {
+      for (const id of sessionIds) {
+        const count = (this.mutations.get(id) ?? 1) - 1;
+        if (count > 0) this.mutations.set(id, count);
+        else this.mutations.delete(id);
+      }
+    };
+  }
   private log = (...a: unknown[]) => console.log('[sessions]', ...a);
 
   constructor(private ctx: Ctx) {}
@@ -44,14 +62,20 @@ export class SessionManager {
   }
 
   async cancelInDb(sessionId: string, reason: 'SERVER_OUTAGE' | 'NO_ATTENDEE' | 'OWNER_CANCEL') {
-    await this.ctx.db.transaction().execute(async (tx) => {
+    this.cancelling.add(sessionId);
+    if (this.loading.has(sessionId)) this.invalidatedLoads.add(sessionId);
+    try {
+      await this.ctx.db.transaction().execute(async (tx) => {
       await tx.updateTable('session_members')
         .set({ state: 'VOID', end_reason: 'SESSION_CANCELLED', ended_at: new Date() })
         .where('session_id', '=', sessionId).where('is_final', '=', false as never).execute();
       await tx.updateTable('sessions')
         .set({ status: 'CANCELLED', cancel_reason: reason, cancelled_at: new Date(), forfeited: false, forfeited_at: null, forfeit_trigger_user_id: null })
         .where('id', '=', sessionId).execute();
-    });
+      });
+    } finally {
+      this.cancelling.delete(sessionId);
+    }
   }
 
   /** Nạp các phiên sắp mở phòng chờ (cron mỗi OPEN_SESSIONS_INTERVAL_MS). */
@@ -76,11 +100,15 @@ export class SessionManager {
   }
 
   private async load(sessionId: string) {
+    if (this.cancelling.has(sessionId) || this.mutations.has(sessionId)) return;
     this.loading.add(sessionId);
     try {
       const s = await this.ctx.db.selectFrom('sessions').innerJoin('groups', 'groups.id', 'sessions.group_id')
-        .select(['sessions.id', 'sessions.group_id', 'sessions.started_at', 'sessions.duration_min', 'sessions.session_day', 'groups.owner_id', 'groups.name'])
+        .select(['sessions.id', 'sessions.status', 'sessions.group_id', 'sessions.started_at', 'sessions.duration_min', 'sessions.session_day', 'groups.owner_id', 'groups.name'])
         .where('sessions.id', '=', sessionId).executeTakeFirstOrThrow();
+      // loadDue's list and this query can overlap cancellation/rescheduling.
+      // Never revive a terminal session or install an obsolete in-flight snapshot.
+      if (s.status !== 'SCHEDULED' || this.invalidatedLoads.has(sessionId) || this.cancelling.has(sessionId) || this.mutations.has(sessionId)) return;
       const rt = new SessionRuntime(
         { id: s.id, groupId: s.group_id, startedAt: s.started_at.getTime(), durationMin: s.duration_min },
         this.ctx.cfg.engine,
@@ -94,6 +122,7 @@ export class SessionManager {
       this.log(`nạp phiên ${s.id} bắt đầu ${s.started_at.toISOString()}`);
     } finally {
       this.loading.delete(sessionId);
+      this.invalidatedLoads.delete(sessionId);
     }
   }
 
@@ -224,6 +253,7 @@ export class SessionManager {
    * mốc COUNTDOWN để timer đếm ngược không chen vào. Trả danh sách người đang WAITING.
    */
   cancelLoaded(sessionId: string): string[] {
+    if (this.loading.has(sessionId)) this.invalidatedLoads.add(sessionId);
     const e = this.runtimes.get(sessionId);
     if (!e) return [];
     const waiting = [...e.rt.members.values()].filter((m) => !FINAL.has(m.state)).map((m) => m.userId);
@@ -233,6 +263,7 @@ export class SessionManager {
 
   /** Sửa giờ phiên đã nạp: bỏ runtime cũ, báo người trong phòng chờ (họ vào lại khi phòng chờ mở theo giờ mới). */
   unloadForReschedule(sessionId: string): string[] {
+    if (this.loading.has(sessionId)) this.invalidatedLoads.add(sessionId);
     const e = this.runtimes.get(sessionId);
     if (!e) return [];
     const waiting = [...e.rt.members.values()].filter((m) => !FINAL.has(m.state));

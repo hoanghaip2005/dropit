@@ -132,10 +132,11 @@ export async function listExplanationsForOwner(ctx: Ctx, userId: string, session
 
 // ---------------- khiếu nại ----------------
 
-type AppealRow = { id: string; session_id: string; status: AppealStatus; body: string; suspect_system_error: boolean; decision_reason: string | null; decided_at: Date | null };
+type AppealRow = { id: string; session_id: string; status: AppealStatus; body: string; suspect_system_error: boolean; decision_reason: string | null; decided_at: Date | null; decision_effect?: Record<string, unknown> | null };
 export const toAppeal = (a: AppealRow) => ({
   appeal_id: a.id, session_id: a.session_id, status: a.status, body: a.body, suspect_system_error: a.suspect_system_error,
   decision_reason: a.decision_reason, decided_at: iso(a.decided_at),
+  decision_effect: a.decision_effect ?? null,
 });
 
 export async function createAppeal(ctx: Ctx, userId: string, sessionId: string, body: string, suspect: boolean) {
@@ -222,10 +223,21 @@ export async function decideAppeal(ctx: Ctx, userId: string, appealId: string, d
     if (a.status !== 'PENDING' && a.status !== 'IN_REVIEW') throw new AppError(409, 'APPEAL_ALREADY_DECIDED', 'Khiếu nại vừa đổi trạng thái');
     if (a.status === 'PENDING') // mở thẳng và quyết định: qua ĐANG XỬ LÝ trong cùng thao tác
       await tx.updateTable('appeals').set({ status: 'IN_REVIEW', opened_at: new Date(), handler_id: userId }).where('id', '=', a.id).execute();
-    const decided = await tx.updateTable('appeals').set({
+    // Serialize effects for appeals on the same session before taking snapshots.
+    await tx.selectFrom('sessions').select('id').where('id', '=', a.session_id).forUpdate().executeTakeFirstOrThrow();
+    const snapshot = async () => {
+      const session = await tx.selectFrom('sessions').select('forfeited').where('id', '=', a.session_id).executeTakeFirstOrThrow();
+      const member = await tx.selectFrom('session_members').select('exempted').where('session_id', '=', a.session_id).where('user_id', '=', a.user_id).executeTakeFirstOrThrow();
+      return { forfeited: session.forfeited, exempted: member.exempted };
+    };
+    const before = await snapshot();
+    let decided = await tx.updateTable('appeals').set({
       status: decision === 'EXEMPT' ? 'EXEMPTED' : 'REJECTED', decision_reason: reason!.trim(), decided_at: new Date(), handler_id: userId,
     }).where('id', '=', a.id).returningAll().executeTakeFirstOrThrow();
     const restore = decision === 'EXEMPT' ? await applyExemption(ctx, tx, a.session_id, a.user_id) : null;
+    decided = await tx.updateTable('appeals').set({
+      decision_effect: JSON.stringify({ before, after: await snapshot() }),
+    }).where('id', '=', a.id).returningAll().executeTakeFirstOrThrow();
     return { decided, restore };
   });
   await notifyDecision(ctx, out.decided, out.restore);

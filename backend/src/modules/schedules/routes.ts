@@ -62,6 +62,7 @@ export async function updateSession(ctx: Ctx, userId: string, sessionId: string,
     start.setMilliseconds(0);
   }
   if (start.getTime() === s.started_at.getTime() && duration === s.duration_min) return toSummary(ctx, s);
+  const releaseLoading = ctx.sessions.suspendLoading([sessionId]);
   const waiting = ctx.sessions.unloadForReschedule(sessionId);
   let row;
   try {
@@ -77,6 +78,7 @@ export async function updateSession(ctx: Ctx, userId: string, sessionId: string,
     if (pgCode(e) === '23514') throw new AppError(409, 'SESSION_ALREADY_STARTED', 'Phiên đã bắt đầu — không sửa được', 'BR-79');
     throw e;
   } finally {
+    releaseLoading();
     ctx.sessions.onScheduled(sessionId); // nạp lại theo giờ mới (hoặc giờ cũ nếu lỗi)
   }
   if (!row) throw new AppError(409, 'SESSION_ALREADY_STARTED', 'Phiên đã bắt đầu — không sửa được', 'BR-79');

@@ -152,6 +152,13 @@ describe('Khiếu nại (US-04.07/04.08, BR-86…BR-88)', () => {
     expect(dec.status).toBe(200);
     expect(dec.body).toMatchObject({ status: 'EXEMPTED', decision_reason: 'Xác nhận lỗi máy' });
     expect(dec.body.decided_at).toBeTruthy();
+    expect(dec.body.decision_effect).toEqual({
+      before: { exempted: false, forfeited: true },
+      after: { exempted: true, forfeited: false },
+    });
+    const savedDecision = await t.api('GET', `/v1/appeals/${ap.body.appeal_id}`, owner.token);
+    expect(savedDecision.body.decision_effect).toEqual(dec.body.decision_effect);
+    expect(findSensitiveKeys(savedDecision.body)).toEqual([]);
 
     const sess = await t.db.selectFrom('sessions').select(['forfeited', 'forfeited_at', 'forfeit_trigger_user_id']).where('id', '=', s.sessionId).executeTakeFirstOrThrow();
     expect(sess).toEqual({ forfeited: false, forfeited_at: null, forfeit_trigger_user_id: null });

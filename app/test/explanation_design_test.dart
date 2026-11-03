@@ -353,7 +353,7 @@ void main() {
       expect(find.text('Tập trung 14 phút 30 giây'), findsOneWidget);
       expect(find.text('Squad · 22/10/2026'), findsOneWidget);
       expect(
-        find.text('Chỉ bạn và chủ nhóm xem được nội dung.'),
+        find.textContaining('Giải trình được gửi cho chủ nhóm;'),
         findsOneWidget,
       );
       expect(find.text('Bản cũ'), findsOneWidget);
