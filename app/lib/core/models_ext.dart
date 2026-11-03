@@ -214,6 +214,7 @@ class Appeal {
         body = '${j['body'] ?? ''}',
         suspectSystemError = j['suspect_system_error'] == true,
         decisionReason = j['decision_reason'] as String?,
+        decisionEffect = j['decision_effect'] is Map ? Map<String, dynamic>.from(j['decision_effect'] as Map) : null,
         decidedAt = _dt(j['decided_at']),
         displayName = j['display_name'] as String?,
         exitedAt = _dt(j['exited_at']);
@@ -223,6 +224,7 @@ class Appeal {
   final String body;
   final bool suspectSystemError;
   final String? decisionReason;
+  final Map<String, dynamic>? decisionEffect;
   final DateTime? decidedAt;
   final String? displayName;
   final DateTime? exitedAt;

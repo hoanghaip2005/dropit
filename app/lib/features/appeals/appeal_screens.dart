@@ -779,6 +779,11 @@ class _OwnerAppealScreenState extends ConsumerState<OwnerAppealScreen> {
               Text('Quyết định', style: t.titleMedium),
               if (a.decisionReason != null) Text('Lý do: ${a.decisionReason}', style: t.bodyMedium),
               if (a.decidedAt != null) Text('Lúc ${hhmm(a.decidedAt)} ${ddmm(a.decidedAt)}', style: t.bodySmall),
+              if (a.decisionEffect != null) ...[
+                const FieldLabel('Thay đổi tại thời điểm quyết định'),
+                Text('Miễn trừ: ${a.decisionEffect!['before']['exempted'] == true ? 'Có' : 'Không'} → ${a.decisionEffect!['after']['exempted'] == true ? 'Có' : 'Không'}'),
+                Text('Mất thưởng tập thể: ${a.decisionEffect!['before']['forfeited'] == true ? 'Có' : 'Không'} → ${a.decisionEffect!['after']['forfeited'] == true ? 'Có' : 'Không'}'),
+              ],
               if (a.status == 'ESCALATED') Text('Ca đã chuyển quản trị xem xét.', style: t.bodySmall),
             ]),
         ]),
