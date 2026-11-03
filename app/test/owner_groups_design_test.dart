@@ -53,6 +53,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('ownerGroupSummary')), findsOneWidget);
+        expect(find.byKey(const Key('ownerParticipationNotice')), findsOneWidget);
         expect(find.text('Tạm ngưng lịch'), findsOneWidget);
         expect(find.text('Mã mời'), findsOneWidget);
         expect(find.text('Đặt lịch'), findsOneWidget);

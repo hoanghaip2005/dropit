@@ -856,6 +856,10 @@ class GroupDetailScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
+                  const HintText(
+                    'Bạn quản lý lịch và báo cáo, không tham gia phiên của nhóm này. Bạn có thể tham gia nhóm khác với vai trò thành viên.',
+                    key: Key('ownerParticipationNotice'),
+                  ),
                 ],
               ),
               Row(
@@ -1675,7 +1679,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
       ),
       children: [
         Text(
-          'Dành cho chủ nhóm. Chủ nhóm không tham gia phiên.',
+          'Bạn đặt lịch cho các thành viên. Với vai trò chủ nhóm, bạn theo dõi kết quả và không tham gia phiên của nhóm này.',
           style: t.bodySmall,
         ),
         AppCard(
