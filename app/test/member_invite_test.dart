@@ -9,6 +9,7 @@ import 'package:dropit/core/models_ext.dart';
 import 'package:dropit/core/providers.dart';
 import 'package:dropit/core/theme/theme.dart';
 import 'package:dropit/features/groups/group_screens.dart';
+import 'package:dropit/features/groups/invite_qr_export.dart';
 
 MyGroup group(String role) => MyGroup.fromJson({
   'group_id': 'g',
@@ -43,6 +44,7 @@ void main() {
           null,
         ),
       );
+      String? exportedUrl;
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -51,7 +53,13 @@ void main() {
           ],
           child: MaterialApp(
             theme: buildLightTheme(),
-            home: const InviteScreen(groupId: 'g'),
+            home: InviteScreen(
+              groupId: 'g',
+              saveInviteQr: (url) async {
+                exportedUrl = url;
+                return InviteQrSaveResult.saved;
+              },
+            ),
           ),
         ),
       );
@@ -63,14 +71,87 @@ void main() {
         role == 'OWNER' ? findsOneWidget : findsNothing,
       );
       await tester.tap(find.text('Chép mã'));
-      expect(copied, contains('ABCDEFGH'));
+      expect(copied, 'ABCDEFGH');
       await tester.tap(find.byKey(const Key('copyInviteLink')));
       expect(copied, groupInviteUrl('ABCDEFGH'));
       final qr = tester.widget<QrImageView>(find.byKey(const Key('inviteQr')));
       expect(qr.semanticsLabel, contains(groupInviteUrl('ABCDEFGH')));
+      final qrPosition = tester.getTopLeft(find.byKey(const Key('inviteQr')));
+      final exportPosition = tester.getTopLeft(
+        find.byKey(const Key('downloadInviteQr')),
+      );
+      final codePosition = tester.getTopLeft(
+        find.byKey(const Key('inviteCode')),
+      );
+      expect(exportPosition.dy, greaterThan(qrPosition.dy));
+      expect(exportPosition.dy, lessThan(codePosition.dy));
+      ScaffoldMessenger.of(
+        tester.element(find.byKey(const Key('downloadInviteQr'))),
+      ).clearSnackBars();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('downloadInviteQr')));
+      await tester.pumpAndSettle();
+      expect(exportedUrl, groupInviteUrl('ABCDEFGH'));
+      expect(find.text('Đã lưu ảnh QR.'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('invite QR export reports that a web download started', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          myGroupsProvider.overrideWith((ref) async => [group('MEMBER')]),
+          inviteCodeProvider('g').overrideWith((ref) async => 'ABCDEFGH'),
+        ],
+        child: MaterialApp(
+          theme: buildLightTheme(),
+          home: InviteScreen(
+            groupId: 'g',
+            saveInviteQr: (_) async => InviteQrSaveResult.downloadStarted,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('downloadInviteQr')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Đã bắt đầu tải ảnh QR.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('invite QR export reports save failures', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          myGroupsProvider.overrideWith((ref) async => [group('MEMBER')]),
+          inviteCodeProvider('g').overrideWith((ref) async => 'ABCDEFGH'),
+        ],
+        child: MaterialApp(
+          theme: buildLightTheme(),
+          home: InviteScreen(
+            groupId: 'g',
+            saveInviteQr: (_) async => throw StateError('save failed'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('downloadInviteQr')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Không thể lưu ảnh QR. Vui lòng thử lại.'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('member can open invite directly from group detail', (
     tester,
   ) async {

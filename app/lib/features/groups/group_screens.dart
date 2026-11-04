@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +14,7 @@ import '../../core/models.dart';
 import '../../core/models_ext.dart';
 import '../../core/providers.dart';
 import '../../core/widgets.dart';
+import 'invite_qr_export.dart';
 
 /// V-19 Nhóm của tôi (vai trò theo từng nhóm). Mockup: `t_02_danh_sach_nhom`.
 class GroupsScreen extends ConsumerWidget {
@@ -81,13 +83,7 @@ class GroupsScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: DT.spaceSm),
-                  Expanded(
-                    child: SecondaryButton(
-                      icon: Icons.vpn_key_outlined,
-                      label: 'Nhập mã nhóm',
-                      onPressed: () => context.push('/join'),
-                    ),
-                  ),
+                  Expanded(child: _JoinGroupActions()),
                 ],
               ),
               Padding(
@@ -107,6 +103,51 @@ class GroupsScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+}
+
+class _JoinGroupActions extends StatelessWidget {
+  const _JoinGroupActions();
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = context.ownerStyle ? OwnerStyle.ink : DT.accent;
+    final border = context.ownerStyle ? OwnerStyle.line : DT.outline;
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            key: const Key('joinGroupManually'),
+            onPressed: () => context.push('/join'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: foreground,
+              minimumSize: const Size.fromHeight(DT.buttonHeightCompact),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              side: BorderSide(color: border),
+            ),
+            child: const FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text('Nhập mã nhóm', maxLines: 1),
+            ),
+          ),
+        ),
+        const SizedBox(width: DT.spaceXs),
+        SizedBox(
+          width: DT.buttonHeightCompact,
+          height: DT.buttonHeightCompact,
+          child: IconButton(
+            key: const Key('scanInviteQr'),
+            tooltip: 'Quét mã QR',
+            onPressed: () => context.push('/scan-invite'),
+            style: IconButton.styleFrom(
+              foregroundColor: foreground,
+              side: BorderSide(color: border),
+            ),
+            icon: const Icon(Icons.qr_code_scanner),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -632,12 +673,13 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                     ),
                 ],
               ),
-              if (_err != null) AppBanner(
-                tone: BannerTone.danger,
-                text: _err!,
-                action: 'Tải lại quy tắc',
-                onAction: _busy ? null : _reloadConsent,
-              ),
+              if (_err != null)
+                AppBanner(
+                  tone: BannerTone.danger,
+                  text: _err!,
+                  action: 'Tải lại quy tắc',
+                  onAction: _busy ? null : _reloadConsent,
+                ),
               if (!_readToEnd)
                 const HintText(
                   'Cuộn đến cuối để đọc hết nội dung trước khi đồng ý.',
@@ -1369,8 +1411,14 @@ String groupInviteUrl(String code) => Uri.parse(
 
 /// V-43 Mời thành viên (mã mời).
 class InviteScreen extends ConsumerWidget {
-  const InviteScreen({super.key, required this.groupId});
+  const InviteScreen({
+    super.key,
+    required this.groupId,
+    this.saveInviteQr = saveInviteQrPng,
+  });
   final String groupId;
+  final InviteQrSaveCallback saveInviteQr;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final code = ref.watch(inviteCodeProvider(groupId));
@@ -1417,6 +1465,11 @@ class InviteScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: DT.spaceSm),
+                _InviteQrExportAction(
+                  inviteUrl: groupInviteUrl(c),
+                  saveInviteQr: saveInviteQr,
+                ),
                 Text(
                   'Quét mã QR hoặc nhập mã bên dưới để tham gia.',
                   textAlign: TextAlign.center,
@@ -1443,9 +1496,7 @@ class InviteScreen extends ConsumerWidget {
               icon: Icons.copy,
               label: 'Chép mã',
               onPressed: () {
-                Clipboard.setData(
-                  ClipboardData(text: 'Tham gia nhóm trên DropIt! bằng mã: $c'),
-                );
+                Clipboard.setData(ClipboardData(text: c));
                 showSnack(context, 'Đã chép mã mời.');
               },
             ),
@@ -1489,6 +1540,58 @@ class InviteScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _InviteQrExportAction extends StatefulWidget {
+  const _InviteQrExportAction({
+    required this.inviteUrl,
+    required this.saveInviteQr,
+  });
+
+  final String inviteUrl;
+  final InviteQrSaveCallback saveInviteQr;
+
+  @override
+  State<_InviteQrExportAction> createState() => _InviteQrExportActionState();
+}
+
+class _InviteQrExportActionState extends State<_InviteQrExportAction> {
+  bool _saving = false;
+
+  Future<void> _save() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      final result = await widget.saveInviteQr(widget.inviteUrl);
+      if (!mounted) return;
+      final message = switch (result) {
+        InviteQrSaveResult.saved => 'Đã lưu ảnh QR.',
+        InviteQrSaveResult.downloadStarted => 'Đã bắt đầu tải ảnh QR.',
+        InviteQrSaveResult.cancelled => 'Đã hủy lưu ảnh QR.',
+      };
+      showSnack(context, message);
+    } catch (error, stackTrace) {
+      developer.log(
+        'Could not save invite QR image.',
+        name: 'dropit.invite.qr',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (!mounted) return;
+      showSnack(context, 'Không thể lưu ảnh QR. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => SecondaryButton(
+    key: const Key('downloadInviteQr'),
+    icon: Icons.download_outlined,
+    label: 'Tải ảnh QR',
+    loading: _saving,
+    onPressed: _save,
+  );
 }
 
 /// Integer minute input shared by create and edit. Presets are shortcuts, not restrictions.

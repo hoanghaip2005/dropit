@@ -23,6 +23,9 @@ dependencies:
   qr_flutter: ^4.1.0
   firebase_core: 4.0.0
   firebase_messaging: 16.0.0
+  mobile_scanner: ^7.5.0
+  zxing2: ^0.2.4
+  file_saver: 0.7.0
 
 dev_dependencies:
   flutter_test:
