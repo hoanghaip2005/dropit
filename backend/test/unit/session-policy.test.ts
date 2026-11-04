@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { sessionReward, validateDuration } from '../../src/shared/session-policy.js';
 
-describe('Custom session duration policy', () => {
-  it('bounds integer durations', () => {
-    for (const duration of [1, 17, 25, 50, 240]) expect(() => validateDuration(duration)).not.toThrow();
-    for (const duration of [0, -1, 241, 1.5, NaN, Infinity]) expect(() => validateDuration(duration)).toThrow();
+describe('BR-02 fixed session duration policy', () => {
+  it('accepts only 25 or 50 integer minutes', () => {
+    for (const duration of [25, 50]) expect(() => validateDuration(duration)).not.toThrow();
+    for (const duration of [0, 1, 17, 30, 240, 241, -1, 1.5, NaN, Infinity]) {
+      expect(() => validateDuration(duration)).toThrow();
+    }
   });
   it('preserves legacy rewards without short-session reward inflation', () => {
     const cfg = { coins25: 10, coins50: 25 };

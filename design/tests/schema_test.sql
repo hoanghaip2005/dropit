@@ -78,6 +78,17 @@ DECLARE
   m12 text := '00000000-0000-0000-0000-000000000012';
   ins text := 'INSERT INTO sessions(id, group_id, duration_min, started_at, ends_at, session_day, created_by, status, cancel_reason) VALUES ';
 BEGIN
+  -- ===== Lịch: thời lượng chỉ 25/50 (BR-02) =====
+  PERFORM pg_temp.expect_ok('lich 25 phut hop le',
+    format('INSERT INTO schedules(id,group_id,created_by,start_time,duration_min,weekdays,start_date,end_date) VALUES (gen_random_uuid(),%L,%L,%L,25,ARRAY[1]::smallint[],DATE %L,DATE %L)',
+      g1, o1, '09:00', '2026-11-02', '2026-11-02'));
+  PERFORM pg_temp.expect_ok('lich 50 phut hop le',
+    format('INSERT INTO schedules(id,group_id,created_by,start_time,duration_min,weekdays,start_date,end_date) VALUES (gen_random_uuid(),%L,%L,%L,50,ARRAY[1]::smallint[],DATE %L,DATE %L)',
+      g1, o1, '10:00', '2026-11-02', '2026-11-02'));
+  PERFORM pg_temp.expect_fail('lich 30 phut bi chan (BR-02)',
+    format('INSERT INTO schedules(id,group_id,created_by,start_time,duration_min,weekdays,start_date,end_date) VALUES (gen_random_uuid(),%L,%L,%L,30,ARRAY[1]::smallint[],DATE %L,DATE %L)',
+      g1, o1, '11:00', '2026-11-02', '2026-11-02'));
+
   -- ===== Phiên: thời lượng chỉ 25/50 (BR-02) =====
   PERFORM pg_temp.expect_ok('phien 25 phut hop le',
     ins || format('(%L,%L,25,%L,%L,%L,%L,''SCHEDULED'',NULL)',

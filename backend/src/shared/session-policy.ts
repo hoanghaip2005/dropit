@@ -1,10 +1,9 @@
 import { AppError } from './errors.js';
 
-export const MIN_DURATION_MIN = 1;
-export const MAX_DURATION_MIN = 240;
+export const ALLOWED_DURATION_MIN = [25, 50] as const;
 export function validateDuration(minutes: number): void {
-  if (!Number.isInteger(minutes) || minutes < MIN_DURATION_MIN || minutes > MAX_DURATION_MIN) {
-    throw new AppError(422, 'DURATION_OUT_OF_RANGE', 'Thời lượng từ 1 đến 240 phút');
+  if (!ALLOWED_DURATION_MIN.some((duration) => duration === minutes)) {
+    throw new AppError(422, 'DURATION_OUT_OF_RANGE', 'Thời lượng chỉ có thể là 25 hoặc 50 phút');
   }
 }
 

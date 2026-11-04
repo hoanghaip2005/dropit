@@ -1594,42 +1594,17 @@ class _InviteQrExportActionState extends State<_InviteQrExportAction> {
   );
 }
 
-/// Integer minute input shared by create and edit. Presets are shortcuts, not restrictions.
-class SessionDurationInput extends StatefulWidget {
+/// Fixed BR-02 session durations shared by schedule create and edit.
+class SessionDurationInput extends StatelessWidget {
   const SessionDurationInput({
     super.key,
     required this.initialValue,
     required this.onChanged,
     this.enabled = true,
   });
-  final int initialValue;
+  final int? initialValue;
   final ValueChanged<int?> onChanged;
   final bool enabled;
-  @override
-  State<SessionDurationInput> createState() => _SessionDurationInputState();
-}
-
-class _SessionDurationInputState extends State<SessionDurationInput> {
-  late final TextEditingController _controller;
-  String? _error;
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: '${widget.initialValue}');
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _change(String text) {
-    final value = int.tryParse(text);
-    final valid = value != null && value >= 1 && value <= 240;
-    setState(() => _error = valid ? null : 'Nhập số phút từ 1 đến 240.');
-    widget.onChanged(valid ? value : null);
-  }
 
   @override
   Widget build(BuildContext context) => Column(
@@ -1642,39 +1617,16 @@ class _SessionDurationInputState extends State<SessionDurationInput> {
           for (final minutes in [25, 50])
             FilterChipPill(
               label: '$minutes phút',
-              selected: _controller.text == '$minutes',
-              onTap: !widget.enabled
-                  ? null
-                  : () {
-                      _controller.text = '$minutes';
-                      _change('$minutes');
-                    },
+              selected: initialValue == minutes,
+              onTap: enabled ? () => onChanged(minutes) : null,
             ),
         ],
-      ),
-      const SizedBox(height: DT.spaceSm),
-      TextField(
-        key: const Key('sessionDurationMinutes'),
-        controller: _controller,
-        enabled: widget.enabled,
-        keyboardType: TextInputType.number,
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(3),
-        ],
-        decoration: InputDecoration(
-          labelText: 'Số phút',
-          suffixText: 'phút',
-          helperText: 'Tùy chọn từ 1 đến 240 phút',
-          errorText: _error,
-        ),
-        onChanged: _change,
       ),
     ],
   );
 }
 
-/// V-44 Đặt lịch một lần (1–240 phút). Mockup: `schedule_focus`.
+/// V-44 Đặt lịch một lần (25 hoặc 50 phút). Mockup: `schedule_focus`.
 class ScheduleScreen extends ConsumerStatefulWidget {
   const ScheduleScreen({super.key, required this.groupId});
   final String groupId;
@@ -1718,7 +1670,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
 
   Future<void> _submit() async {
     if (_dur == null) {
-      setState(() => _err = 'Nhập thời lượng từ 1 đến 240 phút.');
+      setState(() => _err = 'Chọn thời lượng 25 hoặc 50 phút.');
       return;
     }
     if (_startUtc.isBefore(DateTime.now().toUtc())) {
@@ -1772,7 +1724,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
         () => _err = switch (a.code) {
           'SCHEDULE_OVERLAP' => 'Trùng giờ với một phiên khác của nhóm.',
           'START_IN_PAST' => 'Giờ bắt đầu phải ở tương lai.',
-          'DURATION_OUT_OF_RANGE' => 'Nhập thời lượng từ 1 đến 240 phút.',
+          'DURATION_OUT_OF_RANGE' => 'Chọn thời lượng 25 hoặc 50 phút.',
           'VALIDATION_FAILED' when _repeat =>
             'Lịch lặp tối đa 12 tuần. ${a.message}',
           _ =>
@@ -1862,9 +1814,12 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
           children: [
             Text('Thời lượng', style: t.titleMedium),
             SessionDurationInput(
-              initialValue: _dur ?? 25,
+              initialValue: _dur,
               enabled: !_busy,
-              onChanged: (v) => _dur = v,
+              onChanged: (v) => setState(() {
+                _dur = v;
+                _err = null;
+              }),
             ),
             Text(
               'Coins được tính theo thời lượng và kết quả thực tế; tối đa 100 Coins mỗi ngày.',

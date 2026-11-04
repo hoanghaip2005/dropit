@@ -139,9 +139,11 @@ describe('Đặt lịch một lần (US-02.10, BR-02, BR-78, BR-79)', () => {
     expect(list.body.items).toHaveLength(2);
   });
 
-  it('241 phút → 422 DURATION_OUT_OF_RANGE; giờ quá khứ → 422 START_IN_PAST', async () => {
+  it('thời lượng ngoài 25/50 phút → 422 DURATION_OUT_OF_RANGE; giờ quá khứ → 422 START_IN_PAST', async () => {
     const { owner, groupId } = await t.groupWith(0);
-    expect((await t.api('POST', `/v1/groups/${groupId}/schedules`, owner.token, { start_time: at(3), duration_min: 241 })).body.code).toBe('DURATION_OUT_OF_RANGE');
+    for (const duration of [1, 30, 240]) {
+      expect((await t.api('POST', `/v1/groups/${groupId}/schedules`, owner.token, { start_time: at(3), duration_min: duration })).body.code).toBe('DURATION_OUT_OF_RANGE');
+    }
     expect((await t.api('POST', `/v1/groups/${groupId}/schedules`, owner.token, { start_time: at(-1), duration_min: 25 })).body.code).toBe('START_IN_PAST');
   });
 
