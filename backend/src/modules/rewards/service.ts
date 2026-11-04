@@ -46,7 +46,7 @@ export async function finalizeSession(db: DB, cfg: EngineConfig, sessionId: stri
         // BR-46: điểm danh kể cả phiên forfeited; tối đa 1/ngày (PK user, day)
         await tx.insertInto('daily_attendance')
           .values({ user_id: r.user_id, day, group_id: s.group_id, first_session_id: s.id, focus_minutes: Math.floor(r.focus_seconds / 60) })
-          .onConflict((oc) => oc.columns(['user_id', 'day']).doUpdateSet({
+          .onConflict((oc) => oc.columns(['user_id', 'day', 'group_id']).doUpdateSet({
             sessions_completed: sql`daily_attendance.sessions_completed + 1`,
             focus_minutes: sql`daily_attendance.focus_minutes + ${Math.floor(r.focus_seconds / 60)}`,
           }))

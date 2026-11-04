@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 	<dict>
+		<key>NSCameraUsageDescription</key>
+		<string>DropIt! cần dùng camera để quét mã mời tham gia nhóm.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>DropIt! cần truy cập ảnh bạn chọn để cập nhật ảnh đại diện.</string>
 		<key>FirebaseMessagingAutoInitEnabled</key>

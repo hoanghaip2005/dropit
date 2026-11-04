@@ -73,7 +73,7 @@ BEGIN
         INSERT INTO session_members (session_id, user_id, state, end_reason, joined_at, ended_at, focus_seconds, coins_awarded)
         VALUES (sid, u, 'COMPLETED', 'TIME_UP', st - interval '2 minutes', st + interval '25 minutes', 1500, CASE WHEN forf THEN 0 ELSE 10 END);
         INSERT INTO daily_attendance (user_id, day, group_id, first_session_id, focus_minutes) VALUES (u, d, g, sid, 25)
-        ON CONFLICT (user_id, day) DO NOTHING;
+        ON CONFLICT (user_id, day, group_id) DO NOTHING;
         IF forf THEN
           INSERT INTO achievement_log (user_id, kind, value_before, value_after, day, ref_session_id, reason, created_at)
           VALUES (u, 'STREAK_BREAK', NULL, 0, d, sid, 'SESSION_FORFEITED', st + interval '25 minutes');

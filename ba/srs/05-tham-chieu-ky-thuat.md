@@ -87,7 +87,7 @@ MVP 1 instance EC2 giữ trạng thái trong bộ nhớ; Redis/ElastiCache là S
 ### 3.2 PostgreSQL (RDS) — dữ liệu lõi
 - `users(id, cognito_sub, display_name, avatar_url, status, created_at)` — không có điểm uy tín; số dư Coins suy từ sổ cái.
 - `groups(id, owner_id, name, purpose, status, created_at)` — chủ nhóm theo nhóm (D-10).
-- `group_members(group_id, user_id, consent_version, consented_at, joined_at, left_at)` — tối đa 1 nhóm/thành viên (D-21); chủ nhóm không là dòng thành viên (D-25).
+- `group_members(group_id, user_id, consent_version, consented_at, joined_at, left_at)` — một membership đang hoạt động cho mỗi cặp nhóm/người; người dùng có thể tham gia nhiều nhóm (D-30); chủ nhóm không là dòng thành viên (D-25).
 - `schedules(id, group_id, start_time, duration_min, recurrence, ...)` (BR-113).
 - `sessions(id, group_id, schedule_id, duration_min, status, started_at, ends_at, forfeited, forfeited_at, forfeit_trigger_user_id, cancel_reason)`.
 - `session_members(session_id, user_id, final_state, late_join, focus_seconds, exempted)` — trạng thái cuối bất biến (BR-32).

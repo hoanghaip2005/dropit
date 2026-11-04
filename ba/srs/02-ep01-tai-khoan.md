@@ -89,7 +89,7 @@ Q- chưa chốt: viết theo phương án đề xuất, gắn **(giả định, 
 | AC-01.04.4 | Lỗi | Người dùng thường | Gọi API quản trị | 403; chỉ tài khoản thuộc Cognito group “admin” được phép |
 | AC-01.04.5 | Biên | Mỗi nhóm đúng 1 chủ nhóm (D-10) | Có yêu cầu thêm chủ nhóm thứ hai cho G | Từ chối; không có API gán vai trò |
 
-**Ghi chú / giả định:** Không có hành động gán vai trò (01 §3). Việc gán vai trò Quản trị làm thủ công qua Cognito console khi triển khai **(giả định)**. Số nhóm: thành viên của tối đa 1 nhóm (D-21); làm chủ nhiều nhóm (tối đa `max_groups_owned`) và TV một nhóm vẫn được tạo nhóm làm chủ (BR-75 b, c; D-25). Chủ nhóm không tham gia phiên của nhóm mình làm chủ (D-25).
+**Ghi chú / giả định:** Không có hành động gán vai trò (01 §3). Việc gán vai trò Quản trị làm thủ công qua Cognito console khi triển khai **(giả định)**. Thành viên có thể tham gia nhiều nhóm, trong giới hạn riêng cho số nhóm làm chủ (`max_groups_owned`) và được làm chủ nhóm khi đang là thành viên nhóm khác (BR-75 b, c; D-25, D-30). Chủ nhóm không tham gia phiên của nhóm mình làm chủ (D-25).
 
 ---
 
@@ -113,10 +113,10 @@ Q- chưa chốt: viết theo phương án đề xuất, gắn **(giả định, 
 | AC-01.05.7 | Biên | Nhóm G có CN + 9 TV (còn đúng 1 chỗ, Q-141) | Hai người được mời bấm “Đồng ý” gần như cùng lúc | Yêu cầu server nhận trước được vào (BR-33); người sau bị từ chối “Nhóm đã đủ 10 thành viên”, không lưu bản ghi đồng ý (BR-74) |
 | AC-01.05.8 | Lỗi | Người dùng là CN của G | Nhập mã mời / mở liên kết mời của G | Báo “Bạn là chủ nhóm”; không mở màn đồng ý, không tạo tư cách thành viên thứ hai (D-10) |
 | AC-01.05.9 | Bình thường | Danh sách trường chủ nhóm thấy ở `03-quy-tac.md` §Báo cáo §2 và nội dung `MEMBER_EXITED`/`SESSION_FORFEITED` (BR-27, BR-38) | So với mục “ghi gì / ai thấy” trên màn đồng ý | Mọi trường đó (kể cả vắng, vào muộn, mất kết nối, số lần gây mất thưởng tập thể, tên + giờ người thoát gửi cho cả nhóm) đều có trên màn đồng ý; thiếu một trường → không đạt (NFR-P04) |
-| AC-01.05.10 | Lỗi | Người dùng đang là thành viên nhóm A (chưa giải tán) | Mở lời mời nhóm G, bấm “Đồng ý và vào nhóm” | Từ chối “Bạn đang ở nhóm A. Rời nhóm A trước khi tham gia nhóm khác.”; không lưu bản ghi đồng ý; vẫn là thành viên A (BR-75 a, D-21) |
-| AC-01.05.11 | Biên | Người dùng vừa rời nhóm A (US-01.07) / nhóm A vừa ĐÃ GIẢI TÁN | Bấm “Đồng ý và vào nhóm” G | Được vào G (không còn là thành viên nhóm chưa giải tán nào). Nếu nhóm A đang CHỜ GIẢI TÁN → vẫn bị từ chối như AC-01.05.10 (BR-75 a) |
+| AC-01.05.10 | Bình thường | Người dùng đang là thành viên nhóm A (chưa giải tán) | Mở lời mời nhóm G, đọc quy tắc và bấm “Đồng ý và vào nhóm” | Được ghi nhận là thành viên G và vẫn là thành viên A; lưu đồng ý riêng cho G; áp dụng giới hạn sĩ số của G (BR-06, BR-74, BR-75, D-30) |
+| AC-01.05.11 | Biên | Người dùng là thành viên một hoặc nhiều nhóm khác | Bấm “Đồng ý và vào nhóm” G khi G còn chỗ | Được vào G sau khi đồng ý riêng; membership các nhóm khác không đổi (D-30). Nếu G đã giải tán/không nhận thành viên thì từ chối theo BR-80 |
 
-**Ghi chú / giả định:** Nội dung mục đích báo cáo do chủ nhóm điền ở EP-02 (NFR-P09, Q-12). Sĩ số = số thành viên đang hoạt động, không gồm CN (D-25, đề xuất Q-141); trần kiểm tra lúc bấm đồng ý (BR-74). Nhập mã chỉ mở màn này, chưa tạo tư cách thành viên (BR-76). Nội dung màn đồng ý trong 04 §2 mục 2 phải được bổ sung đủ trường (T-BA-39, ngoài tệp này). Không còn chế độ báo để chọn — chỉ báo ngay (D-20, BR-83 Hủy). Màn đồng ý cũng phải nêu “bạn chỉ thuộc được 1 nhóm” (D-21) **(giả định)**. Chủ nhóm không cần đồng ý với nhóm mình tạo vì không tham gia phiên (D-25); Q-67 không còn áp dụng.
+**Ghi chú / giả định:** Nội dung mục đích báo cáo do chủ nhóm điền ở EP-02 (NFR-P09, Q-12). Sĩ số = số thành viên đang hoạt động, không gồm CN (D-25, đề xuất Q-141); trần kiểm tra lúc bấm đồng ý (BR-74). Nhập mã chỉ mở màn này, chưa tạo tư cách thành viên (BR-76). Nội dung màn đồng ý trong 04 §2 mục 2 phải được bổ sung đủ trường (T-BA-39, ngoài tệp này). Không còn chế độ báo để chọn — chỉ báo ngay (D-20, BR-83 Hủy). Màn phải nêu rõ người dùng có thể tham gia nhiều nhóm và cần đồng ý riêng cho từng nhóm (D-30); giữ giới hạn tối đa một phiên đang hoạt động (BR-09). Chủ nhóm không cần đồng ý với nhóm mình tạo vì không tham gia phiên (D-25); Q-67 không còn áp dụng.
 
 ---
 
@@ -211,7 +211,7 @@ Q- chưa chốt: viết theo phương án đề xuất, gắn **(giả định, 
 
 | Mã | Ca | Cho trước | Khi | Thì |
 | --- | --- | --- | --- | --- |
-| AC-01.10.1 | Bình thường | Thành viên của nhóm G (tối đa 1 nhóm, D-21), không trong phiên | Chọn “Xóa tài khoản”, nhập lại mật khẩu, xác nhận | Rời G như rút đồng ý (không kèm lý do); đăng nhập bị chặn ngay; dữ liệu xóa theo 04 §4 và hoàn tất ≤ 30 ngày; số liệu trong báo cáo tổng nhóm đã phát hành giữ dạng ẩn danh **(giả định)** |
+| AC-01.10.1 | Bình thường | Thành viên của một hoặc nhiều nhóm (D-30), không trong phiên | Chọn “Xóa tài khoản”, nhập lại mật khẩu, xác nhận | Rời tất cả nhóm đang tham gia như rút đồng ý; đăng nhập bị chặn ngay; dữ liệu xóa theo 04 §4 và hoàn tất ≤ 30 ngày; số liệu trong báo cáo tổng nhóm đã phát hành giữ dạng ẩn danh **(giả định)** |
 | AC-01.10.2 | Bình thường | Người dùng là chủ nhóm G và H (D-25: quản lý nhiều nhóm) | Xác nhận xóa tài khoản | Cảnh báo trước liệt kê đủ “Nhóm G, H sẽ bị giải tán”; xác nhận → cả G và H chuyển ĐÃ GIẢI TÁN (BR-80), báo cáo phần tháng theo BR-62 |
 | AC-01.10.3 | Lỗi | Nhập sai mật khẩu xác nhận | Xác nhận | Không xóa; báo lỗi |
 | AC-01.10.4 | Lỗi | Người dùng có trạng thái chưa kết thúc (WAITING/FOCUSING/GRACE/PAUSED/DISCONNECTED) trong một phiên | Chọn “Xóa tài khoản” | Từ chối, báo “Đang trong phiên — thử lại sau khi phiên kết thúc”; không thay đổi dữ liệu (BR-72, BR-70) |
@@ -258,7 +258,7 @@ Sửa 2026-10-19 theo `review/lan-4.md` T-BA-125: BR-25 (Hủy, D-25) → BR-114
 | GĐ1 §6; D-05, D-14 (thay US-02.07), D-23; A-09; 04 §2; Q-20, Q-60, Q-141 | US-01.07 | Must | BR-26, BR-32, BR-36, BR-37, BR-48, BR-59, BR-74, BR-76 | AC-01.07.1–7 |
 | GĐ1 §5, §6; D-22; A-31; 04 §3, §5 | US-01.08 | Must | BR-38, NFR-P03, NFR-P06, NFR-P11, NFR-P18, NFR-11 | AC-01.08.1–5 |
 | GĐ1 §5, §6; D-22; A-31; 04 §5 | US-01.09 | Should | NFR-P12, NFR-P18 | AC-01.09.1–4 |
-| GĐ1 §6; D-10, D-21, D-25; A-31; 04 §4, §5; Q-25, Q-34, Q-69 | US-01.10 | Should | NFR-P13, BR-26, BR-44, BR-62, BR-70, BR-72, BR-80 | AC-01.10.1–5 |
+| GĐ1 §6; D-10, D-25, D-30; A-31; 04 §4, §5; Q-25, Q-34, Q-69 | US-01.10 | Should | NFR-P13, BR-26, BR-44, BR-62, BR-70, BR-72, BR-80 | AC-01.10.1–5 |
 | GĐ1 §5; A-32; Q-21, Q-22 | US-01.11 | Should | NFR-P07, BR-73 | AC-01.11.1–4 |
 
 ## Q- liên quan (đã ghi sổ)

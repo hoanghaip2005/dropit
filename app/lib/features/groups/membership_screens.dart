@@ -323,7 +323,7 @@ class _EditSessionScreenState extends ConsumerState<EditSessionScreen> {
     final v = vn(s.startedAt);
     _date = DateTime(v.year, v.month, v.day);
     _time = TimeOfDay(hour: v.hour, minute: v.minute);
-    _dur = s.durationMin;
+    _dur = s.durationMin == 25 || s.durationMin == 50 ? s.durationMin : null;
     _initialSelectedStart = _startUtc;
   }
 
@@ -341,14 +341,14 @@ class _EditSessionScreenState extends ConsumerState<EditSessionScreen> {
     'SCHEDULE_OVERLAP' => 'Trùng phiên khác của nhóm.',
     'START_IN_PAST' =>
       'Giờ bắt đầu phải sau thời điểm hiện tại ít nhất 1 phút.',
-    'DURATION_OUT_OF_RANGE' => 'Nhập thời lượng từ 1 đến 240 phút.',
+    'DURATION_OUT_OF_RANGE' => 'Chọn thời lượng 25 hoặc 50 phút.',
     'SESSION_IN_PROGRESS' => a.message,
     _ => a.offline ? 'Chưa lưu được. Lịch cũ vẫn giữ nguyên.' : a.message,
   };
 
   Future<void> _save(SessionSummary s) async {
     if (_dur == null) {
-      setState(() => _err = 'Nhập thời lượng từ 1 đến 240 phút.');
+      setState(() => _err = 'Chọn thời lượng 25 hoặc 50 phút.');
       return;
     }
     final timeChanged = !_startUtc.isAtSameMomentAs(_initialSelectedStart!);
@@ -514,9 +514,12 @@ class _EditSessionScreenState extends ConsumerState<EditSessionScreen> {
                 children: [
                   Text('Thời lượng', style: t.titleMedium),
                   SessionDurationInput(
-                    initialValue: _dur ?? s.durationMin,
+                    initialValue: _dur,
                     enabled: editable && !_busy,
-                    onChanged: (v) => _dur = v,
+                    onChanged: (v) => setState(() {
+                      _dur = v;
+                      _err = null;
+                    }),
                   ),
                   Text(
                     'Coins được tính theo thời lượng và kết quả thực tế; tối đa 100 Coins mỗi ngày.',

@@ -70,7 +70,7 @@ CREATE TABLE system_params (
 );
 
 INSERT INTO system_params(key, value, configurable, description) VALUES
- ('duration_min',            '{"min":1,"max":240}', false, 'BR-02'),
+ ('duration_min',            '[25,50]', false, 'BR-02'),
  ('countdown_s',             '5',   true, 'BR-04'),
  ('late_join_max_min',       '1',   true, 'BR-07'),
  ('grace_s',                 '3',   true, 'BR-11'),
@@ -202,8 +202,8 @@ CREATE TABLE group_members (
   removal_effective_at timestamptz,                  -- BR-77: xóa giữa phiên có hiệu lực sau ends_at
   CONSTRAINT gm_left_consistent CHECK ((left_at IS NULL) = (leave_reason IS NULL))
 );
--- D-21 / BR-75 (a): một người là thành viên tối đa 1 nhóm tại một thời điểm
-CREATE UNIQUE INDEX group_members_one_active_uq ON group_members(user_id) WHERE left_at IS NULL;
+-- D-30: mỗi người có thể là thành viên của nhiều nhóm; không trùng membership đang hoạt động trong cùng nhóm.
+CREATE UNIQUE INDEX group_members_one_active_per_group_uq ON group_members(user_id, group_id) WHERE left_at IS NULL;
 CREATE INDEX group_members_group_active_idx ON group_members(group_id) WHERE left_at IS NULL;
 CREATE INDEX group_members_user_hist_idx ON group_members(user_id, joined_at);
 
@@ -288,7 +288,7 @@ CREATE TABLE schedules (
   group_id       uuid NOT NULL REFERENCES groups(id),
   created_by     uuid NOT NULL REFERENCES users(id),
   start_time     time NOT NULL,                      -- giờ địa phương Asia/Ho_Chi_Minh
-  duration_min   smallint NOT NULL CHECK (duration_min BETWEEN 1 AND 240),   -- BR-02
+  duration_min   smallint NOT NULL CHECK (duration_min IN (25, 50)),         -- BR-02
   weekdays       smallint[] NOT NULL CHECK (array_length(weekdays,1) BETWEEN 1 AND 7
                                             AND weekdays <@ ARRAY[1,2,3,4,5,6,7]::smallint[]), -- ISO 1=T2
   start_date     date NOT NULL,
@@ -303,7 +303,7 @@ CREATE TABLE sessions (
   id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id                uuid NOT NULL REFERENCES groups(id),
   schedule_id             uuid REFERENCES schedules(id),       -- NULL = phiên đơn lẻ
-  duration_min            smallint NOT NULL CHECK (duration_min BETWEEN 1 AND 240),  -- BR-02
+  duration_min            smallint NOT NULL CHECK (duration_min IN (25, 50)),         -- BR-02
   started_at              timestamptz NOT NULL,                 -- giờ lịch (BR-04)
   ends_at                 timestamptz NOT NULL,                 -- = started_at + duration_min phút (CHECK bên dưới)
   session_day             date NOT NULL,                        -- ngày của started_at theo day_timezone
@@ -541,12 +541,12 @@ CREATE VIEW user_coin_balance AS
 CREATE TABLE daily_attendance (
   user_id        uuid NOT NULL REFERENCES users(id),
   day            date NOT NULL,
-  group_id       uuid NOT NULL REFERENCES groups(id),    -- D-21: thực tế một nhóm; dùng cho báo cáo trong nhóm
+  group_id uuid NOT NULL REFERENCES groups(id), -- D-30: giữ điểm danh riêng theo từng nhóm
   first_session_id uuid NOT NULL REFERENCES sessions(id),
   sessions_completed smallint NOT NULL DEFAULT 1 CHECK (sessions_completed >= 1),
   focus_minutes  integer NOT NULL DEFAULT 0 CHECK (focus_minutes >= 0),
   created_at     timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (user_id, day)                             -- tối đa 1 điểm danh/ngày (BR-46)
+  PRIMARY KEY (user_id, day, group_id)                   -- tổng hợp theo nhóm; lịch cá nhân vẫn tối đa 1 ngày (BR-46)
 );
 CREATE INDEX daily_attendance_group_day_idx ON daily_attendance(group_id, day);
 

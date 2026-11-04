@@ -7,7 +7,7 @@ import type { Ctx } from '../../context.js';
 import { currentUser, parse } from '../../shared/http.js';
 import { AppError, E } from '../../shared/errors.js';
 import { sortPeople } from '../../shared/sort.js';
-import { activeMembership, roleIn } from '../groups/service.js';
+import { activeMemberships, roleIn } from '../groups/service.js';
 import { sessionCols, toSummary } from './summary.js';
 import { decodeCursor, encodeCursor } from '../../shared/cursor.js';
 import { iso } from '../../shared/time.js';
@@ -93,11 +93,11 @@ export function sessionRoutes(app: FastifyInstance, ctx: Ctx) {
 
   app.get('/v1/me/sessions/upcoming', async (req) => {
     const me = await currentUser(req, ctx.db, ctx.verifier);
-    const m = await activeMembership(ctx, me.id); // BR-114: chỉ nhóm tôi là thành viên
-    if (!m) return null;
+    const memberships = await activeMemberships(ctx, me.id); // BR-114: chỉ nhóm tôi là thành viên
+    if (!memberships.length) return null;
     const s = await ctx.db.selectFrom('sessions').innerJoin('groups', 'groups.id', 'sessions.group_id')
       .select([...sessionCols, 'groups.name as group_name'])
-      .where('sessions.group_id', '=', m.group_id).where('sessions.status', 'in', ['SCHEDULED', 'COUNTDOWN', 'ACTIVE'])
+      .where('sessions.group_id', 'in', memberships.map((m) => m.group_id)).where('sessions.status', 'in', ['SCHEDULED', 'COUNTDOWN', 'ACTIVE'])
       .where('sessions.ends_at', '>', new Date()).orderBy('sessions.started_at', 'asc').limit(1).executeTakeFirst();
     return s ? toSummary(ctx, s) : null;
   });

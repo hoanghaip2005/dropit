@@ -63,9 +63,9 @@ Sửa 2026-10-19: D-25 (CN không tham gia phiên, quản lý nhiều nhóm — 
 | AC-02.03.4 | Lỗi | ND đã nhập sai 4 lần trong 15 phút | Nhập sai lần thứ 5 | Khóa nhập mã 15 phút cho tài khoản đó; trong thời gian khóa, mã đúng cũng bị từ chối "Thử lại sau hh:mm" (BR-76) **(đề xuất, Q-73)** |
 | AC-02.03.5 | Biên | Nhóm A có CN + 10 TV (đầy, Q-141) | ND nhập mã đúng rồi bấm đồng ý | Từ chối "Nhóm đã đủ 10 thành viên" (BR-74; kiểm tra lúc đồng ý, AC-01.05.6). Với CN + 9 TV → vào được, thành CN + 10 TV **(đề xuất, Q-141)** |
 | AC-02.03.6 | Lỗi | Nhóm A ở CHỜ GIẢI TÁN hoặc ĐÃ GIẢI TÁN | ND nhập mã của A | Báo "Mã không hợp lệ"; không mở màn đồng ý (BR-80) |
-| AC-02.03.7 | Lỗi | ND đang là TV nhóm B (chưa giải tán) | Nhập mã đúng của nhóm A rồi bấm đồng ý | Từ chối “Bạn đang ở nhóm B. Rời nhóm B trước khi tham gia nhóm khác.”; không lưu bản ghi đồng ý; vẫn là TV nhóm B (BR-75 a, D-21; AC-01.05.10) |
+| AC-02.03.7 | Bình thường | ND đang là TV nhóm B (chưa giải tán), nhóm A còn chỗ | Nhập mã đúng của nhóm A, đọc quy tắc rồi bấm đồng ý | Thêm membership và bản ghi đồng ý riêng cho A; vẫn là TV nhóm B; sĩ số từng nhóm được tính riêng (BR-06, BR-74, BR-75, D-30; AC-01.05.10) |
 
-**Ghi chú / giả định:** Nhập mã chỉ dẫn đến màn đồng ý (US-01.05), chưa tạo tư cách TV (BR-76). Giới hạn 1 nhóm kiểm tra lúc bấm đồng ý, cùng lúc với trần sĩ số (BR-75, BR-74).
+**Ghi chú / giả định:** Nhập mã chỉ dẫn đến màn đồng ý (US-01.05), chưa tạo tư cách TV (BR-76). Mỗi nhóm kiểm tra consent và trần sĩ số riêng lúc bấm đồng ý (BR-75, BR-74). Một người vẫn chỉ được ở trạng thái đang trong tối đa một phiên (BR-09).
 
 ## US-02.04 Mời bằng email
 
@@ -84,9 +84,9 @@ Sửa 2026-10-19: D-25 (CN không tham gia phiên, quản lý nhiều nhóm — 
 | AC-02.04.5 | Biên | Nhóm A có CN + 9 TV (sĩ số 9, còn 1 chỗ) và 3 lời mời đang chờ | CN gửi thêm lời mời; sau đó một người được mời đồng ý | Gửi được (không giới hạn lời mời chờ, kiểm tra trần lúc đồng ý); người đồng ý đầu tiên vào → CN + 10 TV = đầy (Q-141); các lời mời còn lại vẫn mở được nhưng bấm đồng ý bị từ chối "Nhóm đã đủ 10 thành viên" (BR-74, BR-76) **(đề xuất, Q-74)** |
 | AC-02.04.6 | Bình thường | Lời mời đang chờ | CN thu hồi | Liên kết hết hiệu lực |
 | AC-02.04.7 | Biên | Lời mời gửi lúc T | Người nhận mở liên kết lúc T + 7 ngày | Hết hạn (mốc nửa mở, BR-65); trước mốc đó → mở được (BR-76) **(đề xuất, Q-73)** |
-| AC-02.04.8 | Lỗi | Người được mời đang là TV nhóm B | Mở liên kết mời vào nhóm A, bấm đồng ý | Từ chối như AC-02.03.7; lời mời vẫn “đang chờ” đến hết hạn (BR-75 a, D-21). CN nhóm A không được biết người đó ở nhóm nào **(giả định)** |
+| AC-02.04.8 | Bình thường | Người được mời đang là TV nhóm B, nhóm A còn chỗ | Mở liên kết mời vào nhóm A, đọc quy tắc, bấm đồng ý | Thêm membership A; vẫn là TV B; lời mời kết thúc theo luồng chấp nhận; không tiết lộ dữ liệu nhóm B cho CN nhóm A (BR-75, D-30) |
 
-**Ghi chú / giả định:** Gửi lời mời không kiểm tra người nhận đang ở nhóm khác (để không lộ tư cách thành viên cho CN nhóm A); chặn ở bước đồng ý **(giả định)**. Dùng SES cần địa chỉ đã xác minh ở sandbox (Q-64). Thông báo cho người được mời không nêu dữ liệu của TV khác.
+**Ghi chú / giả định:** Gửi lời mời không kiểm tra người nhận đang ở nhóm khác; mỗi nhóm chỉ thấy membership của chính nhóm đó. Dùng SES cần địa chỉ đã xác minh ở sandbox (Q-64). Thông báo cho người được mời không nêu dữ liệu của TV khác.
 
 ## US-02.05 Tham gia nhóm kèm đồng ý minh bạch (Hủy — gộp vào US-01.05)
 
@@ -107,10 +107,10 @@ Hủy theo D-14. Toàn bộ nội dung nằm ở US-01.05 (`02-ep01-tai-khoan.md
 | AC-02.06.3 | Lỗi | ND không thuộc nhóm C | Gọi API danh sách TV nhóm C | 403 (A-03, NFR-11) |
 | AC-02.06.4 | Biên | ND không ở nhóm nào | Mở "Nhóm của tôi" | Thấy trạng thái trống + nút "Tạo nhóm" / "Nhập mã" |
 | AC-02.06.5 | Biên | Nhóm B ở trạng thái ĐÃ GIẢI TÁN | TV cũ mở "Nhóm của tôi" | B không còn trong danh sách nhóm đang tham gia; dữ liệu của mình ở B vẫn xem được ở "Dữ liệu của tôi" (US-01.08) |
-| AC-02.06.6 | Lỗi | ND là CN của nhóm A, B, C | Mở "Nhóm của tôi" (app hoặc API) | Mỗi nhóm hiện tên, nhãn vai trò, trạng thái nhóm, sĩ số, phiên kế tiếp và **tỉ lệ hoàn thành phiên tháng hiện tại của riêng nhóm đó** (tạm tính đến hôm qua); danh sách nhóm sắp theo tên nhóm A→Z; **không** có chỉ số cộng dồn nhiều nhóm (tổng phiên, tổng lần thoát, tỉ lệ chung…) và không so sánh/xếp nhóm theo chỉ số (BR-117, D-21, D-25, D-03) **(đề xuất, Q-145)** |
+| AC-02.06.6 | Bình thường | ND là CN một số nhóm và/hoặc TV của một số nhóm khác | Mở "Nhóm của tôi" (app hoặc API) | Hiện từng nhóm có vai trò, trạng thái nhóm, sĩ số, phiên kế tiếp và **tỉ lệ hoàn thành phiên tháng hiện tại của riêng nhóm đó** (tạm tính đến hôm qua); danh sách nhóm sắp theo tên A→Z; **không** có chỉ số cộng dồn/so sánh/xếp hạng giữa các nhóm (BR-117, D-25, D-30, D-03) **(đề xuất, Q-145)** |
 | AC-02.06.7 | Biên | Nhóm B có TV "Vũ", "An", "Bình" | Mở danh sách TV nhóm B | CN hiện ở dòng riêng đầu danh sách (nhãn "Chủ nhóm", không tham gia phiên — D-25) (ngoại lệ ghi trong BR-115); TV sắp theo tên hiển thị A→Z (An, Bình, Vũ), trùng tên thì theo thời điểm vào nhóm (sớm trước), vẫn trùng thì theo `user_id`; không sắp theo chỉ số hay hoạt động (BR-115, NFR-P06) |
 
-**Ghi chú / giả định:** Theo D-21 một ND là TV của tối đa 1 nhóm; danh sách chỉ có nhiều dòng khi ND làm chủ nhiều nhóm (BR-75 b). CN nhóm A không thấy ND đó làm chủ nhóm nào khác (04 §3) **(giả định)**.
+**Ghi chú / giả định:** Danh sách trả đủ nhóm mà ND đang làm chủ hoặc tham gia; vai trò và quyền được xác định riêng theo từng nhóm (D-10, D-30). CN nhóm A không thấy các vai trò/nhóm khác của ND (04 §3) **(giả định)**.
 
 ## US-02.07 Thành viên rời nhóm (Hủy — gộp vào US-01.07)
 
@@ -210,9 +210,9 @@ Hủy theo D-14. Rời nhóm = rút đồng ý với nhóm đó; toàn bộ nộ
 
 **Ghi chú / giả định:** Sửa/hủy lần lặp: US-02.10b.
 
-## US-02.12 Cảnh báo trùng lịch giữa nhiều nhóm (Hủy — D-21)
+## US-02.12 Cảnh báo trùng lịch giữa nhiều nhóm (Hủy — D-21; cần rà lại theo D-30)
 
-Hủy theo D-21: một người chỉ là thành viên của tối đa 1 nhóm nên không còn trùng lịch giữa nhiều nhóm của cùng thành viên (BR-10 Hủy). Chủ nhóm sở hữu nhiều nhóm không tham gia phiên (D-25) nên cũng không trùng lịch; không cảnh báo trùng. Mã AC-02.12.1–5 không dùng lại. Q-81 không còn áp dụng; Q-82 (“báo vắng trước”) chuyển ảnh hưởng sang EP-03/EP-08.
+US này từng bị hủy vì giả định một người chỉ thuộc một nhóm (D-21). D-30 đã thay giả định đó; chính sách cảnh báo trùng lịch giữa các nhóm vẫn đang mở ở Q-81. Không tự khôi phục phạm vi hoặc dùng lại AC-02.12.1–5 trước khi có quyết định; Q-82 (“báo vắng trước”) chuyển ảnh hưởng sang EP-03/EP-08.
 
 ## US-02.13 Báo cáo nhóm hoặc hồ sơ lạm dụng
 

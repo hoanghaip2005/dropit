@@ -146,7 +146,7 @@ Mục Hủy hiện tại (không truy vết tiếp): BR-10, BR-25, BR-69, BR-83,
 | Đăng nhập và vai trò (CN/TV theo nhóm, QT) | GĐ1 §7; D-10 | US-01.01, US-01.02, US-01.04 | Có US |
 | Màn đồng ý minh bạch, rút đồng ý, "Dữ liệu của tôi" | 01 §5 EP-01; GĐ1 §6 | US-01.05, US-01.07, US-01.08 | Có US |
 | Sửa hồ sơ cơ bản | 01 §5 EP-01; D-17 | US-01.03 | Có US |
-| Tạo nhóm 4–10 thành viên (không gồm CN — giả định Q-141), TV tối đa 1 nhóm, CN quản lý nhiều nhóm, khai mục đích | GĐ1 §7; D-02, D-10, D-21, D-25 | US-02.01 | Có US |
+| Tạo nhóm 4–10 thành viên (không gồm CN — giả định Q-141), ND có thể tham gia nhiều nhóm, CN quản lý nhiều nhóm, khai mục đích | GĐ1 §7; D-02, D-10, D-25, D-30 | US-02.01 | Có US |
 | Mời thành viên | GĐ1 §4.1, §7 | US-02.03 (mã); email là Should (US-02.04) | Có US |
 | Xem nhóm, xóa thành viên | 01 §5 EP-02 | US-02.06, US-02.08 | Có US |
 | CN đặt lịch phiên 25/50' (một lần), sửa/hủy | GĐ1 §4.1; D-06 | US-02.10, US-02.11 | Có US |

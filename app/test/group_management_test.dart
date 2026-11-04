@@ -108,7 +108,7 @@ void main() {
     expect(find.text('Chép mã'), findsOneWidget);
   });
 
-  testWidgets('Duration accepts custom minutes and rejects outside bounds', (
+  testWidgets('Duration offers only the fixed 25 and 50 minute options', (
     tester,
   ) async {
     int? value = 25;
@@ -123,17 +123,12 @@ void main() {
         ),
       ),
     );
-    final field = find.byKey(const Key('sessionDurationMinutes'));
-    await tester.enterText(field, '37');
-    expect(value, 37);
-    await tester.enterText(field, '0');
-    expect(value, isNull);
-    await tester.pump();
-    expect(find.text('Nhập số phút từ 1 đến 240.'), findsOneWidget);
-    await tester.enterText(field, '241');
-    expect(value, isNull);
-    await tester.enterText(field, '240');
-    expect(value, 240);
+    expect(find.text('25 phút'), findsOneWidget);
+    expect(find.text('50 phút'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Tùy chọn từ 1 đến 240 phút'), findsNothing);
+    await tester.tap(find.text('50 phút'));
+    expect(value, 50);
   });
 
   testWidgets('Delete group requires confirmation; cancel does not call API', (

@@ -143,7 +143,7 @@ Không có cột số dư Coins (suy từ sổ cái, BR-44) và không có "đi�
 
 Chỉ mục: `groups_owner_idx`. Trigger `groups_owner_not_member` chặn đổi chủ nhóm thành người đang là thành viên.
 
-### 3.4 `group_members` (BR-71, BR-74, BR-75, BR-77; D-21, D-25)
+### 3.4 `group_members` (BR-71, BR-74, BR-75, BR-77; D-25, D-30)
 | Cột | Kiểu | Ràng buộc |
 | --- | --- | --- |
 | group_id, user_id | uuid | FK |
@@ -152,7 +152,7 @@ Chỉ mục: `groups_owner_idx`. Trigger `groups_owner_not_member` chặn đổi
 | left_at + leave_reason | | CHECK cùng NULL hoặc cùng có |
 | removal_effective_at | timestamptz | xóa giữa phiên → hiệu lực sau `ends_at` (BR-77) |
 
-- **D-21:** `UNIQUE (user_id) WHERE left_at IS NULL` — một người tối đa 1 nhóm đang là thành viên.
+- **D-30:** `UNIQUE (user_id, group_id) WHERE left_at IS NULL` — một người có thể là thành viên của nhiều nhóm; không tạo trùng membership đang hoạt động trong cùng nhóm. Mỗi nhóm vẫn kiểm tra đồng ý và sĩ số riêng.
 - **D-25:** trigger `group_members_check` chặn `user_id = groups.owner_id`.
 - **BR-74:** trigger khóa dòng nhóm (`FOR UPDATE`) rồi đếm, chặn thành viên thứ 11; chỉ nhận khi nhóm ACTIVE. Sàn 4 chỉ là cảnh báo, không ràng buộc.
 - Lịch sử giữ dòng đã rời (chủ nhóm mới không thấy dữ liệu ở nhóm cũ — lọc theo `group_id`).
@@ -233,7 +233,7 @@ Chuyển hợp lệ (trigger `appeals_transition`): tạo mới → PENDING ho�
 - View `user_coin_balance`. Chỉ mục `(user_id, reward_date)` để tính trần.
 
 ### 3.13 `daily_attendance` (BR-46)
-PK `(user_id, day)` — tối đa 1 điểm danh/ngày. `group_id` để báo cáo trong nhóm (chủ nhóm thấy điểm danh **trong nhóm mình**, D-12). `sessions_completed`, `focus_minutes` tích lũy trong ngày.
+Mỗi dòng tổng hợp theo người, ngày và nhóm (`PRIMARY KEY (user_id, day, group_id)`). Lịch điểm danh cá nhân loại trùng ngày; báo cáo/riêng tư nhóm đếm riêng theo `group_id` để không gộp hoạt động giữa các nhóm (D-30). `group_id` để báo cáo trong nhóm (chủ nhóm thấy điểm danh **trong nhóm mình**, D-12). `sessions_completed`, `focus_minutes` tích lũy trong ngày.
 
 ### 3.14 Chuỗi: cột trên `users` + `achievement_log` (BR-47…51, BR-92) **[KCN]**
 Không tách bảng `streaks` (DQ-D05). `achievement_log` chỉ-thêm: `kind ∈ {CHECKIN, STREAK_INC, STREAK_BREAK, STREAK_RESTORE, BADGE_AWARD}`, `value_before/after`, `day`, `ref_session_id`, `reason`. `UNIQUE (user_id, day) WHERE kind = 'STREAK_INC'` (BR-49). Lý do ngắt chuỗi là **[KCN]**.
@@ -325,7 +325,7 @@ Sao lưu RDS ≤ 35 ngày: dữ liệu đã xóa biến mất hẳn sau vòng sa
 
 | Mã | Câu hỏi | Đề xuất | Trạng thái |
 | --- | --- | --- | --- |
-| DQ-D01 | Trần 10 thành viên và D-21 được bảo vệ bằng trigger + unique index. Có chấp nhận dùng trigger (logic nằm trong CSDL) hay chuyển hết về tầng ứng dụng? | Giữ cả hai: ứng dụng kiểm tra để báo lỗi thân thiện, CSDL là lưới an toàn chống đua. **(đề xuất)** | Chờ |
+| DQ-D01 | Trần 10 thành viên và membership hoạt động duy nhất theo cặp người/nhóm (D-30) được bảo vệ bằng trigger + unique index. Có chấp nhận dùng trigger (logic nằm trong CSDL) hay chuyển hết về tầng ứng dụng? | Giữ cả hai: ứng dụng kiểm tra để báo lỗi thân thiện, CSDL là lưới an toàn chống đua. **(đề xuất)** | Chờ |
 | DQ-D02 | `session_members` (kết quả từng người) có xóa sau 13 tháng như sự kiện thoát không? 04-nfr §4 chỉ nêu "sự kiện thoát…" và "điểm danh/chuỗi đến xóa tài khoản". | Giữ `session_members` 13 tháng; `daily_attendance`, `achievement_log` giữ đến xóa tài khoản. Cần BA xác nhận. **(đề xuất)** | Chờ |
 | DQ-D03 | Sổ cái chỉ-thêm nhưng xóa tài khoản phải xóa Coins. Dùng cờ phiên `dropit.purge` chỉ cho job xóa — có chấp nhận ngoại lệ này? | Chấp nhận; job purge chạy bằng vai trò CSDL riêng, ghi `admin_audit`. **(đề xuất)** | Chờ |
 | DQ-D04 | Nhật ký truy cập: 05 §3.3 gợi ý DynamoDB, thiết kế chọn PostgreSQL (gộp lượt xem, hạn lưu theo ngày xóa tài khoản). | Giữ PostgreSQL. **(đề xuất)** | Chờ |
