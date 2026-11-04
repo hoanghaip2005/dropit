@@ -7,6 +7,7 @@ import '../../app/theme.dart';
 import '../../core/models.dart';
 import '../../core/providers.dart';
 import '../../core/widgets.dart';
+import 'home_ad_carousel.dart';
 
 /// V-03 Trang chủ thành viên (+ khối "Nhóm tôi quản lý", VQ-01). Mockup: `employee_home(_dashboard)`.
 class HomeScreen extends ConsumerWidget {
@@ -297,6 +298,8 @@ class _MySummary extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: DT.spaceMd),
+          const HomeAdCarousel(),
           const SizedBox(height: DT.spaceMd),
           AppCard(
             children: [

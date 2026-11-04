@@ -27,6 +27,7 @@
 | 08 | [Đăng nhập Cognito](08-LOGIN.md) | `sign_in_login` + hợp đồng auth thật | Bỏ mock, form thật/config failclosed; Flutter173 đạt/1 skip, backend58 đạt; verifier source đóng V08-01; chờ cấu hình AWS và hình ảnh |
 | 17 | [Quét mã QR mời tham gia](17-QR-INVITE-SCAN.md) | Yêu cầu người dùng + QR consent hiện tại + V-04 nhập mã | Source verifier đóng finding multi-QR; tests/analyze/build web đạt; CHƯA XÁC MINH HÌNH ẢNH/camera thiết bị |
 | 18 | [Xuất ảnh QR mời](18-MEMBER-INVITE-QR-EXPORT.md) | Yêu cầu người dùng + D14–D17 | Nút tải PNG QR đã triển khai; test QR payload/widget và web build đạt; analyzer còn info ở `router.dart:51`; CHƯA XÁC MINH HÌNH ẢNH/tải file runtime |
+| 19 | [Carousel quảng cáo mẫu trên Home](19-HOME-AD-CAROUSEL.md) | Yêu cầu người dùng + D18; `employee_home/code.html` chỉ tham khảo thứ tự | Đã triển khai; 6 tests + Home flow regression đạt; web build và screenshot desktop kiểm tra độc lập đạt; responsive mobile/native chưa xác minh |
 
 Mỗi đợt chốt đúng route/state, lập hồ sơ, sửa, kiểm độc lập rồi mới coi là hoàn thành. Có thể đổi thứ tự khi người dùng ưu tiên view khác. Không tự coi việc hoàn thành bước 0 là hoàn thành tất cả đợt UI.
 
