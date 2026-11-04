@@ -27,7 +27,8 @@ Chi tiết xem [`../02-so-quyet-dinh.md`](../02-so-quyet-dinh.md).
 | D-10 / D-25 | Không có vai trò "Trưởng phòng". Ai tạo nhóm là chủ nhóm. Chủ nhóm không tham gia phiên và được quản lý nhiều nhóm |
 | D-12 | Chủ nhóm không thấy chuỗi. Chỉ thấy điểm danh và kết quả phiên trong nhóm mình |
 | D-20 / D-22 | Có người thoát → báo ngay cho cả nhóm và cả phiên, nêu tên người thoát |
-| D-21 | Mỗi người là thành viên của tối đa 1 nhóm (giả định) |
+| D-21 | (Hủy — thay bằng D-30) Từng giới hạn người dùng ở tối đa 1 nhóm |
+| D-30 | Người dùng có thể tham gia nhiều nhóm, đồng ý riêng theo từng nhóm; giới hạn tối đa một phiên đang hoạt động vẫn giữ |
 | D-29 | Màn phiên có nút "Rời phiên" kèm hộp xác nhận (BR-118): ACTIVE/GRACE/PAUSED → EXITED; ở phòng chờ → ABSENT (Q-149); khi mất kết nối thì không gửi và không xếp hàng gửi sau |
 
 ## 4. Mục lục

@@ -85,7 +85,7 @@ Cột Sprint: 1–4 = Must đã xếp; “Sau” = Should/Could, làm sau MVP (h
 | US-02.10 | Đặt lịch phiên — **chỉ lịch một lần** ở MVP | Must | Must | M (xem §5.3) | 02.01 | 2 | BE, FM |
 | US-02.10b | Đặt lịch phiên lặp lại (tách khỏi US-02.10; BR-113; Q-78) | Should | Should (ngoài nguồn GĐ1) | M | 02.10, 02.11 | Sau | BE, FM |
 | US-02.11 | Sửa / hủy lịch phiên | Must | Must | M | 02.10 | 2 | BE, FM |
-| US-02.12 | Cảnh báo trùng lịch giữa nhiều nhóm | Should | Hủy — D-21 (TV thuộc tối đa 1 nhóm, không còn trùng lịch chéo nhóm) | — | — | Hủy | — |
+| US-02.12 | Cảnh báo trùng lịch giữa nhiều nhóm | Should | Hủy — D-21; chính sách cần rà lại theo D-30/Q-81 | — | — | Hủy | — |
 | US-02.13 | Báo cáo nhóm hoặc hồ sơ lạm dụng (Q-63, Q-105) | Should | Should | S | 02.06 | Sau | BE, FM |
 | US-02.14 | Nhắc thành viên trước giờ phiên (Q-80) | Should | Should | S | 02.10, T-02 (SNS) | Sau | BE |
 
@@ -241,7 +241,7 @@ Bảng §2 và §4 đang phản ánh PA-B (trạng thái hiện tại, chưa c�
 | Sprint | Trọng tâm (Quy trình §12) | Demo cuối sprint | Tiêu chí GĐ1 §11 |
 | --- | --- | --- | --- |
 | 1 | Chốt phạm vi, kiến trúc, hạ tầng, thử rủi ro cao nhất | PoC T-01 chạy trên **máy thật iOS và Android** (iOS: bản TestFlight từ GitHub Actions, D-26; iPhone thật — Q-142): khóa màn hình không tính, rời app được ghi; đăng nhập Cognito; tạo nhóm, mời bằng mã; AWS có cảnh báo ngân sách; CI build Android (T-03) và IPA ký + TestFlight (T-06) | Nền cho “≥3 dịch vụ AWS có vai trò” |
-| 2 | Luồng chính end-to-end | Một chủ nhóm tạo và quản lý **2 nhóm** (chủ nhóm không tham gia phiên, D-25; mỗi thành viên chỉ ở 1 nhóm, D-21), đặt lịch 25’ cho từng nhóm; thành viên đồng ý, vào phiên, úp máy; một người rời app >3s → **chủ nhóm, cả nhóm và người trong phiên nhận push trong vài giây, có tên người thoát** (D-20, D-22), cả phiên mất thưởng, phiên vẫn chạy đến hết | §11 #1, #2 |
+| 2 | Luồng chính end-to-end | Một chủ nhóm tạo và quản lý **2 nhóm** (chủ nhóm không tham gia phiên, D-25); một thành viên tham gia cả hai nhóm sau khi đồng ý riêng từng nhóm (D-30), được liệt kê trong từng nhóm và vẫn chỉ tham gia tối đa một phiên đang hoạt động (BR-09); đặt lịch 25’ cho từng nhóm; thành viên vào phiên, úp máy; một người rời app >3s → **chủ nhóm, cả nhóm và người trong phiên nhận push trong vài giây, có tên người thoát** (D-20, D-22), cả phiên mất thưởng, phiên vẫn chạy đến hết | §11 #1, #2 |
 | 3 | Tính năng phụ, cloud còn lại | Coins/chuỗi/điểm danh sau phiên; Shop mua và trang bị; giải trình; mất kết nối; báo cáo tháng tạo bằng EventBridge + Lambda và **gửi email tóm tắt qua SES** (không PDF, D-24) | §11 #3, #4 |
 | 4 | Kiểm thử, sửa lỗi, tài liệu, phát hành bản thử | Bản phát hành thử; thông báo mục đích báo cáo (US-08.08); hồ sơ, huy hiệu, nhật ký riêng tư, “Dữ liệu của tôi”, xem báo cáo trong app; báo cáo và slide giải thích vai trò từng dịch vụ AWS | Toàn bộ §11 |
 
@@ -273,7 +273,7 @@ Thứ tự ưu tiên gợi ý nếu dư năng lực: US-03.06 tạm dừng và U
 | Q-130 | Nhật ký riêng tư có ở MVP | 07.07, 07.10 Must; 07.08, 07.09 Should | Đã chốt — D-15 |
 | Q-133 | Must 83 > 80: hạ 3 story hay Sprint 4 = 15? | Hạ 3 story | Đã chốt — D-17 (giữ 83, Sprint 4 = 15) |
 | Q-03, Q-33 | Chế độ báo ngay/gộp | Ngay, gộp Should | Đã chốt — D-20 (chỉ báo ngay, cả nhóm + phiên; gộp Won't) |
-| Q-04 | Một người ở nhiều nhóm? | Nhiều nhóm | Đã chốt — D-21 (TV tối đa 1 nhóm) |
+| Q-04 | Một người ở nhiều nhóm? | Nhiều nhóm | Đã chốt — D-30 (TV có thể tham gia nhiều nhóm) |
 | Q-64, Q-36 | Email báo cáo Must? PDF? | Email Must kèm PDF | Đã chốt — D-24 (email tóm tắt Must, PDF Should) |
 | Q-19, Q-135, Q-139 | Chủ nhóm có tham gia phiên? | — | Đã chốt — D-25 (không tham gia; US-03.13 Hủy) |
 | Q-140 | (Mở rộng sau D-26 và review mockup) US-03.09 S→M, T-06 pipeline iOS, US-08.10 Must mới → Must 86 > 83 (D-17). PA-A: hạ US-07.04, US-06.02, dời US-01.02 sang S4, gộp US-04.06 vào US-08.10; PA-A2: thay gộp bằng dời US-02.08 sang S4 + hạ US-01.03; PA-B: giữ 86, sửa D-17; PA-C: theo T-BA-69 | PA-A (đề xuất) — xem §5.5 | Chờ |

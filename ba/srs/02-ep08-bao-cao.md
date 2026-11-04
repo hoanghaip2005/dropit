@@ -2,7 +2,7 @@
 
 Nguồn: GĐ1 §4.8, §6, §8, §11; D-03, D-05, D-10, D-11, D-12, D-13, D-21, D-22, D-24 · MoSCoW: Must (tạo tự động, xem theo nhóm, dòng của mình, email tóm tắt, mục đích, chi tiết phiên cho chủ nhóm — US-08.10); Should (tổng nhóm cho thành viên, so sánh, tải PDF trong app, kỳ trống — D-13, D-24) · Phụ trách: (chưa giao)
 
-Cập nhật 2026-10-07 theo D-21 (thành viên thuộc tối đa 1 nhóm; báo cáo luôn theo **một** nhóm/thành viên, không có màn gộp mọi nhóm), D-22 (báo cáo có tên người thoát ở từng phiên; không hiện tổng số lần thoát của người khác cho thành viên — đề xuất Q-137), D-24 (email tóm tắt, không PDF; PDF chỉ tải trong app, Should), T-BA-57.
+Cập nhật 2026-10-07 theo D-21 (sau được thay bằng D-30; báo cáo vẫn tách theo từng nhóm, không gộp dữ liệu chéo nhóm), D-22 (báo cáo có tên người thoát ở từng phiên; không hiện tổng số lần thoát của người khác cho thành viên — đề xuất Q-137), D-24 (email tóm tắt, không PDF; PDF chỉ tải trong app, Should), T-BA-57.
 
 Cập nhật 2026-10-19 theo D-25 (chủ nhóm không tham gia phiên → không có dòng báo cáo: AC-08.01.7, AC-08.02.7, .8), Q-141 (sĩ số không gồm CN) và review lần 3 T-BA-58 (AC-08.02.4 gắn nhãn phạm vi US-01.11).
 

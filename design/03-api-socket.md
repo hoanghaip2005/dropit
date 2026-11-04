@@ -34,7 +34,7 @@ Tên bảng/cột và giá trị enum theo `design/schema.sql` + `02-du-lieu.md`
 | 401 | Thiếu/hết hạn token | `UNAUTHENTICATED`, `TOKEN_EXPIRED` | NFR-10 |
 | 403 | Không có quyền trên nhóm/phiên | `FORBIDDEN_GROUP`, `NOT_GROUP_OWNER`, `ACCOUNT_LOCKED`, `ADMIN_REQUIRED`, `CONSENT_REQUIRED` (chưa đồng ý/đồng ý lại), `OWNER_CANNOT_JOIN_SESSION`, `NOT_EXITED_IN_SESSION` | NFR-11, BR-06, BR-114 |
 | 404 | Không tồn tại | `NOT_FOUND`, `INVITE_CODE_INVALID`, `REPORT_NOT_READY` | BR-76 |
-| 409 | Xung đột trạng thái | `GROUP_FULL`, `ALREADY_IN_GROUP`, `OWNER_OF_THIS_GROUP`, `CONSENT_VERSION_STALE`, `MAX_GROUPS_OWNED`, `SCHEDULE_OVERLAP`, `SESSION_ALREADY_STARTED`, `SESSION_IN_PROGRESS`, `SESSION_NOT_FINISHED`, `ALREADY_OWNED`, `PRICE_CHANGED`, `APPEAL_EXISTS`, `APPEAL_WINDOW_CLOSED`, `APPEAL_ALREADY_DECIDED`, `EXPLANATION_WINDOW_CLOSED`, `ALREADY_REPORTED`, `VERSION_CONFLICT` | BR-74, BR-75, BR-78, BR-45, BR-86 |
+| 409 | Xung đột trạng thái | `GROUP_FULL`, `ALREADY_MEMBER`, `OWNER_OF_THIS_GROUP`, `CONSENT_VERSION_STALE`, `MAX_GROUPS_OWNED`, `SCHEDULE_OVERLAP`, `SESSION_ALREADY_STARTED`, `SESSION_IN_PROGRESS`, `SESSION_NOT_FINISHED`, `ALREADY_OWNED`, `PRICE_CHANGED`, `APPEAL_EXISTS`, `APPEAL_WINDOW_CLOSED`, `APPEAL_ALREADY_DECIDED`, `EXPLANATION_WINDOW_CLOSED`, `ALREADY_REPORTED`, `VERSION_CONFLICT` | BR-74, BR-75, BR-78, BR-45, BR-86 |
 | 422 | Hợp lệ cú pháp nhưng trái quy tắc | `INSUFFICIENT_COINS`, `ITEM_UNAVAILABLE`, `ITEM_NOT_OWNED`, `START_IN_PAST`, `DURATION_OUT_OF_RANGE`, `BALANCE_WOULD_BE_NEGATIVE`, `JOURNAL_TOO_LONG`, `JOURNAL_DATE_INVALID`, `IDEMPOTENCY_MISMATCH` | BR-02, BR-45, BR-100 |
 | 429 | Vượt giới hạn | `RATE_LIMITED`, `INVITE_CODE_LOCKED` | BR-76 |
 
@@ -58,9 +58,9 @@ Tên bảng/cột và giá trị enum theo `design/schema.sql` + `02-du-lieu.md`
 
 Ví dụ:
 ```json
-{ "type": "https://api.dropit.example/errors/already-in-group", "title": "Đã ở nhóm khác",
-  "status": 409, "code": "ALREADY_IN_GROUP", "br": "BR-75",
-  "detail": "Bạn đang ở nhóm A. Rời nhóm A trước khi tham gia nhóm khác.", "request_id": "r-7f3c" }
+{ "type": "https://api.dropit.example/errors/already-member", "title": "Đã là thành viên nhóm",
+  "status": 409, "code": "ALREADY_MEMBER", "br": "D-30",
+  "detail": "Bạn đã là thành viên nhóm này.", "request_id": "r-7f3c" }
 ```
 
 ---

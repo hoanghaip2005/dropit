@@ -261,7 +261,7 @@ async function applyExemption(ctx: Ctx, tx: Tx, sessionId: string, userId: strin
   // Q-124: người được miễn trừ có điểm danh (cả khi phiên vẫn forfeited)
   await tx.insertInto('daily_attendance')
     .values({ user_id: userId, day, group_id: s.group_id, first_session_id: s.id, focus_minutes: Math.floor(me.focus_seconds / 60) })
-    .onConflict((oc) => oc.columns(['user_id', 'day']).doUpdateSet({ sessions_completed: sql`daily_attendance.sessions_completed + 1` }))
+    .onConflict((oc) => oc.columns(['user_id', 'day', 'group_id']).doUpdateSet({ sessions_completed: sql`daily_attendance.sessions_completed + 1` }))
     .execute();
 
   if (remaining.length) {

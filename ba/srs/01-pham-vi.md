@@ -20,10 +20,10 @@ Theo D-10, chỉ có **một vai trò hệ thống đặc quyền** là Quản t
 
 | Loại | Vai trò | Mô tả | Ghi chú |
 | --- | --- | --- | --- |
-| Hệ thống | **Người dùng** (ND) | Mọi tài khoản thường; có thể tạo nhóm hoặc tham gia nhóm | Là thành viên của tối đa 1 nhóm (D-21). Được tạo/quản lý nhiều nhóm với vai trò chủ nhóm (D-25); một thành viên nhóm A vẫn được tạo nhóm B và làm chủ nhóm B (giả định, Q-150 — D-25 chưa nêu rõ ý này) |
+| Hệ thống | **Người dùng** (ND) | Mọi tài khoản thường; có thể tạo nhóm hoặc tham gia nhóm | Có thể là thành viên của nhiều nhóm, đồng ý riêng theo từng nhóm (D-30). Được tạo/quản lý nhiều nhóm với vai trò chủ nhóm (D-25); một thành viên nhóm A vẫn được tạo nhóm B và làm chủ nhóm B (giả định, Q-150 — D-25 chưa nêu rõ ý này) |
 | Hệ thống | **Quản trị** (QT) | Quản lý tài khoản, danh mục Shop, cấu hình thông số, xử lý khiếu nại/lỗi | Không xem dữ liệu phiên chi tiết trừ khi xử lý ca, có ghi nhật ký **(giả định, Q-22)** |
 | Trong nhóm | **Chủ nhóm** (CN) | Người tạo nhóm; quản lý thành viên, đặt lịch phiên, nhận thông báo, xem báo cáo nhóm | Mỗi nhóm đúng 1 CN (D-10). **Không tham gia phiên** của nhóm mình, không bị ghi dữ liệu phiên; không tính vào sĩ số 4–10 **(giả định, Q-141)** (D-25) |
-| Trong nhóm | **Thành viên** (TV) | Người tham gia nhóm; vào phiên, nhận thành tích/Coins | Thuộc tối đa 1 nhóm tại một thời điểm (D-21). Muốn vào nhóm khác phải rời nhóm hiện tại |
+| Trong nhóm | **Thành viên** (TV) | Người tham gia nhóm; vào phiên, nhận thành tích/Coins | Có thể thuộc nhiều nhóm; quyền, sự đồng ý và dữ liệu được áp dụng riêng theo từng nhóm (D-30) |
 
 Quyền CN chỉ áp dụng cho nhóm mình tạo. Các hành động cá nhân (hồ sơ, Shop, nhật ký, dữ liệu của tôi) thuộc mọi Người dùng, không phụ thuộc vai trò trong nhóm.
 
@@ -80,7 +80,7 @@ Ký hiệu: ✔ được · ✖ không · ~ một phần (ghi rõ). “Của mì
 | Epic | Mô tả | MoSCoW | Phiên bản | Lý do |
 | --- | --- | --- | --- | --- |
 | EP-01 Tài khoản & vai trò | Đăng nhập (Cognito), vai trò hệ thống ND/QT, vai trò trong nhóm CN/TV, đồng ý minh bạch, quyền dữ liệu cá nhân | Must | MVP | Nền cho phân quyền và riêng tư (GĐ1 §6, §7; D-10) |
-| EP-02 Nhóm | Mọi ND tạo nhóm 4–10 thành viên (CN quản lý nhiều nhóm, không tham gia phiên — D-25), TV thuộc tối đa 1 nhóm (D-21); mời mã (email: Should); CN đặt lịch phiên một lần | Must | MVP | Cấu trúc cốt lõi (D-02, D-06, D-10, D-21) |
+| EP-02 Nhóm | Mọi ND tạo nhóm 4–10 thành viên (CN quản lý nhiều nhóm, không tham gia phiên — D-25); ND có thể tham gia nhiều nhóm, đồng ý riêng theo từng nhóm (D-30); mời mã (email: Should); CN đặt lịch phiên một lần | Must | MVP | Cấu trúc cốt lõi (D-02, D-06, D-10, D-30) |
 | EP-03 Phiên & Lockdown | Đếm ngược 5s, giao diện tối, khoan hồng 3s, phát hiện rời app trên **iOS và Android** (khóa màn hình không tính thoát), phiên tiếp tục khi có người thoát, mất kết nối (LOST không phạt cả phiên, D-19). Tạm dừng có lý do, vào muộn, sự cố server: Should | Must | MVP | Giá trị lõi; rủi ro kỹ thuật cao nhất, nhân đôi do 2 nền tảng (GĐ1 §10 #1; D-05, D-07, D-08) |
 | EP-04 Thông báo thoát | Báo **ngay** (SNS) cho cả nhóm và mọi người trong phiên, kèm tên người thoát (D-20, D-22); giải trình. Khiếu nại: Should. Chế độ gộp cuối phiên: Won't (D-20) | Must | MVP | Tiêu chí demo “vài giây” (GĐ1 §11); giảm báo oan (§10 #3), quan trọng hơn vì D-05 phạt cả phiên |
 | EP-05 Thành tích | Điểm danh, chuỗi ngày, huy hiệu mốc; ngắt chuỗi cả phiên khi có người thoát; chuỗi chỉ hiện cho chính người dùng (D-12) | Must | MVP | Thay cược bằng ghi nhận (GĐ1 §4.4, D-01, D-05) |
@@ -97,7 +97,7 @@ Ký hiệu: ✔ được · ✖ không · ~ một phần (ghi rõ). “Của mì
 | Epic | Tính năng |
 | --- | --- |
 | EP-01 | Đăng nhập/đăng xuất; vai trò hệ thống ND/QT, vai trò CN/TV theo nhóm (D-10); màn đồng ý minh bạch (không ô đánh dấu sẵn); rút đồng ý và rời nhóm; “Dữ liệu của tôi” (xem); sửa hồ sơ cơ bản (US-01.03, D-17) |
-| EP-02 | ND tạo nhóm 4–10 người, trở thành CN; TV thuộc tối đa 1 nhóm (D-21); mời bằng mã nhóm; xem nhóm và thành viên; xóa TV; khai mục đích báo cáo; CN đặt lịch phiên **một lần** 25/50’ (D-06), sửa/hủy lịch |
+| EP-02 | ND tạo nhóm 4–10 người, trở thành CN; ND có thể tham gia nhiều nhóm và đồng ý riêng theo từng nhóm (D-30); mời bằng mã nhóm; xem nhóm và thành viên; xóa TV; khai mục đích báo cáo; CN đặt lịch phiên **một lần** 25/50’ (D-06), sửa/hủy lịch |
 | EP-03 | Vào phiên theo lịch; đếm ngược 5s; giao diện tối tĩnh; chỉ báo “Phiên đang được ghi”; phát hiện rời app trên iOS và Android bằng Flutter (D-07); khoan hồng 3s (1 lần/phiên, Q-10); cho tắt màn hình, khóa màn hình không tính thoát (D-08); khi 1 người thoát, phiên vẫn chạy đến hết giờ cho mọi người (D-05); báo mọi người phiên mất thưởng, kèm tên người thoát (D-22); mất kết nối ghi riêng, không phạt cả phiên (D-19); kết thúc phiên, xem kết quả |
 | EP-04 | Push **ngay** cho cả nhóm và mọi người trong phiên khi có người thoát (D-20); TV giải trình, CN xem giải trình (Q-16) |
 | EP-05 | Ghi điểm danh ngày; chuỗi theo ngày có lịch nhóm (Q-17), xem chuỗi của mình; huy hiệu mốc; ngắt chuỗi mọi TV trong phiên có người thoát (D-05) |
@@ -189,7 +189,7 @@ Ký hiệu: ✔ được · ✖ không · ~ một phần (ghi rõ). “Của mì
 | Người dùng | Mọi tài khoản thường; vai trò hệ thống mặc định (D-10) |
 | Quản trị | Vai trò hệ thống duy nhất có đặc quyền (D-10) |
 | Chủ nhóm | Người dùng đã tạo nhóm; mỗi nhóm đúng 1 chủ nhóm; có thể là chủ nhóm của nhiều nhóm. Chỉ quản lý (tạo nhóm, đặt lịch, nhận thông báo, xem báo cáo), **không tham gia phiên** (D-25). Trong văn phòng thường là trưởng phòng, nhưng hệ thống không có vai trò “trưởng phòng” (D-10) |
-| Thành viên | Người dùng đã đồng ý và tham gia một nhóm; tối đa 1 nhóm (D-10, D-21). Chỉ thành viên mới tham gia phiên (D-25) |
+| Thành viên | Người dùng đã đồng ý với điều khoản của nhóm đó và tham gia nhóm; có thể là thành viên của nhiều nhóm, với quyền và consent tách biệt theo từng nhóm (D-10, D-30). Chỉ thành viên mới tham gia phiên (D-25) |
 | Trưởng phòng | Người thật ngoài đời (đối tượng phỏng vấn), không phải vai trò trong hệ thống; trong app dùng vai trò chủ nhóm (D-10) |
 | Văn phòng | Đơn vị chứa các nhóm; MVP chỉ 1 văn phòng (GĐ1 §7) |
 | Nhóm | Tập 4–10 thành viên (không gồm chủ nhóm — giả định, Q-141) do một chủ nhóm tạo và quản lý (D-02, D-10, D-25) |

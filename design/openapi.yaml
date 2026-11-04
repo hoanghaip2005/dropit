@@ -282,7 +282,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: 'GROUP_FULL | ALREADY_IN_GROUP | OWNER_OF_THIS_GROUP | CONSENT_VERSION_STALE'
+          description: 'GROUP_FULL | ALREADY_MEMBER | OWNER_OF_THIS_GROUP | CONSENT_VERSION_STALE'
           content: { application/problem+json: { schema: { $ref: '#/components/schemas/Error' } } }
         '422': { $ref: '#/components/responses/Unprocessable' }
     delete:
@@ -1337,7 +1337,7 @@ components:
         - INVITE_CODE_INVALID
         - INVITE_CODE_LOCKED
         - GROUP_FULL
-        - ALREADY_IN_GROUP
+        - ALREADY_MEMBER
         - OWNER_OF_THIS_GROUP
         - CONSENT_VERSION_STALE
         - MAX_GROUPS_OWNED

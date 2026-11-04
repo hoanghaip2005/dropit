@@ -8,7 +8,7 @@ beforeAll(async () => {
 });
 afterAll(async () => t?.close());
 
-describe('Nhóm, mã mời, đồng ý (EP-02, BR-74/75/76, D-21, D-25)', () => {
+describe('Nhóm, mã mời, đồng ý (EP-02, BR-74/75/76, D-25, D-30)', () => {
   it('tạo nhóm → 201 GroupOwnerView, mã mời 8 ký tự đúng bảng mã', async () => {
     const o = await t.user('Chủ nhóm');
     const r = await t.api('POST', '/v1/groups', o.token, { name: 'Nhóm A', report_purpose: 'Mục đích' });
@@ -61,13 +61,16 @@ describe('Nhóm, mã mời, đồng ý (EP-02, BR-74/75/76, D-21, D-25)', () => 
     expect(r.body.code).toBe('OWNER_OF_THIS_GROUP');
   });
 
-  it('đang ở nhóm A vào nhóm B → 409 ALREADY_IN_GROUP có tên nhóm A (BR-75, D-21)', async () => {
+  it('thành viên có thể tham gia nhiều nhóm và thấy đầy đủ danh sách (D-30)', async () => {
     const A = await t.groupWith(1);
     const B = await t.groupWith(0);
     const r = await t.api('POST', `/v1/groups/${B.groupId}/consent`, A.members[0].token, { consent_version: 1, invite_code: B.inviteCode });
-    expect(r.status).toBe(409);
-    expect(r.body.code).toBe('ALREADY_IN_GROUP');
-    expect(r.body.detail).toContain('Nhóm');
+    expect(r.status).toBe(201);
+    expect(r.body).toMatchObject({ group_id: B.groupId, role: 'MEMBER' });
+    const list = await t.api('GET', '/v1/me/groups', A.members[0].token);
+    expect(list.status).toBe(200);
+    expect(list.body.items.filter((g: { role: string }) => g.role === 'MEMBER').map((g: { group_id: string }) => g.group_id))
+      .toEqual(expect.arrayContaining([A.groupId, B.groupId]));
   });
 
   it('consent_version cũ → 409 CONSENT_VERSION_STALE; sai mã → 404 INVITE_CODE_INVALID', async () => {

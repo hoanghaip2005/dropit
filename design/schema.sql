@@ -202,8 +202,8 @@ CREATE TABLE group_members (
   removal_effective_at timestamptz,                  -- BR-77: xóa giữa phiên có hiệu lực sau ends_at
   CONSTRAINT gm_left_consistent CHECK ((left_at IS NULL) = (leave_reason IS NULL))
 );
--- D-21 / BR-75 (a): một người là thành viên tối đa 1 nhóm tại một thời điểm
-CREATE UNIQUE INDEX group_members_one_active_uq ON group_members(user_id) WHERE left_at IS NULL;
+-- D-30: mỗi người có thể là thành viên của nhiều nhóm; không trùng membership đang hoạt động trong cùng nhóm.
+CREATE UNIQUE INDEX group_members_one_active_per_group_uq ON group_members(user_id, group_id) WHERE left_at IS NULL;
 CREATE INDEX group_members_group_active_idx ON group_members(group_id) WHERE left_at IS NULL;
 CREATE INDEX group_members_user_hist_idx ON group_members(user_id, joined_at);
 
@@ -541,12 +541,12 @@ CREATE VIEW user_coin_balance AS
 CREATE TABLE daily_attendance (
   user_id        uuid NOT NULL REFERENCES users(id),
   day            date NOT NULL,
-  group_id       uuid NOT NULL REFERENCES groups(id),    -- D-21: thực tế một nhóm; dùng cho báo cáo trong nhóm
+  group_id uuid NOT NULL REFERENCES groups(id), -- D-30: giữ điểm danh riêng theo từng nhóm
   first_session_id uuid NOT NULL REFERENCES sessions(id),
   sessions_completed smallint NOT NULL DEFAULT 1 CHECK (sessions_completed >= 1),
   focus_minutes  integer NOT NULL DEFAULT 0 CHECK (focus_minutes >= 0),
   created_at     timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (user_id, day)                             -- tối đa 1 điểm danh/ngày (BR-46)
+  PRIMARY KEY (user_id, day, group_id)                   -- tổng hợp theo nhóm; lịch cá nhân vẫn tối đa 1 ngày (BR-46)
 );
 CREATE INDEX daily_attendance_group_day_idx ON daily_attendance(group_id, day);
 

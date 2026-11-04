@@ -9,7 +9,7 @@ Quy trình: `Q-` (Chờ) → nhóm họp → ghi `D-` (Đã chốt) kèm lý do,
 | Q-01 | Khi một người thoát, phiên người còn lại tiếp tục hay cả nhóm bị ảnh hưởng? | Tiếp tục; chỉ người thoát mất Coins phiên + ngắt chuỗi (GĐ1 §4.3) | EP-03, EP-04, BR phiên | Đã chốt → xem D- |
 | Q-02 | Ai bắt đầu phiên: lịch chủ nhóm hay thành viên tự mở? | Lịch do chủ nhóm đặt + phiên tự do vẫn tính Coins | EP-02, EP-03 | Đã chốt → xem D- |
 | Q-03 | Báo chủ nhóm ngay hay gộp cuối phiên? | Mặc định ngay, cho chọn gộp | EP-04 | Đã chốt → xem D- |
-| Q-04 | Một người ở nhiều nhóm? Nhiều chủ nhóm/văn phòng? | Nhiều nhóm: có (nhưng 1 phiên tại 1 thời điểm); nhiều văn phòng: giai đoạn sau | EP-01, EP-02, mô hình dữ liệu | Đã chốt → xem D- |
+| Q-04 | Một người ở nhiều nhóm? Nhiều chủ nhóm/văn phòng? | Nhiều nhóm: có; tối đa 1 phiên đang hoạt động tại một thời điểm (BR-09); nhiều văn phòng: giai đoạn sau | EP-01, EP-02, mô hình dữ liệu | Đã chốt → D-30 |
 | Q-05 | Bài viết: nội dung gì, ai xem, kiểm duyệt? | Hoãn ngoài MVP (EP-10) | EP-10 | Chờ |
 | Q-06 | Nhật ký chỉ riêng tư hay chia sẻ bạn bè? | MVP: chỉ riêng tư | EP-07 | Chờ |
 | Q-07 | iOS, Android hay cả hai? Hạn nộp? | Cần giảng viên/nhóm xác nhận | Toàn dự án | Đã chốt → xem D- |
@@ -74,7 +74,7 @@ Quy trình: `Q-` (Chờ) → nhóm họp → ghi `D-` (Đã chốt) kèm lý do,
 | Q-78 | Lịch lặp lại có ở MVP? Sửa/hủy chuỗi lặp thế nào? (EP-02) | Có (theo ngày trong tuần); sửa/hủy "lần này" hoặc "lần này và sau" | EP-02, EP-03 | Chờ |
 | Q-79 | Khoảng tối thiểu giữa lúc đặt/sửa lịch và giờ bắt đầu? (EP-02) | Đặt mới ≥ 1 phút; sửa/hủy được đến trước COUNTDOWN | EP-02 | Chờ |
 | Q-80 | Thành viên có được nhắc (push) trước giờ phiên? (EP-02) | Có, 5 phút trước, cấu hình theo nhóm | EP-02, EP-04 | Chờ |
-| Q-81 | Cảnh báo trùng lịch cho chủ nhóm lộ đến mức nào? (EP-02) | Chỉ số người trùng + tên thành viên nhóm mình; không lộ tên/giờ nhóm khác | EP-02, NFR riêng tư | Hủy — D-21 |
+| Q-81 | Cảnh báo trùng lịch cho chủ nhóm lộ đến mức nào? (EP-02) | Chỉ số người trùng + tên thành viên nhóm mình; không lộ tên/giờ nhóm khác | EP-02, NFR riêng tư | Chờ — rà soát lại sau D-30 |
 | Q-82 | Thành viên có được "báo vắng trước" một phiên? (EP-02) | Should; ghi ABSENT kèm ghi chú, không push | EP-02, EP-03, EP-08 | Chờ |
 | Q-83 | Phòng chờ mở trước giờ bắt đầu bao lâu? (EP-03) | 10 phút, cấu hình được | EP-02, EP-03 | Chờ |
 | Q-84 | Rời app trong COUNTDOWN (chưa ghi) thì khi sang ACTIVE xử lý thế nào? (EP-03) | Nếu khi ACTIVE không ở app → GRACE tính từ `started_at`, có trừ lượt khoan hồng | EP-03 | Chờ |
@@ -143,7 +143,7 @@ Quy trình: `Q-` (Chờ) → nhóm họp → ghi `D-` (Đã chốt) kèm lý do,
 | Q-147 | Email báo cáo có dùng ảnh theo dõi mở thư (tracking pixel) không? (V-50) | Không | EP-08, NFR riêng tư | Đã chốt → D-27 |
 | Q-148 | Màn chi tiết phiên của chủ nhóm (V-46) có tự làm mới không, hay chỉ kéo xuống để làm mới? | Chỉ kéo để làm mới, không tự cập nhật thời gian thực | EP-08, BR-116 | Đã chốt → D-28 |
 | Q-149 | (T-BA-123) Thành viên bấm "Rời phiên" và xác nhận khi đang ở phòng chờ V-06 (WAITING, trước `started_at`; màn đếm ngược V-07 không có nút — T-BA-132): ghi ABSENT (không thông báo, không kích hoạt D-05) hay EXITED như trong phiên? | ABSENT, không vào lại được phiên đó; ưu tiên hơn BR-64 (rời app trong COUNTDOWN → GRACE) | EP-03, BR-118, BR-64, §2.2 | Chờ |
-| Q-150 | (T-BA-129) Người đang là thành viên nhóm A có được tạo nhóm B và làm chủ nhóm B không (vẫn tham gia phiên nhóm A như thành viên)? | Có; nhóm làm chủ không tính vào giới hạn 1 nhóm thành viên (D-21) | EP-01, EP-02, BR-75 (c), AC-02.01.4 | Chờ |
+| Q-150 | (T-BA-129) Người đang là thành viên nhóm A có được tạo nhóm B và làm chủ nhóm B không (vẫn tham gia phiên nhóm A như thành viên)? | Có; vai trò chủ nhóm và thành viên độc lập theo từng nhóm (D-25, D-30) | EP-01, EP-02, BR-75 (c), AC-02.01.4 | Chờ |
 | Q-151 | Tín hiệu khóa màn hình đến muộn khi đang khoan hồng: cho phân loại lại thành LOCK (về FOCUSING, trả lại lượt khoan hồng)? Spike T-01 bật mặc định (`LOCK_RECLASSIFY`) | Có, nhưng chỉ khi tín hiệu khóa đến trong ≤600 ms sau khi rời; cần đo bằng spike, có thể bị lợi dụng | EP-03, BR-11…15 | Chờ |
 | Q-152 | Vuốt tắt app (swipe-kill) mà socket đóng trước khi kịp gửi sự kiện rời → hiện ra LOST (không phạt tập thể) thay vì EXITED — lối lách luật. Xử lý thế nào? | Chờ kết quả spike S-05; nếu xảy ra thì tính LOST xảy ra trong ≤3s sau lần cuối app ở foreground là EXITED | EP-03, BR-19, BR-118 | Chờ |
 | Q-153 | (T-BA-140) Thành viên đang ở phòng chờ (WAITING) mất mạng thì sao? | Giữ WAITING; nối lại trước `started_at` thì vào phiên được; không nối lại kịp đến `started_at` thì ABSENT | EP-03, BR-19, BR-63, BR-64, §2.2, V-06 | Chờ |
@@ -191,7 +191,7 @@ Tiêu chí: chặn story Must hoặc ảnh hưởng nhiều story/epic nhất. �
 | D-18 | (Q-61) Nhóm có tài khoản Apple Developer. Thiết bị iPhone/Mac để build & thử: (giả định) có — cần xác nhận. | Đủ điều kiện thử iOS | 2026-10-07 | Người dùng |
 | D-19 | (Q-14, Q-51, Q-28) Mất mạng quá hạn → LOST, **không** làm cả phiên mất thưởng (chỉ người đó không nhận Coins); sự cố server → hủy phiên, không phạt (trừ ngoại lệ BR-68). | Tránh phạt oan do mạng | 2026-10-07 | Người dùng |
 | D-20 | (Q-03, Q-32, Q-33) Khi có người thoát: báo **ngay** cho **cả nhóm (group)** và **mọi người trong phiên (room)**, không chỉ chủ nhóm. Không có chế độ gộp cuối phiên ở MVP (US-04.03, US-04.04 → Won't hoặc sau MVP). | Minh bạch, áp lực đồng đội | 2026-10-07 | Người dùng |
-| D-21 | (Q-04) **Một người chỉ là thành viên của tối đa 1 nhóm** tại một thời điểm. (giả định) Chủ nhóm vẫn được tạo/quản lý nhiều nhóm (để đạt tiêu chí demo GĐ1 §11: 1 người quản lý ≥2 nhóm) nhưng chỉ tham gia phiên của 1 nhóm — cần xác nhận. | Đơn giản, bỏ xung đột lịch chéo nhóm | 2026-10-07 | Người dùng |
+| D-21 | (Hủy — yêu cầu mới 2026-11-05, thay bằng D-30) Một người chỉ là thành viên của tối đa 1 nhóm tại một thời điểm. | — | 2026-10-07 | Người dùng |
 | D-22 | (Q-50) Mọi người trong nhóm/phiên **biết tên người thoát**. Thay thế NFR-P16 và BR-38 (không nêu tên). | Minh bạch theo nhóm | 2026-10-07 | Người dùng |
 | D-23 | (Q-131, Q-20, Q-60) Rút đồng ý/rời nhóm sau `forfeited_at` vẫn bị ngắt chuỗi; rút trước đó không kích hoạt D-05. | Chặn lách giữ chuỗi | 2026-10-07 | Người dùng |
 | D-24 | (Q-64, Q-36) Email báo cáo tháng gửi **nội dung tóm tắt**, không kèm PDF. PDF là tùy chọn tải trong app (Should). | Email đơn giản | 2026-10-07 | Người dùng |
@@ -200,6 +200,7 @@ Tiêu chí: chặn story Must hoặc ảnh hưởng nhiều story/epic nhất. �
 | D-27 | (Q-147) Email báo cáo **không** dùng ảnh theo dõi mở thư (tracking pixel) hay link theo dõi. | Riêng tư | 2026-10-19 | Người dùng |
 | D-28 | (Q-148) Màn chi tiết phiên của chủ nhóm (V-46) **không tự làm mới**; chỉ cập nhật khi kéo xuống để làm mới. | Không giám sát thời gian thực (BR-116) | 2026-10-19 | Người dùng |
 | D-29 | (T-BA-123) Màn phiên có nút **"Rời phiên"**; bấm → hộp xác nhận nêu hệ quả (cả phiên mất thưởng, ngắt chuỗi, cả nhóm thấy tên) → xác nhận thì EXITED ngay (BR-118), không qua khoan hồng. Hủy hộp thì tiếp tục phiên. | Minh bạch, tránh lỡ tay | 2026-10-19 | Người dùng |
+| D-30 | (Q-04, yêu cầu mới) Một người có thể là thành viên của nhiều nhóm cùng lúc; phải đồng ý riêng với quy tắc của từng nhóm. Trần 10 thành viên, vai trò chủ nhóm theo từng nhóm và quy tắc tối đa một phiên đang hoạt động tại một thời điểm (BR-09) vẫn giữ nguyên. Việc cảnh báo lịch trùng giữa các nhóm chưa được chốt (Q-81). | Người dùng cần tham gia thêm nhóm mà không phải rời nhóm hiện tại | 2026-11-05 | Người dùng |
 
 ## Chi tiết câu hỏi
 

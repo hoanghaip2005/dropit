@@ -110,8 +110,10 @@ BEGIN
     ins || format('(gen_random_uuid(),%L,25,%L,%L,%L,%L,''CANCELLED'',''OWNER_CANCEL'')',
       g1, '2026-11-02 02:10+00', '2026-11-02 02:35+00', '2026-11-02', o1));
 
-  -- ===== D-21: một người chỉ thuộc 1 nhóm đang hoạt động =====
-  PERFORM pg_temp.expect_fail('thanh vien nhom 1 vao them nhom 2 bi chan (D-21)',
+  -- ===== D-30: một người có thể thuộc nhiều nhóm; cùng nhóm không tạo membership trùng =====
+  PERFORM pg_temp.expect_ok('thanh vien nhom 1 vao nhom 2 duoc phep (D-30)',
+    format('INSERT INTO group_members(group_id,user_id,consent_version,consented_at) VALUES (%L,%L,1,now())', g2, m01));
+  PERFORM pg_temp.expect_fail('membership dang hoat dong trung trong cung nhom bi chan (D-30)',
     format('INSERT INTO group_members(group_id,user_id,consent_version,consented_at) VALUES (%L,%L,1,now())', g2, m01));
 
   -- ===== D-25: chủ nhóm không là thành viên / không vào phiên =====
@@ -128,7 +130,7 @@ BEGIN
   PERFORM pg_temp.expect_fail('thanh vien thu 11 bi chan (BR-74)',
     format('INSERT INTO group_members(group_id,user_id,consent_version,consented_at) VALUES (%L,%L,1,now())', g1, m11));
 
-  -- D-21 (tiếp): rời nhóm xong thì vào nhóm khác được
+  -- Thành viên có thể rời một nhóm và tiếp tục ở nhóm còn lại.
   PERFORM pg_temp.expect_ok('roi nhom 1 roi vao nhom 2 duoc phep (D-21)',
     format('UPDATE group_members SET left_at = now(), leave_reason = ''LEFT'' WHERE group_id = %L AND user_id = %L; '
         || 'INSERT INTO group_members(group_id,user_id,consent_version,consented_at) VALUES (%L,%L,1,now())', g1, m10, g2, m10));

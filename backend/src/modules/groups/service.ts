@@ -1,5 +1,5 @@
 import { isBlocked } from '../moderation/service.js';
-// Module groups (EP-02): tạo nhóm, mã mời (BR-76), đồng ý → thành viên (BR-06, BR-74, BR-75, D-21, D-25).
+// Module groups (EP-02): tạo nhóm, mã mời (BR-76), đồng ý → thành viên (BR-06, BR-74, BR-75, D-25, D-30).
 import { createHash, randomInt } from 'node:crypto';
 import type { Ctx } from '../../context.js';
 import { AppError, E } from '../../shared/errors.js';
@@ -51,15 +51,24 @@ export async function getGroupRow(ctx: Ctx, groupId: string) {
   return g;
 }
 
-export async function activeMembership(ctx: Ctx, userId: string) {
+function activeMembershipQuery(ctx: Ctx, userId: string) {
   return ctx.db
     .selectFrom('group_members')
     .innerJoin('groups', 'groups.id', 'group_members.group_id')
     .select(['group_members.group_id', 'group_members.consent_version', 'group_members.joined_at', 'groups.name', 'groups.consent_version as group_consent_version'])
     .where('group_members.user_id', '=', userId)
     .where('groups.status', '<>', 'DISSOLVED')
-    .where('group_members.left_at', 'is', null)
+    .where('group_members.left_at', 'is', null);
+}
+
+export async function activeMembership(ctx: Ctx, userId: string, groupId: string) {
+  return activeMembershipQuery(ctx, userId)
+    .where('group_members.group_id', '=', groupId)
     .executeTakeFirst();
+}
+
+export async function activeMemberships(ctx: Ctx, userId: string) {
+  return activeMembershipQuery(ctx, userId).execute();
 }
 
 /** Vai trò theo từng nhóm (D-10): OWNER | MEMBER | null. */
@@ -264,7 +273,7 @@ export async function acceptConsent(
   const items = consentItems(g.retention_months);
   const missing = body.accepted_items ? items.filter((i) => i.required && !body.accepted_items!.includes(i.code)) : [];
   if (missing.length) throw new AppError(422, 'VALIDATION_FAILED', `Chưa tích: ${missing.map((m) => m.code).join(', ')}`, 'BR-06');
-  const cur = await activeMembership(ctx, userId);
+  const cur = await activeMembership(ctx, userId, groupId);
   const consentRow = {
     user_id: userId, group_id: groupId, consent_version: g.consent_version, action: 'GRANT' as const,
     purpose_snapshot: g.report_purpose, retention_months: g.retention_months, terms_hash: termsHash(items), client_info: null,
@@ -280,7 +289,6 @@ export async function acceptConsent(
   }
   if (!body.invite_code || body.invite_code !== g.invite_code.trim())
     throw new AppError(404, 'INVITE_CODE_INVALID', 'Mã nhóm không đúng hoặc đã hết hiệu lực', 'BR-76');
-  if (cur) throw new AppError(409, 'ALREADY_IN_GROUP', `Bạn đang ở nhóm ${cur.name}. Rời nhóm ${cur.name} trước khi tham gia nhóm khác.`, 'BR-75');
   if (g.status !== 'ACTIVE') throw new AppError(409, 'GROUP_FULL', 'Nhóm không nhận thành viên mới lúc này', 'T-BA-37');
   try {
     await ctx.db.transaction().execute(async (tx) => {
@@ -294,7 +302,7 @@ export async function acceptConsent(
     });
   } catch (e) {
     if (e instanceof AppError) throw e;
-    if (pgCode(e) === '23505') throw new AppError(409, 'ALREADY_IN_GROUP', 'Bạn đang ở nhóm khác', 'BR-75');
+    if (pgCode(e) === '23505') throw new AppError(409, 'ALREADY_MEMBER', 'Bạn đã là thành viên nhóm này', 'D-30');
     if (pgCode(e) === '23514' && String((e as Error).message).includes('10 thành viên')) throw new AppError(409, 'GROUP_FULL', 'Nhóm đã đủ 10 thành viên', 'BR-74');
     throw e;
   }
@@ -305,7 +313,7 @@ export async function myGroup(ctx: Ctx, userId: string, groupId: string, role: '
   const g = await getGroupRow(ctx, groupId);
   let needs = false;
   if (role === 'MEMBER') {
-    const m = await activeMembership(ctx, userId);
+    const m = await activeMembership(ctx, userId, groupId);
     needs = !!m && m.consent_version < g.consent_version;
   }
   const n = await memberCount(ctx, groupId);
@@ -362,8 +370,8 @@ export async function listMyGroups(ctx: Ctx, userId: string) {
   owned.sort((a, b) => collVi.compare(a.name, b.name) || a.created_at.getTime() - b.created_at.getTime());
   const items = [];
   for (const g of owned) items.push(await myGroup(ctx, userId, g.id, 'OWNER'));
-  const m = await activeMembership(ctx, userId);
-  if (m) items.push(await myGroup(ctx, userId, m.group_id, 'MEMBER'));
+  const memberships = await activeMemberships(ctx, userId);
+  for (const m of memberships) items.push(await myGroup(ctx, userId, m.group_id, 'MEMBER'));
   return { items };
 }
 
